@@ -1,12 +1,13 @@
 import { useState } from 'react'
 import Nav from './components/Nav'
+import Sidebar from './components/Sidebar'
 
 const App = () => (
   <main>
     <Nav/>
     {/*sandesh*/}
     <section>
-      <h1>sidebar</h1>
+     <Sidebar/>
     </section>
     <section>
       <h1>content</h1>
