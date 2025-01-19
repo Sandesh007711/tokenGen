@@ -10,7 +10,7 @@ const Nav = () => {
   }
 
   return (
-    <header className="bg-gray-800 p-4">
+    <header className="bg-gray-800 p-7">
       <div className="container mx-auto flex flex-wrap items-center justify-between">
         {/* Company Logo */}
         <div className="flex items-center">
