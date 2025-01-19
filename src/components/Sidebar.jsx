@@ -1,8 +1,29 @@
-import React from 'react'
+import React, { useState } from 'react'
+import { FaUser, FaCar, FaDollarSign, FaKey, FaChartBar, FaBars } from 'react-icons/fa'
+import './Sidebar.css'
 
 const Sidebar = () => {
+  const [isOpen, setIsOpen] = useState(false)
+
+  const toggleSidebar = () => {
+    setIsOpen(!isOpen)
+  }
+
   return (
-    <div>Sidebsdar</div>
+    <div className='fixed'>
+      <button className="toggle-button" onClick={toggleSidebar}>
+        <FaBars />
+      </button>
+      <div className={`sidebar ${isOpen ? 'open' : ''}`}>
+        <ul>
+          <li><FaUser /><span>Create User</span></li>
+          <li><FaCar /><span>Vehicle</span></li>
+          <li><FaDollarSign /><span>Rate</span></li>
+          <li><FaKey /><span>Token</span></li>
+          <li><FaChartBar /><span>Report</span></li>
+        </ul>
+      </div>
+    </div>
   )
 }
 
