@@ -47,7 +47,7 @@ const Nav = () => {
             </span>
           </div>
 
-          <button className="flex-3 bg-slate-500 rounded-full p-2 rounded-full transition-transform duration-300 hover:scale-110 hover:shadow-lg hover:shadow-slate-400 group">
+          <button className="flex-3 bg-slate-500 rounded-full p-2  transition-transform duration-300 hover:scale-110 hover:shadow-lg hover:shadow-slate-400 group">
             <img src={logoutIcon} alt="Logout" className="h-8 w-8 rounded-xl" />
             <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-black rounded opacity-0 group-hover:opacity-100 transition-opacity duration-300">
               Logout
