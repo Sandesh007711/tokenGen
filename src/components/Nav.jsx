@@ -35,7 +35,7 @@ const Nav = () => {
         
         {/* Profile Section */}
         <div >
-          <div className=" justify-end text-2xl mx-4 hover:font-bold  text-white transition-transform duration-300 hover:scale-110 hover:text-yellow-400 hover:shadow-lg ">Profile</div>
+          <div className="text-2xl mx-4 hover:font-bold  text-white transition-transform duration-300 hover:scale-110 hover:text-yellow-400 hover:shadow-lg ">Profile</div>
         </div>
         
         {/* Menu Toggle Button for Mobile */}
