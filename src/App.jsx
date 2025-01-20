@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import Nav from './components/Nav'
 import Sidebar from './components/Sidebar'
+import Content from './components/Content'
+import Footer from './components/Footer'
 
 const App = () => (
   <main>
@@ -10,10 +12,10 @@ const App = () => (
       <Sidebar/>
     </section>
     <section>
-      <h1>content</h1>
+      <Content/>
     </section>
     <section>
-      <h1>footer</h1>
+      <Footer/>
     </section>
   </main>
 )
