@@ -1,27 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react'
-import { FaUser, FaCar, FaDollarSign, FaKey, FaTruckLoading, FaArrowLeft, FaArrowRight } from 'react-icons/fa'
-import './Sidebar.css'
+import React, { useState, useEffect, useRef } from 'react';
+import { FaUser, FaCar, FaKey, FaTruckLoading, FaArrowLeft, FaArrowRight, FaTimes } from 'react-icons/fa';
+import './Sidebar.css';
 
-const Sidebar = () => {
-  const [isOpen, setIsOpen] = useState(false)
-  const sidebarRef = useRef(null)
-
-  const toggleSidebar = () => {
-    setIsOpen(!isOpen)
-  }
-
-  const handleClickOutside = (event) => {
-    if (sidebarRef.current && !sidebarRef.current.contains(event.target)) {
-      setIsOpen(false)
-    }
-  }
-
-  useEffect(() => {
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside)
-    }
-  }, [])
+const Sidebar = ({ isOpen, toggleSidebar }) => {
+  const sidebarRef = useRef(null);
 
   return (
     <div>
@@ -31,6 +13,11 @@ const Sidebar = () => {
         </button>
       </div>
       <div ref={sidebarRef} className={`sidebar ${isOpen ? 'open' : ''}`}>
+        {isOpen && (
+          <button className="close-button absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-red-500 text-white p-4 rounded-full" onClick={toggleSidebar}>
+            <FaTimes size={24} />
+          </button>
+        )}
         <ul>
           <li><FaUser /><span>Create User</span></li>
           <li><FaCar /><span>Vehicle Rate</span></li>
@@ -39,7 +26,7 @@ const Sidebar = () => {
         </ul>
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default Sidebar
+export default Sidebar;
