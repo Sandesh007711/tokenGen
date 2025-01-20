@@ -23,7 +23,7 @@ const Nav = () => {
             className="h-[110px] w-[110px] mr-2 rounded-full transition-transform duration-300 hover:scale-110 hover:shadow-xl hover:shadow-slate-400" 
           />
           <h1 className="text-white text-3xl font-bold rounded-xl px-2 transition-transform duration-300 hover:scale-110 hover:shadow-lg hover:shadow-slate-400">
-            Kochas Power Pvt. Ltd.
+            Ramjee SIngh & Co.
           </h1>
         </div>
         
