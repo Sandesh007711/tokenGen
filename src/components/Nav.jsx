@@ -11,7 +11,7 @@ const Nav = () => {
 
   return (
     <header className="bg-black py-4">
-      <div className="container mx-5 flex flex-wrap items-center justify-between">
+      <div className="container mx-20 flex flex-wrap items-center justify-between">
         {/* Company Logo */}
         <div className="flex items-center">
           <img 
@@ -26,10 +26,10 @@ const Nav = () => {
         
         {/* Navigation Links */}
         <nav className={` w-full md:w-auto ${isOpen ? 'block' : 'hidden'} md:block`}>
-          <ul className="flex flex-col md:flex-row space-y-2 md:space-y-0 md:space-x-4 mt-2 md:mt-0 justify-center w-full md:w-auto">
-            <li><a href="#home" className="px-5 text-lg text-white transition-transform duration-300 hover:scale-110 hover:text-gray-400 hover:shadow-lg">Home</a></li>
-            <li><a href="#about" className="px-5 text-lg text-white transition-transform duration-300 hover:scale-110 hover:text-gray-400 hover:shadow-lg">About</a></li>
-            <li><a href="#contact" className="px-5 text-lg text-white transition-transform duration-300 hover:scale-110 hover:text-gray-400 hover:shadow-lg">Contact</a></li>
+          <ul className="flex flex-col md:flex-row md:space-x-4 ">
+            <li><a href="#home" className="text-xl text-white transition-transform duration-300 hover:scale-110 hover:text-yellow-400 hover:shadow-lg">Home</a></li>
+            <li><a href="#about" className="text-xl text-white transition-transform duration-300 hover:scale-110 hover:text-yellow-400 hover:shadow-lg">About</a></li>
+            <li><a href="#contact" className="text-xl text-white transition-transform duration-300 hover:scale-110 hover:text-yellow-400 hover:shadow-lg">Contact</a></li>
           </ul>
         </nav>
         
