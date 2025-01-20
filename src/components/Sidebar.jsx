@@ -10,7 +10,7 @@ const Sidebar = () => {
   }
 
   return (
-    <div className='fixed'>
+    <div className='fixed bg-black'>
       <button className="toggle-button" onClick={toggleSidebar}>
         <FaBars />
       </button>
