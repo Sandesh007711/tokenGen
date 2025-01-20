@@ -3,14 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import './Login.css';
 import logo from '../assets/logo.gif'; // Ensure the path is correct
 
-function Login() {
-  const navigate = useNavigate();
+function App() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isValid, setIsValid] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
+  const navigate = useNavigate();
 
   const validateUsername = (username) => {
     const re = /^[a-zA-Z]+$/;
@@ -39,64 +39,72 @@ function Login() {
     }
   };
 
-  const handleSubmit = (event) => {
-    event.preventDefault();
+  const handleSubmit = (e) => {
+    e.preventDefault();
     if (!username || !password) {
       setIsValid(false);
       setError('Please fill in both fields');
     } else if (!validateUsername(username)) {
       setIsValid(false);
       setError('Username must contain only letters');
-    } else if (username === 'admin' && password === 'password') {
-      navigate('/OtpVerification');
-    } else {
+    } else if (password.length < 6) {
       setIsValid(false);
-      setError('Invalid username or password');
+      setError('Password must be at least 6 characters');
+    } else {
+      setIsValid(true);
+      setError('');
+      setIsLoading(true);
+      // Simulate API call
+      setTimeout(() => {
+        setIsLoading(false);
+        navigate('/otp-verification');
+      }, 2000);
     }
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-100">
-      <div className="bg-white p-8 rounded shadow-md w-full max-w-md">
-        <h2 className="text-2xl font-bold mb-6 text-center">Login</h2>
-        {error && <p className="text-red-500 text-center mb-4">{error}</p>}
-        <form onSubmit={handleSubmit}>
-          <div className="mb-4">
-            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="username">
-              Username
-            </label>
+    <div className="App">
+      <div className="login-container">
+        <img src={logo} alt="Logo" className="logo" />
+        <h1 className="welcome-message">Welcome Back!</h1>
+        <form onSubmit={handleSubmit} className="login-form">
+          <div className="input-group">   
+            <label>Username</label>
             <input
               type="text"
-              id="username"
               value={username}
               onChange={handleUsernameChange}
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+              className="input-field"
+              placeholder="Enter your username"
             />
           </div>
-          <div className="mb-6">
-            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="password">
-              Password
-            </label>
+          <div className="input-group">
+            <label>Password</label>
             <input
               type="password"
-              id="password"
               value={password}
               onChange={handlePasswordChange}
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:shadow-outline"
+              className="input-field"
+              placeholder="Enter your password"
             />
           </div>
-          <div className="flex items-center justify-between">
-            <button
-              type="submit"
-              className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-            >
-              Sign In
-            </button>
+          <div className="input-group remember-me">
+            <input
+              type="checkbox"
+              checked={rememberMe}
+              onChange={() => setRememberMe(!rememberMe)}
+            />
+            <label>Remember Me</label>
           </div>
+          <a href="#" className="forgot-password">Forgot Password?</a>
+          {!isValid && <p className="error-message">{error}</p>}
+          <button type="submit" className="submit-btn" disabled={isLoading}>
+            {isLoading ? <span className="spinner"></span> : 'Submit'}
+          </button>
         </form>
       </div>
     </div>
   );
 }
 
-export default Login;
+export default App;

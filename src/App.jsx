@@ -7,21 +7,19 @@ import 'tailwindcss/tailwind.css';
 
 const App = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const [contentState, setContentState] = useState('default');
 
   const toggleSidebar = () => {
     setIsOpen(!isOpen);
-    setContentState(isOpen ? 'default' : 'sidebar-opened');
   };
 
   return (
-    <main>
+    <main >
       <Nav />
       <section>
         <Sidebar isOpen={isOpen} toggleSidebar={toggleSidebar} />
       </section>
       <section className={`flex-grow transition-all duration-300 ${isOpen ? 'ml-64' : 'ml-0'}`}>
-        <Content isOpen={isOpen} contentState={contentState} />
+        <Content isOpen={isOpen} />
       </section>
       <section>
         <Footer />
