@@ -10,10 +10,12 @@ const Sidebar = () => {
   }
 
   return (
-    <div className='fixed'>
-      <button className="toggle-button" onClick={toggleSidebar}>
-        <FaBars />
-      </button>
+    <div>
+      <div className="toggle-button-container">
+        <button className="toggle-button" onClick={toggleSidebar}>
+          {isOpen ? <FaArrowLeft /> : <FaArrowRight />}
+        </button>
+      </div>
       <div className={`sidebar ${isOpen ? 'open' : ''}`}>
         <ul>
           <li><FaUser /><span>Create User</span></li>
