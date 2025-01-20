@@ -4,27 +4,20 @@ import Sidebar from './components/Sidebar';
 import Content from './components/Content';
 import Footer from './components/Footer';
 import 'tailwindcss/tailwind.css';
+import {Route, Routes} from 'react-router-dom';
+import Home from './pages/Home';
+import OtpVerification from './pages/OtpVerification';
+
 
 const App = () => {
-  const [isOpen, setIsOpen] = useState(false);
 
-  const toggleSidebar = () => {
-    setIsOpen(!isOpen);
-  };
 
   return (
-    <main >
-      <Nav />
-      <section>
-        <Sidebar isOpen={isOpen} toggleSidebar={toggleSidebar} />
-      </section>
-      <section className={`flex-grow transition-all duration-300 ${isOpen ? 'ml-64' : 'ml-0'}`}>
-        <Content isOpen={isOpen} />
-      </section>
-      <section>
-        <Footer />
-      </section>
-    </main>
+    <Routes>
+      <Route path='/' element={<Home />} />
+      <Route path='/Otp' element={<OtpVerification />} />
+      
+    </Routes>
   );
 };
 
