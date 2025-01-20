@@ -29,19 +29,38 @@
   margin-top: 5px;
 }
 
+.toggle-button-container {
+  position: fixed;
+  top: 50%;
+  left: 0;
+  transform: translateY(-50%);
+  z-index: 1000;
+  width: 30px;
+  height: 100px;
+  background-color: transparent;
+}
+
 .toggle-button {
-    position: fixed;
-    top: 15px;
-    left: 15px;
-    background-color: #000000;
-    color: white;
-    border: none;
-    padding: 20px; /* Increased padding */
-    font-size: 24px; /* Increased font size */
-    cursor: pointer;
-    z-index: 1000;
+  position: absolute;
+  top: 50%;
+  left: -30px;
+  transform: translateY(-50%);
+  background-color: #000;
+  color: rgb(0, 0, 0);
+  border: none;
+  padding: 10px;
+  font-size: 24px;
+  cursor: pointer;
+  transition: left 0.3s, background-color 0.3s, box-shadow 0.3s;
+  border-radius: 50%;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.toggle-button-container:hover .toggle-button {
+  left: 0;
 }
 
 .toggle-button:hover {
   background-color: #000000;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
 }

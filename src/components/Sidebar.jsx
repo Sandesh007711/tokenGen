@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { FaUser, FaCar, FaDollarSign, FaKey, FaChartBar, FaBars } from 'react-icons/fa'
+import { FaUser, FaCar, FaDollarSign, FaKey, FaChartBar, FaArrowLeft, FaArrowRight } from 'react-icons/fa'
 import './Sidebar.css'
 
 const Sidebar = () => {
@@ -10,7 +10,7 @@ const Sidebar = () => {
   }
 
   return (
-    <div className='fixed bg-black'>
+    <div className='fixed'>
       <button className="toggle-button" onClick={toggleSidebar}>
         <FaBars />
       </button>
