@@ -1,5 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { FaUser, FaCar, FaKey, FaTruckLoading, FaArrowLeft, FaArrowRight, FaChevronDown, FaList, FaEdit, FaTrashAlt } from 'react-icons/fa';
+import { Link } from 'react-router-dom';
 
 const Sidebar = ({ isOpen, toggleSidebar }) => {
   const sidebarRef = useRef(null);
@@ -20,10 +21,10 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
       <div ref={sidebarRef} className={`fixed top-30 left-0 h-full w-64 bg-gradient-to-b from-black via-slate-800 to-white  text-white transition-transform transform ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="fixed flex-col items-center justify-center h-full p-4">
           <ul className="space-y-4">
-            <li className="flex items-center space-x-2 hover:bg-gray-700 p-2 rounded"><FaUser /><span>Create User</span></li>
+            <li className="flex items-center space-x-2 hover:bg-gray-700 p-2 rounded"><FaUser /><Link to="/create-user"><span>Create User</span></Link></li>
             <li className="flex flex-col space-y-2">
               <div className="flex items-center space-x-2 hover:bg-gray-700 p-2 rounded cursor-pointer" onClick={() => setIsVehicalRateOpen(!isVehicalRateOpen)}>
-                <FaCar /><span>Vehical Rate</span><FaChevronDown className={`transform transition-transform ${isVehicalRateOpen ? 'rotate-180' : ''}`} />
+                <FaCar /><Link to="/vehicle-rate"><span>Vehical Rate</span></Link><FaChevronDown className={`transform transition-transform ${isVehicalRateOpen ? 'rotate-180' : ''}`} />
               </div>
               {/* Show subsections under Vehical Rate if isVehicalRateOpen is true */}
               {isVehicalRateOpen && (
@@ -35,7 +36,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
             </li>
             <li className="flex flex-col space-y-2">
               <div className="flex items-center space-x-2 hover:bg-gray-700 p-2 rounded cursor-pointer" onClick={() => setIsTokenReportOpen(!isTokenReportOpen)}>
-                <FaKey /><span>Token Report</span><FaChevronDown className={`transform transition-transform ${isTokenReportOpen ? 'rotate-180' : ''}`} />
+                <FaKey /><Link to="/token-report"><span>Token Report</span></Link><FaChevronDown className={`transform transition-transform ${isTokenReportOpen ? 'rotate-180' : ''}`} />
               </div>
               {/* Show subsections under Token Report if isTokenReportOpen is true */}
               {isTokenReportOpen && (
@@ -47,7 +48,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
                 </ul>
               )}
             </li>
-            <li className="flex items-center space-x-2 hover:bg-gray-700 p-2 rounded"><FaTruckLoading /><span>Loaded</span></li>
+            <li className="flex items-center space-x-2 hover:bg-gray-700 p-2 rounded"><FaTruckLoading /><Link to="/loaded"><span>Loaded</span></Link></li>
           </ul>
         </div>
       </div>

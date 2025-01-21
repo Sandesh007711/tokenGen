@@ -2,17 +2,15 @@ import { useState } from 'react'
 import React from 'react'
 import Nav from '../components/Nav'
 import Sidebar from '../components/Sidebar'
-import Content from './Content'
 import Footer from '../components/Footer'
-import Route from '../routes/I_Routes'
+import I_Routes from '../routes/I_Routes'
 
 const Home = () => {
+  const [isOpen, setIsOpen] = useState(false)
 
-    const [isOpen, setIsOpen] = useState(false);
-
-    const toggleSidebar = () => {
-      setIsOpen(!isOpen);
-    };
+  const toggleSidebar = () => {
+    setIsOpen(!isOpen)
+  }
 
   return (
     <main>
@@ -21,7 +19,7 @@ const Home = () => {
         <Sidebar isOpen={isOpen} toggleSidebar={toggleSidebar} />
       </section>
       <section className={`px-10 flex-grow transition-all duration-300 ${isOpen ? 'ml-64' : 'ml-0'}`}>
-        <Content isOpen={isOpen}/>
+        <I_Routes isOpen={isOpen} />
       </section>
       <section>
         <Footer />
