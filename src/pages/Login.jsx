@@ -92,6 +92,7 @@ const Login = () => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
+              {/* eye Password input */}
               <button
                 type="button"
                 className="absolute inset-y-0 right-0 px-3 py-8 text-gray-600 hover:text-gray-900 focus:shadow-outline transition duration-300 ease-in-out transform hover:scale-125"
