@@ -17,7 +17,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
       >
         {isOpen ? <FaArrowLeft /> : <FaArrowRight />}
       </button>
-      <div ref={sidebarRef} className={`fixed top-30 left-0 h-full w-64 bg-black text-white transition-transform transform ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+      <div ref={sidebarRef} className={`fixed top-30 left-0 h-full w-64 bg-gradient-to-b from-black via-slate-800 to-white  text-white transition-transform transform ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="fixed flex-col items-center justify-center h-full p-4">
           <ul className="space-y-4">
             <li className="flex items-center space-x-2 hover:bg-gray-700 p-2 rounded"><FaUser /><span>Create User</span></li>

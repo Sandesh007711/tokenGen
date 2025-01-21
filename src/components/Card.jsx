@@ -1,33 +1,58 @@
 import React from 'react';
+import DataTable from 'react-data-table-component';
 
 const Card = ({ data }) => {
+  const columns = Object.keys(data[0]).map((key) => ({
+    name: key,
+    selector: row => row[key],
+    sortable: true,
+  }));
+
+  const customStyles = {
+    header: {
+      style: {
+        backgroundColor: '#f8f9fa', // Tailwind: bg-gray-100
+        color: '#343a40', // Tailwind: text-gray-800
+      },
+    },
+    headRow: {
+      style: {
+        backgroundColor: '#343a40', // Tailwind: bg-gray-800
+        color: '#ffffff', // Tailwind: text-white
+      },
+    },
+    headCells: {
+      style: {
+        color: '#ffffff', // Tailwind: text-white
+      },
+    },
+    rows: {
+      style: {
+        backgroundColor: '#ffffff', // Tailwind: bg-white
+        color: '#343a40', // Tailwind: text-gray-800
+        '&:nth-of-type(odd)': {
+          backgroundColor: '#f8f9fa', // Tailwind: bg-gray-100
+        },
+      },
+    },
+    pagination: {
+      style: {
+        backgroundColor: '#f8f9fa', // Tailwind: bg-gray-100
+        color: '#343a40', // Tailwind: text-gray-800
+      },
+    },
+  };
+
   return (
     <div className="bg-white shadow-md rounded-lg p-4 m-4">
-      <table className="min-w-full divide-y divide-gray-200">
-        <thead className="bg-gray-50">
-          <tr>
-            {Object.keys(data[0]).map((key) => (
-              <th
-                key={key}
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-              >
-                {key}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody className="bg-white divide-y divide-gray-200 max-h-60 overflow-y-auto block">
-          {data.map((row, index) => (
-            <tr key={index} className="table w-full table-fixed">
-              {Object.values(row).map((value, i) => (
-                <td key={i} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {value}
-                </td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <DataTable
+        columns={columns}
+        data={data}
+        pagination
+        highlightOnHover
+        striped
+        customStyles={customStyles}
+      />
     </div>
   );
 };
