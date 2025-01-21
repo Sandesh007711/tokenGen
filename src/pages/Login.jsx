@@ -1,21 +1,41 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import logo from '../assets/loginLogo.gif'; // Adjust the path as necessary
-import loginLogo from '../assets/loginLogo.gif'; // Adjust the path as necessary
+import loginLogo from '../assets/loginLogo.gif';
 
 const Login = () => {
   const [isAdminLogin, setIsAdminLogin] = useState(true);
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
   const navigate = useNavigate();
 
+  // Hardcoded credentials for demonstration
+  const adminCredentials = { username: 'admin', password: 'admin123' };
+  const operatorCredentials = { username: 'operator', password: 'operator123' };
+
   const handleSignIn = () => {
-    navigate('/otp-verification');
+    if (
+      (isAdminLogin && username === adminCredentials.username && password === adminCredentials.password) ||
+      (!isAdminLogin && username === operatorCredentials.username && password === operatorCredentials.password)
+    ) {
+      navigate('/otp-verification');
+    } else {
+      setError('Invalid credentials');
+    }
+  };
+
+  const handleSwitchLogin = () => {
+    setIsAdminLogin(!isAdminLogin);
+    setUsername('');
+    setPassword('');
+    setError('');
   };
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-r from-gray-800 to-black p-8">
       {/* Welcome text with fade-in effect */}
       <h1 className="text-5xl font-bold text-gray-300 fade-in text-center mb-8">
-        Welcome Back!
+        Welcome!
       </h1>
       {/* Login card */}
       <div className="bg-black p-8 rounded-lg shadow-lg w-full max-w-md">
@@ -25,9 +45,11 @@ const Login = () => {
         </div>
         {/* Login form title */}
         <div className="mb-6">
-          <h2 className="text-3xl font-bold mb-6 text-center text-white">
+          <h2 className="text-3xl font-bold mb-2 text-center text-white">
             {isAdminLogin ? 'Admin Login' : 'Operator Login'}
           </h2>
+          {/* Error message */}
+          {error && <p className="text-red-500 text-4xs italic mb-4 text-center">{error}</p>}
           {/* Login form */}
           <form>
             {/* Username input */}
@@ -40,6 +62,8 @@ const Login = () => {
                 id="username"
                 type="text"
                 placeholder={isAdminLogin ? 'Admin Username' : 'Operator Username'}
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
               />
             </div>
             {/* Password input */}
@@ -52,6 +76,8 @@ const Login = () => {
                 id="password"
                 type="password"
                 placeholder="******************"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
               />
             </div>
             {/* Sign In and Switch Login Type buttons */}
@@ -66,7 +92,7 @@ const Login = () => {
               <button
                 className="text-xl font-bold text-gray-500 transition duration-300 ease-in-out transform hover:scale-105 hover:text-white"
                 type="button"
-                onClick={() => setIsAdminLogin(!isAdminLogin)}
+                onClick={handleSwitchLogin}
               >
                 {isAdminLogin ? 'Operator Login' : 'Admin Login'}
               </button>
