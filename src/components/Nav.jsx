@@ -25,7 +25,7 @@ const Nav = () => {
         
         <Link to="/"> 
           <h1 className="text-white text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold rounded-xl px-2 transition-transform duration-300 hover:scale-110 hover:shadow-lg hover:shadow-slate-400">
-            Ramjee Singh & Co.
+            Ramjee Singh And Co.
           </h1>
           </Link>
         </div>
