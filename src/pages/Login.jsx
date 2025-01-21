@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import logo from '../assets/logo.gif'; // Adjust the path as necessary
+import logo from '../assets/loginLogo.gif'; // Adjust the path as necessary
 import loginLogo from '../assets/loginLogo.gif'; // Adjust the path as necessary
 
 const Login = () => {
