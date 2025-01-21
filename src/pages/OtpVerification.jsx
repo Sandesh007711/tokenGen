@@ -63,8 +63,7 @@ const OtpVerification = () => {
     // Check if the OTP is correct
     if (otpValue === "1234") {
       console.log("OTP Verified:", otpValue);
-      // Navigate to the homepage
-      navigate("/homepage");
+      navigate("/");
     } else {
       // Set error message
       setError("Invalid OTP");
