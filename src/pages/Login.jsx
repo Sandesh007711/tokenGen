@@ -15,13 +15,13 @@ const Login = () => {
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-r from-gray-800 to-black p-8">
       {/* Welcome text with fade-in effect */}
       <h1 className="text-5xl font-bold text-gray-300 fade-in text-center mb-8">
-        Welcome
+        Welcome Back!
       </h1>
       {/* Login card */}
       <div className="bg-black p-8 rounded-lg shadow-lg w-full max-w-md">
         {/* Logo image */}
         <div className="flex justify-center mb-6">
-          <img src={loginLogo} alt="Login Logo" className="w-24 h-24" />
+          <img src={loginLogo} alt="Login Logo" className="w-[300px] h-[300px]" />
         </div>
         {/* Login form title */}
         <div className="mb-6">
