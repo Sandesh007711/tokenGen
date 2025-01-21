@@ -1,10 +1,12 @@
 import React from 'react'
-import './Footer.css' // Import the CSS file for styling
+
 
 const Footer = () => {
   return (
-    <footer className="footer">
-      <p>COPYRIGHT &copy; KOCHAS POWER PVT. LTD. ALL RIGHTS RESERVED - 2025</p>
+    <footer className="footer_w">
+      <p className="m-0 font-bold tracking-wide">
+        COPYRIGHT &copy; KOCHAS POWER PVT. LTD. ALL RIGHTS RESERVED - 2025
+        </p>
     </footer>
   )
 }
