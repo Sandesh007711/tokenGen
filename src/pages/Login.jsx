@@ -33,15 +33,22 @@ const Login = () => {
     setError('');
   };
 
+
   const togglePasswordVisibility = () => {
     setShowPassword(!showPassword);
+  };
+
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      handleSignIn();
+    }
   };
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-r from-gray-800 to-black p-8">
       {/* Welcome text with fade-in effect */}
       <h1 className="text-5xl font-bold text-gray-300 fade-in text-center mb-8">
-        Welcome!
+        Welcome Back!
       </h1>
       {/* Login card */}
       <div className="bg-black p-8 rounded-lg shadow-lg w-full max-w-md">
@@ -57,7 +64,7 @@ const Login = () => {
           {/* Error message */}
           {error && <p className="text-red-500 text-4xs italic mb-4 text-center">{error}</p>}
           {/* Login form */}
-          <form>
+          <form onKeyPress={handleKeyPress}>
             {/* Username input */}
             <div className="mb-4">
               <label className="block text-white text-sm font-bold mb-2" htmlFor="username">
