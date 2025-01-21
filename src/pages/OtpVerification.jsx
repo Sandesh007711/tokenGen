@@ -1,40 +1,76 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 
 const OtpVerification = () => {
+  const [otp, setOtp] = useState(["", "", "", ""]);
+  const inputRefs = useRef([]);
   const navigate = useNavigate();
-  const [otp, setOtp] = useState('');
-  const [error, setError] = useState('');
 
-  const handleSubmit = (event) => {
-    event.preventDefault();
-    // Simple OTP verification logic
-    if (otp === '123456') {
-      // If OTP is correct, navigate to the home page
-      navigate('/');
+  const handleChange = (e, index) => {
+    const value = e.target.value;
+    if (/^[0-9]$/.test(value)) {
+      const newOtp = [...otp];
+      newOtp[index] = value;
+      setOtp(newOtp);
+      if (index < 3) {
+        inputRefs.current[index + 1].focus();
+      }
+    } else if (value === "") {
+      const newOtp = [...otp];
+      newOtp[index] = "";
+      setOtp(newOtp);
+    }
+  };
+
+  const handleKeyDown = (e, index) => {
+    if (e.key === "Backspace") {
+      const newOtp = [...otp];
+      newOtp[index] = "";
+      setOtp(newOtp);
+      if (index > 0) {
+        inputRefs.current[index - 1].focus();
+      }
+    }
+  };
+
+  const handlePaste = (e) => {
+    const paste = e.clipboardData.getData("text");
+    if (/^[0-9]{4}$/.test(paste)) {
+      const newOtp = paste.split("");
+      setOtp(newOtp);
+      inputRefs.current[3].focus();
+    }
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const otpValue = otp.join("");
+    if (otpValue === "1234") {
+      console.log("OTP Verified:", otpValue);
+      navigate("/homepage");
     } else {
-      // If OTP is incorrect, set an error message
-      setError('Invalid OTP');
+      console.log("Invalid OTP");
     }
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-100">
+    <div className="flex items-center justify-center min-h-screen bg-gradient-to-r from-blue-400 to-purple-500">
       <div className="bg-white p-8 rounded shadow-md w-full max-w-md">
         <h2 className="text-2xl font-bold mb-6 text-center">OTP Verification</h2>
-        {error && <p className="text-red-500 text-center mb-4">{error}</p>}
         <form onSubmit={handleSubmit}>
-          <div className="mb-4">
-            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="otp">
-              OTP
-            </label>
-            <input
-              type="text"
-              id="otp"
-              value={otp}
-              onChange={(e) => setOtp(e.target.value)}
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-            />
+          <div className="flex justify-center mb-4 space-x-2" onPaste={handlePaste}>
+            {otp.map((digit, index) => (
+              <input
+                key={index}
+                type="text"
+                value={digit}
+                onChange={(e) => handleChange(e, index)}
+                onKeyDown={(e) => handleKeyDown(e, index)}
+                ref={(el) => (inputRefs.current[index] = el)}
+                maxLength="1"
+                className="w-12 h-12 text-center text-lg border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            ))}
           </div>
           <div className="flex items-center justify-between">
             <button
