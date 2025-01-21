@@ -5,6 +5,12 @@ import profile from "../assets/profile.png";
 import home from "../assets/home.png";
 
 const Nav = () => {
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
+  const toggleDropdown = () => {
+    setIsDropdownOpen(!isDropdownOpen);
+  };
+
   return (
     <header className="bg-gradient-to-l from-slate-200 via-slate-700 to-black lg:py-4 md:py-2 sm:py-1 py-[2px]">
       <div className="flex justify-between items-center mx-5">
@@ -29,38 +35,36 @@ const Nav = () => {
             <img
               src={home}
               alt="Home"
-              className="h-[20px] w-[20px] sm:h-[40px] sm:w-[40px] md:h-[50px] md:w-[50px] rounded-full"
+              className="h-[20px] w-[20px] sm:h-[40px] sm:w-[40px] md:h-[50px] md:w-[50px] rounded-xl"
             />
-            <span
-              className="absolute bottom-full left-1/2 transform -translate-x-1/2 
-                      mb-2 px-2 py-1 text-xs text-white bg-black rounded 
-                      opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-            >
+            <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-black rounded opacity-0 group-hover:opacity-100 transition-opacity duration-300">
               Home
             </span>
           </button>
 
-          <button className="transition-transform duration-300 hover:scale-110 hover:shadow-lg hover:shadow-slate-700 rounded-full group">
-            <img
-              src={profile}
-              alt="Profile"
-              className="h-[20px] w-[20px] sm:h-[40px] sm:w-[40px] md:h-[50px] md:w-[50px] rounded-xl"
-            />
-            <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-black rounded opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-              Profile
-            </span>
-          </button>
-
-          <button className="bg-slate-700 rounded-full p-1 sm:p-2 transition-transform duration-300 hover:scale-110 hover:shadow-lg hover:shadow-slate-400 group">
-            <img
-              src={logoutIcon}
-              alt="Logout"
-              className="h-[20px] w-[20px] sm:h-[30px] sm:w-[30px] md:h-[45px] md:w-[45px] rounded-xl"
-            />
-            <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-black rounded opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-              Logout
-            </span>
-          </button>
+          <div className="relative">
+            <button
+              className="transition-transform duration-300 hover:scale-110 hover:shadow-lg hover:shadow-slate-700 rounded-full group"
+              onClick={toggleDropdown}
+            >
+              <img
+                src={profile}
+                alt="Profile"
+                className="h-[20px] w-[20px] sm:h-[40px] sm:w-[40px] md:h-[50px] md:w-[50px] rounded-xl"
+              />
+              <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-black rounded opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                Profile
+              </span>
+            </button>
+            {isDropdownOpen && (
+              <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10">
+                <button className="flex items-center w-full px-2 py-1 text-sm text-gray-700 hover:bg-gray-100">
+                  <img src={logoutIcon} alt="Logout" className="h-5 w-5 mr-2" />
+                  Logout
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </header>
