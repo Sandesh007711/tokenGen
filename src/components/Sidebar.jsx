@@ -10,7 +10,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
     <div className="relative">
       {/* Sliding button */}
       <button
-        className={`fixed top-1/2 transform -translate-y-1/2 bg-gradient-to-r from-purple-400 via-pink-500 to-red-500 text-white p-2 rounded-full shadow-lg hover:scale-110 transition-transform duration-300 ease-in-out ${
+        className={`fixed top-1/2 transform -translate-y-1/2 bg-gradient-to-r from-slate-500 via-slate-800 to-black text-white p-2 rounded-full shadow-lg hover:scale-110 transition-transform duration-300 ease-in-out ${
           isOpen ? 'left-64' : 'left-0'
         }`}
         onClick={toggleSidebar}
