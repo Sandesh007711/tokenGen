@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import loginLogo from '../assets/loginLogo.gif';
+import { PiEyeClosedBold , PiEyeBold } from 'react-icons/pi'; // Import eye icons
 
 const Login = () => {
   const [isAdminLogin, setIsAdminLogin] = useState(true);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
 
   // Hardcoded credentials for demonstration
@@ -31,11 +33,22 @@ const Login = () => {
     setError('');
   };
 
+
+  const togglePasswordVisibility = () => {
+    setShowPassword(!showPassword);
+  };
+
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      handleSignIn();
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-r from-gray-800 to-black p-8">
       {/* Welcome text with fade-in effect */}
       <h1 className="text-5xl font-bold text-gray-300 fade-in text-center mb-8">
-        Welcome!
+        Welcome Back!
       </h1>
       {/* Login card */}
       <div className="bg-black p-8 rounded-lg shadow-lg w-full max-w-md">
@@ -51,7 +64,7 @@ const Login = () => {
           {/* Error message */}
           {error && <p className="text-red-500 text-4xs italic mb-4 text-center">{error}</p>}
           {/* Login form */}
-          <form>
+          <form onKeyPress={handleKeyPress}>
             {/* Username input */}
             <div className="mb-4">
               <label className="block text-white text-sm font-bold mb-2" htmlFor="username">
@@ -67,18 +80,25 @@ const Login = () => {
               />
             </div>
             {/* Password input */}
-            <div className="mb-6">
+            <div className="mb-6 relative">
               <label className="block text-white text-sm font-bold mb-2" htmlFor="password">
                 Password
               </label>
               <input
                 className="shadow appearance-none border rounded w-full py-2 px-3 text-black mb-3 leading-tight focus:outline-none focus:shadow-outline transition duration-300 ease-in-out transform hover:scale-105"
                 id="password"
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 placeholder="******************"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
+              <button
+                type="button"
+                className="absolute inset-y-0 right-0 px-3 py-2 text-gray-600"
+                onClick={togglePasswordVisibility}
+              >
+                {showPassword ? < PiEyeBold size={24} /> : < PiEyeClosedBold size={24} />} 
+              </button>
             </div>
             {/* Sign In and Switch Login Type buttons */}
             <div className="flex items-center justify-between">
