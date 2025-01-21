@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import loginLogo from '../assets/loginLogo.gif';
+import { PiEyeClosedBold , PiEyeBold } from 'react-icons/pi'; // Import eye icons
 
 const Login = () => {
   const [isAdminLogin, setIsAdminLogin] = useState(true);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
 
   // Hardcoded credentials for demonstration
@@ -29,6 +31,10 @@ const Login = () => {
     setUsername('');
     setPassword('');
     setError('');
+  };
+
+  const togglePasswordVisibility = () => {
+    setShowPassword(!showPassword);
   };
 
   return (
@@ -67,18 +73,25 @@ const Login = () => {
               />
             </div>
             {/* Password input */}
-            <div className="mb-6">
+            <div className="mb-6 relative">
               <label className="block text-white text-sm font-bold mb-2" htmlFor="password">
                 Password
               </label>
               <input
                 className="shadow appearance-none border rounded w-full py-2 px-3 text-black mb-3 leading-tight focus:outline-none focus:shadow-outline transition duration-300 ease-in-out transform hover:scale-105"
                 id="password"
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 placeholder="******************"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
+              <button
+                type="button"
+                className="absolute inset-y-0 right-0 px-3 py-2 text-gray-600"
+                onClick={togglePasswordVisibility}
+              >
+                {showPassword ? < PiEyeBold size={24} /> : < PiEyeClosedBold size={24} />} 
+              </button>
             </div>
             {/* Sign In and Switch Login Type buttons */}
             <div className="flex items-center justify-between">
