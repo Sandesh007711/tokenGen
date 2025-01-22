@@ -15,10 +15,10 @@ const Home = () => {
   return (
     <main>
       <Nav className="fixed top-0 w-full z-50" />
-      <section className='pt-[142px]'> {/* Add padding to avoid content being hidden behind the navbar */}
+      <section className='lg:pt-[142px] pt-[84px]'> {/* Add padding to avoid content being hidden behind the navbar */}
         <Sidebar isOpen={isOpen} toggleSidebar={toggleSidebar} />
       </section>
-      <section className={`px-10 flex-grow transition-all duration-300 ${isOpen ? 'ml-64' : 'ml-0'}`}>
+      <section className={`px-5 lg:px-10 flex-grow transition-all duration-300 ${isOpen ? 'ml-64' : 'ml-0'}`}>
         <I_Routes isOpen={isOpen} />
       </section>
       <section>
