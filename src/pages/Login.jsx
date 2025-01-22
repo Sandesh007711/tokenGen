@@ -40,44 +40,48 @@ const Login = () => {
     setError('');
   };
 
-  const togglePasswordVisibility = () => {
-    setShowPassword(!showPassword);
-  };
-
   const handleKeyPress = (e) => {
     if (e.key === 'Enter') {
       handleSignIn();
     }
   };
 
+  const togglePasswordVisibility = () => {
+    setShowPassword(!showPassword);
+  };
+
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-r from-gray-800 to-black p-8">
-      {/* Welcome text with fade-in effect */}
-      <h1 className="text-5xl font-bold text-gray-300 fade-in text-center mb-8">
-        Welcome Back!
-      </h1>
-      {/* Login card */}
-      <div className="bg-black p-8 rounded-lg shadow-lg w-full max-w-md">
-        {/* Logo image */}
-        <div className="flex justify-center mb-6">
-          <img src={loginLogo} alt="Login Logo" className="w-[300px] h-[300px]" />
-        </div>
-        {/* Login form title */}
-        <div className="mb-6">
-          <h2 className="text-3xl font-bold mb-2 text-center text-white">
-            {isAdminLogin ? 'Admin Login' : 'Operator Login'}
-          </h2>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-gray-800 to-black p-4">
+      <div className="w-full max-w-xl bg-gradient-to-b from-gray-800 to-gray-900 rounded-2xl shadow-2xl overflow-hidden">
+        {/* Left side content */}
+        <div className="p-8">
+          {/* Logo and welcome section */}
+          <div className="text-center mb-8">
+            <img src={loginLogo} alt="Login Logo" className="w-32 h-32 mx-auto mb-6 rounded-full shadow-lg" />
+            <h1 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-slate-300 to-slate-500 mb-2">
+              Welcome Back!
+            </h1>
+            <h2 className="text-2xl font-semibold text-slate-400">
+              {isAdminLogin ? 'Admin Portal' : 'Operator Portal'}
+            </h2>
+          </div>
+
           {/* Error message */}
-          {error && <p className="text-red-500 text-4xs italic mb-4 text-center">{error}</p>}
+          {error && (
+            <div className="mb-4 p-3 bg-red-900/50 border border-red-500 rounded-lg">
+              <p className="text-red-400 text-sm text-center">{error}</p>
+            </div>
+          )}
+
           {/* Login form */}
-          <form onKeyPress={handleKeyPress}>
+          <form onKeyPress={handleKeyPress} className="space-y-6">
             {/* Username input */}
-            <div className="mb-4">
-              <label className="block text-white text-sm font-bold mb-2" htmlFor="username">
+            <div>
+              <label className="block text-gray-300 text-sm font-bold mb-2" htmlFor="username">
                 Username
               </label>
               <input
-                className="shadow appearance-none border rounded w-full py-2 px-3 text-black leading-tight focus:outline-none focus:shadow-outline transition duration-300 ease-in-out transform hover:scale-105"
+                className="w-full px-4 py-3 bg-gray-900 text-gray-300 rounded-lg border border-gray-700 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 transition-all duration-300"
                 id="username"
                 type="text"
                 placeholder={isAdminLogin ? 'Admin Username' : 'Operator Username'}
@@ -85,43 +89,51 @@ const Login = () => {
                 onChange={(e) => setUsername(e.target.value)}
               />
             </div>
-            {/* Password input */}
-            <div className="mb-6 relative">
-              <label className="block text-white text-sm font-bold mb-2" htmlFor="password">
+
+            {/* Password input with toggle */}
+            <div>
+              <label className="block text-gray-300 text-sm font-bold mb-2" htmlFor="password">
                 Password
               </label>
-              <input
-                className="shadow appearance-none border rounded w-full py-2 px-3 text-black mb-3 leading-tight focus:outline-none focus:shadow-outline transition duration-300 ease-in-out transform hover:scale-105"
-                id="password"
-                type={showPassword ? 'text' : 'password'}
-                placeholder="******************"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-              {/* eye Password input */}
-              <button
-                type="button"
-                className="absolute inset-y-0 right-0 px-3 py-8 text-gray-600 hover:text-gray-900 focus:shadow-outline transition duration-300 ease-in-out transform hover:scale-125"
-                onClick={togglePasswordVisibility}
-              >
-                {showPassword ? < PiEyeBold size={24} /> : < PiEyeClosedBold size={24} />} 
-              </button>
+              <div className="relative">
+                <input
+                  className="w-full px-4 py-3 bg-gray-900 text-gray-300 rounded-lg border border-gray-700 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 transition-all duration-300 [&::-ms-reveal]:hidden [&::-webkit-contacts-auto-fill-button]:hidden [&::-webkit-credentials-auto-fill-button]:hidden [&::-webkit-inner-spin-button]:hidden"
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Enter your password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  autoComplete="new-password"
+                />
+                <button
+                  type="button"
+                  onClick={togglePasswordVisibility}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-200 focus:outline-none"
+                >
+                  {showPassword ? (
+                    <PiEyeBold className="w-5 h-5" />
+                  ) : (
+                    <PiEyeClosedBold className="w-5 h-5" />
+                  )}
+                </button>
+              </div>
             </div>
-            {/* Sign In and Switch Login Type buttons */}
-            <div className="flex items-center justify-between">
+
+            {/* Buttons */}
+            <div className="flex flex-col space-y-4">
               <button
-                className="bg-white hover:bg-gray-300 text-black font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline transition duration-300 ease-in-out transform hover:scale-105"
                 type="button"
                 onClick={handleSignIn}
+                className="w-full py-3 bg-gradient-to-r from-slate-400 via-gray-500 to-black hover:from-black hover:via-gray-500 hover:to-slate-400 text-white font-bold rounded-lg transition duration-300 ease-in-out transform hover:scale-[1.02]"
               >
                 Sign In
               </button>
               <button
-                className="text-xl font-bold text-gray-500 transition duration-300 ease-in-out transform hover:scale-105 hover:text-white"
                 type="button"
                 onClick={handleSwitchLogin}
+                className="text-slate-400 hover:text-white transition-colors duration-300 text-sm font-semibold"
               >
-                {isAdminLogin ? 'Operator Login' : 'Admin Login'}
+                Switch to {isAdminLogin ? 'Operator Login' : 'Admin Login'}
               </button>
             </div>
           </form>
