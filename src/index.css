@@ -15,15 +15,23 @@
     animation: fadeIn 2s ease-in-out;
   }
   
-  body {
-    background-color: white;
+  @keyframes gradientFlow {
+    0% {
+      background-position: 0% 50%;
+    }
+    50% {
+      background-position: 100% 50%;
+    }
+    100% {
+      background-position: 0% 50%;
+    }
   }
   
-
-
+  body {
+    background-color: #7da8add5;
+  }
   
-
-.footer_w {
+  .footer_w {
     @apply bg-gradient-to-br from-gray-900 to-gray-700
      text-white text-center py-2 
      fixed bottom-0 w-full shadow-md font-sans text-sm;
