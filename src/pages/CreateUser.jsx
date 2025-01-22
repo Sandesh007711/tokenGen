@@ -69,7 +69,7 @@ const CreateUser = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-white p-8">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100 p-8">
       <div className="bg-white p-8 rounded shadow-md w-full max-w-4xl mb-8">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-2xl font-bold">User List</h2>
@@ -84,7 +84,7 @@ const CreateUser = () => {
           <table className="min-w-full bg-white">
             <thead>
               <tr>
-                <th className="py-2 px-4 border-b">Serial no.</th>
+                <th className="py-2 px-4 border-b">#</th>
                 <th className="py-2 px-4 border-b">User Name</th>
                 <th className="py-2 px-4 border-b">Mobile Number</th>
                 <th className="py-2 px-4 border-b">Password</th>
