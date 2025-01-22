@@ -1,16 +1,16 @@
-import { useState } from 'react'
-import React from 'react'
-import Nav from '../components/Nav'
-import Sidebar from '../components/Sidebar'
-import Footer from '../components/Footer'
-import I_Routes from '../routes/I_Routes'
+import { useState } from 'react';
+import React from 'react';
+import Nav from '../components/Nav';
+import Sidebar from '../components/Sidebar';
+import Footer from '../components/Footer';
+import I_Routes from '../routes/I_Routes';
 
 const Home = () => {
-  const [isOpen, setIsOpen] = useState(false)
+  const [isOpen, setIsOpen] = useState(false);
 
   const toggleSidebar = () => {
-    setIsOpen(!isOpen)
-  }
+    setIsOpen(!isOpen);
+  };
 
   return (
     <main>
@@ -18,14 +18,14 @@ const Home = () => {
       <section className='lg:pt-[142px] pt-[84px]'> {/* Add padding to avoid content being hidden behind the navbar */}
         <Sidebar isOpen={isOpen} toggleSidebar={toggleSidebar} />
       </section>
-      <section className={`px-5 lg:px-10 flex-grow transition-all duration-300 ${isOpen ? 'ml-64' : 'ml-0'}`}>
+      <section className={`px-5 lg:px-10 flex-grow transition-all duration-300 ${isOpen ? 'lg:ml-64 hidden lg:block' : 'ml-0'}`}>
         <I_Routes isOpen={isOpen} />
       </section>
       <section>
         <Footer />
       </section>
     </main>
-  )
-}
+  );
+};
 
-export default Home
+export default Home;
