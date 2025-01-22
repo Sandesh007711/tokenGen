@@ -1,8 +1,53 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import DataTable from 'react-data-table-component';
 import QRCode from 'qrcode';
 
-const Card = ({ data }) => {
+const Card = ({ userId }) => {
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [totalRows, setTotalRows] = useState(0);
+  const [perPage, setPerPage] = useState(10);
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const fetchComments = async (page) => {
+    setLoading(true);
+    try {
+      const response = await fetch(
+        `https://jsonplaceholder.typicode.com/comments?postId=${userId}&_page=${page}&_limit=${perPage}`
+      );
+      const total = response.headers.get('x-total-count');
+      const json = await response.json();
+      
+      const formattedData = json.map(item => ({
+        id: item.id,
+        name: item.name,
+        email: item.email,
+        comment: item.body.substring(0, 50) + '...'
+      }));
+
+      setData(formattedData);
+      setTotalRows(parseInt(total));
+      setLoading(false);
+    } catch (error) {
+      console.error('Error:', error);
+      setLoading(false);
+    }
+  };
+
+  const handlePageChange = page => {
+    setCurrentPage(page);
+    fetchComments(page);
+  };
+
+  const handlePerRowsChange = async (newPerPage, page) => {
+    setPerPage(newPerPage);
+    fetchComments(page);
+  };
+
+  useEffect(() => {
+    fetchComments(1);
+  }, [userId]);
+
   const generateQR = async (data) => {
     try {
       const qrData = JSON.stringify({
@@ -164,6 +209,9 @@ const Card = ({ data }) => {
       name: 'ID',
       selector: row => row.id,
       sortable: true,
+      style: {
+        overflow: 'visible' // Use CSS instead of allowOverflow prop
+      }
     },
     {
       name: 'Name',
@@ -185,19 +233,19 @@ const Card = ({ data }) => {
     {
       name: 'Action',
       cell: row => (
-        <button
-          onClick={() => handlePrint(row)}
-          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-3 rounded transition duration-300 ease-in-out transform hover:scale-105 flex items-center gap-2"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-          </svg>
-          Print
-        </button>
+        <div className="print-button-wrapper">
+          <button
+            onClick={() => handlePrint(row)}
+            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-3 rounded transition duration-300 ease-in-out transform hover:scale-105 flex items-center gap-2"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+            </svg>
+            Print
+          </button>
+        </div>
       ),
       ignoreRowClick: true,
-      allowOverflow: true,
-      button: true,
     },
   ];
 
@@ -226,25 +274,46 @@ const Card = ({ data }) => {
         '&:nth-of-type(odd)': {
           backgroundColor: '#f8f9fa', // Tailwind: bg-gray-100
         },
+        '&:hover': {
+          backgroundColor: '#f3f4f6',
+        },
       },
     },
-    pagination: {
+    table: {
       style: {
-        backgroundColor: '#f8f9fa', // Tailwind: bg-gray-100
-        color: '#343a40', // Tailwind: text-gray-800
+        backgroundColor: '#ffffff',
+        borderRadius: '0.5rem',
+        overflow: 'hidden',
+      },
+    },
+    progressWrapper: {
+      style: {
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        minHeight: '100px',
       },
     },
   };
 
   return (
-    <div className="bg-white shadow-md rounded-lg p-4 m-4">
+    <div className="bg-white shadow-lg rounded-lg overflow-hidden p-4 mt-16 md:mt-20 lg:mt-24 xl:mt-20 sm:p-6 max-w-full">
       <DataTable
         columns={columns}
         data={data}
+        progressPending={loading}
+        progressComponent={
+          <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-gray-900"></div>
+        }
         pagination
+        paginationServer
+        paginationTotalRows={totalRows}
+        onChangeRowsPerPage={handlePerRowsChange}
+        onChangePage={handlePageChange}
         highlightOnHover
         striped
         customStyles={customStyles}
+        className="rounded-lg overflow-hidden"
       />
     </div>
   );

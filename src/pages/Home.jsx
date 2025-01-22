@@ -13,15 +13,16 @@ const Home = () => {
   };
 
   return (
-    <main>
-      <Nav className="fixed top-0 w-full z-50" />
-      <section className='lg:pt-[142px] pt-[84px]'> {/* Add padding to avoid content being hidden behind the navbar */}
+    <main className="min-h-screen flex flex-col">
+      <Nav />
+      <section className='lg:pt-[120px] md:pt-[100px] sm:pt-[72px] pt-[72px]'>
         <Sidebar isOpen={isOpen} toggleSidebar={toggleSidebar} />
       </section>
-      <section className={`px-5 lg:px-10 flex-grow transition-all duration-300 ${isOpen ? 'lg:ml-64 hidden lg:block' : 'ml-0'}`}>
+      <section className={`px-3 sm:px-4 md:px-6 lg:px-8 flex-grow transition-all duration-300 
+        ${isOpen ? 'lg:ml-64 hidden lg:block' : 'ml-0'}`}>
         <I_Routes isOpen={isOpen} />
       </section>
-      <section>
+      <section className="mt-auto">
         <Footer />
       </section>
     </main>
