@@ -43,7 +43,7 @@ const Content = () => {
               onClick={() => handleCardClick(user.userId)}
               className="cursor-pointer transform transition-transform duration-300 hover:scale-105"
             >
-              <div className="bg-white rounded-lg shadow-lg p-4 sm:p-6 hover:shadow-xl">
+              <div className="bg-white rounded-lg shadow-lg p-4 sm:p-6 hover:shadow-xl hover:bg-slate-200">
                 <div className="text-xl sm:text-2xl font-bold mb-3 sm:mb-4 text-gray-800">User {user.userId}</div>
                 <div className="text-sm sm:text-base text-gray-600">
                   <p className="mb-2">Total Comments: {user.totalComments}</p>
