@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import loginLogo from '../assets/loginLogo.gif';
-import { PiEyeClosedBold , PiEyeBold } from 'react-icons/pi'; // Import eye icons
+import { PiEyeClosedBold, PiEyeBold } from 'react-icons/pi';
 
 const Login = () => {
   const [isAdminLogin, setIsAdminLogin] = useState(true);
@@ -10,16 +11,22 @@ const Login = () => {
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
-
-  // Hardcoded credentials for demonstration
-  const adminCredentials = { username: 'admin', password: 'admin123' };
-  const operatorCredentials = { username: 'operator', password: 'operator123' };
+  const { login } = useAuth();
 
   const handleSignIn = () => {
-    if (
-      (isAdminLogin && username === adminCredentials.username && password === adminCredentials.password) ||
-      (!isAdminLogin && username === operatorCredentials.username && password === operatorCredentials.password)
-    ) {
+    if (isAdminLogin && username === 'admin' && password === 'admin123') {
+      login({
+        token: 'admin-token',
+        role: 'admin',
+        username
+      });
+      navigate('/otp-verification');
+    } else if (!isAdminLogin && username === 'operator' && password === 'operator123') {
+      login({
+        token: 'operator-token',
+        role: 'operator',
+        username
+      });
       navigate('/otp-verification');
     } else {
       setError('Invalid credentials');
@@ -32,7 +39,6 @@ const Login = () => {
     setPassword('');
     setError('');
   };
-
 
   const togglePasswordVisibility = () => {
     setShowPassword(!showPassword);
