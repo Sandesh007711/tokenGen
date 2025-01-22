@@ -1,11 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
 
 const CreateUser = () => {
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isEditMode, setIsEditMode] = useState(false);
-  const [editIndex, setEditIndex] = useState(null);
   const [users, setUsers] = useState([]);
   const [formData, setFormData] = useState({
     userName: '',
@@ -14,6 +11,9 @@ const CreateUser = () => {
     route: ''
   });
   const [showPassword, setShowPassword] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editIndex, setEditIndex] = useState(null);
+  const passwordRef = useRef(null);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -41,14 +41,12 @@ const CreateUser = () => {
       password: '',
       route: ''
     });
-    setIsModalOpen(false);
   };
 
   const handleEdit = (index) => {
     setFormData(users[index]);
     setIsEditMode(true);
     setEditIndex(index);
-    setIsModalOpen(true);
   };
 
   const handleDelete = (index) => {
@@ -56,60 +54,157 @@ const CreateUser = () => {
     setUsers(updatedUsers);
   };
 
-  const openCreateUserModal = () => {
+  const handleCancelEdit = () => {
+    setIsEditMode(false);
+    setEditIndex(null);
     setFormData({
       userName: '',
       mobileNumber: '',
       password: '',
       route: ''
     });
-    setIsEditMode(false);
-    setEditIndex(null);
-    setIsModalOpen(true);
   };
 
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (passwordRef.current && !passwordRef.current.contains(event.target)) {
+        setShowPassword(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [passwordRef]);
+
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100 p-8">
-      <div className="bg-white p-8 rounded shadow-md w-full max-w-4xl mb-8">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-2xl font-bold">User List</h2>
-          <button
-            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-            onClick={openCreateUserModal}
-          >
-            Create User
-          </button>
-        </div>
+    <div className="min-h-screen p-8">
+      {/* Form Container */}
+      <div className="bg-white p-6 rounded-lg shadow-md mb-8">
+        <h2 className="text-2xl font-bold mb-6">{isEditMode ? 'Edit User' : 'Create User'}</h2>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-gray-700 text-sm font-bold mb-2">
+                User Name
+              </label>
+              <input
+                type="text"
+                name="userName"
+                value={formData.userName}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-gray-700 text-sm font-bold mb-2">
+                Mobile Number
+              </label>
+              <input
+                type="text"
+                name="mobileNumber"
+                value={formData.mobileNumber}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                required
+              />
+            </div>
+            <div className="relative" ref={passwordRef}>
+              <label className="block text-gray-700 text-sm font-bold mb-2">
+                Password
+              </label>
+              <input
+                type={showPassword ? "text" : "password"}
+                name="password"
+                value={formData.password}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                required
+              />
+              <span
+                className="absolute right-3 top-9 cursor-pointer"
+                onClick={() => setShowPassword(!showPassword)}
+              >
+                <FontAwesomeIcon icon={showPassword ? faEyeSlash : faEye} />
+              </span>
+            </div>
+            <div>
+              <label className="block text-gray-700 text-sm font-bold mb-2">
+                Route
+              </label>
+              <input
+                type="text"
+                name="route"
+                value={formData.route}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                required
+              />
+            </div>
+          </div>
+          <div className="flex justify-end mt-4 space-x-2">
+            {isEditMode && (
+              <button
+                type="button"
+                onClick={handleCancelEdit}
+                className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded"
+              >
+                Cancel
+              </button>
+            )}
+            <button
+              type="submit"
+              className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+            >
+              {isEditMode ? 'Update' : 'Submit'}
+            </button>
+          </div>
+        </form>
+      </div>
+
+      {/* Table Container */}
+      <div className="bg-white p-6 rounded-lg shadow-md">
+        <h2 className="text-2xl font-bold mb-6">User List</h2>
         {users.length > 0 ? (
-          <table className="min-w-full bg-white">
+          <table className="min-w-full">
             <thead>
-              <tr>
-                <th className="py-2 px-4 border-b">#</th>
-                <th className="py-2 px-4 border-b">User Name</th>
-                <th className="py-2 px-4 border-b">Mobile Number</th>
-                <th className="py-2 px-4 border-b">Password</th>
-                <th className="py-2 px-4 border-b">Route</th>
-                <th className="py-2 px-4 border-b">Actions</th>
+              <tr className="bg-gray-50">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  User Name
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Mobile Number
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Password
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Route
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Actions
+                </th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="bg-white divide-y divide-gray-200">
               {users.map((user, index) => (
                 <tr key={index}>
-                  <td className="py-2 px-4 border-b">{index + 1}</td>
-                  <td className="py-2 px-4 border-b">{user.userName}</td>
-                  <td className="py-2 px-4 border-b">{user.mobileNumber}</td>
-                  <td className="py-2 px-4 border-b">{'*'.repeat(user.password.length)}</td>
-                  <td className="py-2 px-4 border-b">{user.route}</td>
-                  <td className="py-2 px-4 border-b">
+                  <td className="px-6 py-4 whitespace-nowrap">{user.userName}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">{user.mobileNumber}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">{'*'.repeat(user.password.length)}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">{user.route}</td>
+                  <td className="px-6 py-4 whitespace-nowrap space-x-2">
                     <button
-                      className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-2 rounded focus:outline-none focus:shadow-outline mr-2"
                       onClick={() => handleEdit(index)}
+                      className="bg-yellow-500 hover:bg-yellow-700 text-white font-bold py-1 px-3 rounded"
                     >
                       Edit
                     </button>
                     <button
-                      className="bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-2 rounded focus:outline-none focus:shadow-outline"
                       onClick={() => handleDelete(index)}
+                      className="bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-3 rounded"
                     >
                       Delete
                     </button>
@@ -119,92 +214,9 @@ const CreateUser = () => {
             </tbody>
           </table>
         ) : (
-          <p className="text-center text-gray-500">No users available. Click "Create User" to add a new user.</p>
+          <p className="text-center text-gray-500">No users available</p>
         )}
       </div>
-
-      {isModalOpen && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 p-4">
-          <div className="bg-white p-6 rounded shadow-md w-full max-w-sm mt-20">
-            <h2 className="text-2xl font-bold mb-6 text-center">{isEditMode ? 'Edit User' : 'Create User'}</h2>
-            <form onSubmit={handleSubmit}>
-              <div className="mb-4">
-                <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="userName">
-                  User Name
-                </label>
-                <input
-                  type="text"
-                  name="userName"
-                  value={formData.userName}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                />
-              </div>
-              <div className="mb-4">
-                <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="mobileNumber">
-                  Mobile Number
-                </label>
-                <input
-                  type="text"
-                  name="mobileNumber"
-                  value={formData.mobileNumber}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                />
-              </div>
-              <div className="mb-4 relative">
-                <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="password">
-                  Password
-                </label>
-                <input
-                  type={showPassword ? "text" : "password"}
-                  name="password"
-                  value={formData.password}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                />
-                <span
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center cursor-pointer"
-                  onClick={() => setShowPassword(!showPassword)}
-                >
-                  <FontAwesomeIcon icon={showPassword ? faEyeSlash : faEye} />
-                </span>
-              </div>
-              <div className="mb-4">
-                <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="route">
-                  Route
-                </label>
-                <input
-                  type="text"
-                  name="route"
-                  value={formData.route}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                />
-              </div>
-              <div className="flex items-center justify-between">
-                <button
-                  type="submit"
-                  className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-                >
-                  {isEditMode ? 'Update' : 'Submit'}
-                </button>
-                <button
-                  type="button"
-                  className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-                  onClick={() => setIsModalOpen(false)}
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
