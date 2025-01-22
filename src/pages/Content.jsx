@@ -7,27 +7,27 @@ const Content = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false); // State to track sidebar visibility
 
   useEffect(() => {
-    fetch('https://jsonplaceholder.typicode.com/todos')
+    fetch('https://jsonplaceholder.typicode.com/comments')
       .then(response => response.json())
       .then(json => {
-        console.log(json); // Log the fetched data
-        const formattedData = json.reduce((acc, todo) => {
-          const userId = todo.userId;
-          if (!acc[userId]) {
-            acc[userId] = {
-              userId: userId,
+        const formattedData = json.reduce((acc, post) => {
+          const postId = post.postId;
+          if (!acc[postId]) {
+            acc[postId] = {
+              userId: postId, // Using postId as userId for consistency
               data: [],
             };
           }
-          acc[userId].data.push({
-            id: todo.id,
-            title: todo.title,
-            completed: todo.completed ? 'Yes' : 'No',
+          acc[postId].data.push({
+            id: post.id,
+            name: post.name,
+            email: post.email,
+            comment: post.body.substring(0, 50) + '...', // Truncate long comments
           });
           return acc;
         }, {});
         setData(Object.values(formattedData));
-        setSelectedUserId(Object.values(formattedData)[0]?.userId || ''); // Set initial selected userId
+        setSelectedUserId(Object.values(formattedData)[0]?.userId || '');
       })
       .catch(error => console.error('Error fetching data:', error));
   }, []);

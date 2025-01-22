@@ -24,27 +24,27 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
             <li className="flex items-center space-x-2 hover:bg-gray-700 p-2 rounded"><FaUser /><Link to="/create-user"><span>Create User</span></Link></li>
             <li className="flex flex-col space-y-2">
               <div className="flex items-center space-x-2 hover:bg-gray-700 p-2 rounded cursor-pointer" onClick={() => setIsVehicalRateOpen(!isVehicalRateOpen)}>
-                <FaCar /><Link to="/vehicle-rate"><span>Vehical Rate</span></Link><FaChevronDown className={`transform transition-transform ${isVehicalRateOpen ? 'rotate-180' : ''}`} />
+                <FaCar /><span>Vehical Rate</span><FaChevronDown className={`transform transition-transform ${isVehicalRateOpen ? 'rotate-180' : ''}`} />
               </div>
               {/* Show subsections under Vehical Rate if isVehicalRateOpen is true */}
               {isVehicalRateOpen && (
                 <ul className="ml-4 space-y-2">
-                  <li className="flex items-center space-x-2 hover:bg-gray-700 p-2 rounded"><FaList /><span>Manage Vehical Type</span></li>
-                  <li className="flex items-center space-x-2 hover:bg-gray-700 p-2 rounded"><FaEdit /><span>Manage Rate</span></li>
+                  <li className="flex items-center space-x-2 hover:bg-gray-700 p-2 rounded"><FaList /><Link to="/vehicle-rate"><span>Manage Vehical Type</span></Link></li>
+                  <li className="flex items-center space-x-2 hover:bg-gray-700 p-2 rounded"><FaEdit /><Link to="/manage-rate"><span>Manage Rate</span></Link></li>
                 </ul>
               )}
             </li>
             <li className="flex flex-col space-y-2">
               <div className="flex items-center space-x-2 hover:bg-gray-700 p-2 rounded cursor-pointer" onClick={() => setIsTokenReportOpen(!isTokenReportOpen)}>
-                <FaKey /><Link to="/token-report"><span>Token Report</span></Link><FaChevronDown className={`transform transition-transform ${isTokenReportOpen ? 'rotate-180' : ''}`} />
+                <FaKey /><span>Token Report</span><FaChevronDown className={`transform transition-transform ${isTokenReportOpen ? 'rotate-180' : ''}`} />
               </div>
               {/* Show subsections under Token Report if isTokenReportOpen is true */}
               {isTokenReportOpen && (
                 <ul className="ml-4 space-y-2">
-                  <li className="flex items-center space-x-2 hover:bg-gray-700 p-2 rounded"><FaList /><span>Token List</span></li>
-                  <li className="flex items-center space-x-2 hover:bg-gray-700 p-2 rounded"><FaTruckLoading /><span>Loaded List</span></li>
-                  <li className="flex items-center space-x-2 hover:bg-gray-700 p-2 rounded"><FaEdit /><span>Update Token List</span></li>
-                  <li className="flex items-center space-x-2 hover:bg-gray-700 p-2 rounded"><FaTrashAlt /><span>Delete Token List</span></li>
+                  <li className="flex items-center space-x-2 hover:bg-gray-700 p-2 rounded"><FaList /><Link to="/token-list"><span>Token List</span></Link></li>
+                  <li className="flex items-center space-x-2 hover:bg-gray-700 p-2 rounded"><FaTruckLoading /><Link to="/loaded-list"><span>Loaded List</span></Link></li>
+                  <li className="flex items-center space-x-2 hover:bg-gray-700 p-2 rounded"><FaEdit /><Link to="/update-token-list"><span>Update Token List</span></Link></li>
+                  <li className="flex items-center space-x-2 hover:bg-gray-700 p-2 rounded"><FaTrashAlt /><Link to="/delete-token-list"><span>Delete Token List</span></Link></li>
                 </ul>
               )}
             </li>
