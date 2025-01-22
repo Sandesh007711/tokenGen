@@ -28,9 +28,7 @@
   }
   
   body {
-    background: linear-gradient(-45deg, #7da8add5, #58868d, #406e77, #2d4f56);
-    background-size: 400% 400%;
-    animation: gradientFlow 15s ease infinite;
+    background-color: #7da8add5;
   }
   
   .footer_w {
