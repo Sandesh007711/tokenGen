@@ -1,15 +1,24 @@
 import React, { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 import logo from "../assets/Ramjee Singh and company logo.gif";
 import logoutIcon from "../assets/icons8-logout-64.png";
 import profile from "../assets/profile.png";
 import home from "../assets/home.png";
-import { Link } from "react-router-dom";
 
 const Nav = () => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const { logout } = useAuth();
+  const navigate = useNavigate();
 
   const toggleDropdown = () => {
     setIsDropdownOpen(!isDropdownOpen);
+  };
+
+  const handleLogout = () => {
+    logout();
+    setIsDropdownOpen(false);
+    navigate('/login');
   };
 
   return (
@@ -63,12 +72,13 @@ const Nav = () => {
             </button>
             {isDropdownOpen && (
               <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10">
-            
-                <button className="flex items-center w-full px-2 py-1 text-sm text-gray-700 hover:bg-gray-100">
+                <button 
+                  className="flex items-center w-full px-2 py-1 text-sm text-gray-700 hover:bg-gray-100"
+                  onClick={handleLogout}
+                >
                   <img src={logoutIcon} alt="Logout" className="h-5 w-5 mr-2" />
                   Logout
                 </button>
-                
               </div>
             )}
           </div>
