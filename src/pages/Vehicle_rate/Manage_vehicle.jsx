@@ -123,6 +123,12 @@ const VehicleRate = () => {
     }, 3000); // Hide after 3 seconds
   };
 
+  // Add cancel edit handler
+  const handleCancelEdit = () => {
+    setVehicleType('');
+    setEditIndex(null);
+  };
+
   return (
     <div className="p-7 max-w-7xl mx-auto">
       {/* Error Popup */}
@@ -194,6 +200,14 @@ const VehicleRate = () => {
           >
             {editIndex !== null ? 'Update Vehicle' : 'Add Vehicle'}
           </button>
+          {editIndex !== null && (
+            <button
+              onClick={handleCancelEdit}
+              className="bg-gradient-to-r from-gray-400 to-gray-600 hover:from-gray-600 hover:to-gray-400 text-white font-bold py-3 px-6 rounded-lg transition duration-300 ease-in-out transform hover:scale-[1.02]"
+            >
+              Cancel
+            </button>
+          )}
           <p className="text-sm font-semibold text-gray-300">Total Entries: {vehicleList.length}</p>
         </div>
       </div>

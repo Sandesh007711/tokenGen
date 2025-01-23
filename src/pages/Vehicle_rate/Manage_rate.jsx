@@ -237,6 +237,14 @@ const ManageRate = () => {
             >
               {editingId ? 'Update Rate' : 'Add Rate'}
             </button>
+            {editingId && (
+              <button
+                onClick={resetForm}
+                className="bg-gradient-to-r from-gray-400 to-gray-500 hover:from-gray-500 hover:to-gray-400 text-white font-bold py-3 px-6 rounded-lg transition duration-300 ease-in-out transform hover:scale-[1.02]"
+              >
+                Cancel
+              </button>
+            )}
             {inputError && (
               <span className="text-red-400 text-sm font-medium">{inputError}</span>
             )}
