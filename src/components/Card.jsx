@@ -2,13 +2,16 @@ import React, { useState, useEffect } from 'react';
 import DataTable from 'react-data-table-component';
 import QRCode from 'qrcode';
 
+// Card component for displaying detailed operator data in a table format
 const Card = ({ operator }) => {
+  // State management for table data and pagination
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [totalRows, setTotalRows] = useState(0);
   const [perPage, setPerPage] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
 
+  // Fetch data with pagination support
   const fetchData = async (page, pageSize) => {
     setLoading(true);
     try {
@@ -60,6 +63,7 @@ const Card = ({ operator }) => {
     }
   };
 
+  // Pagination handlers
   const handlePageChange = page => {
     setCurrentPage(page);
     fetchData(page, perPage);
@@ -71,10 +75,12 @@ const Card = ({ operator }) => {
     fetchData(page, newPerPage);
   };
 
+  // Load initial data when operator changes
   useEffect(() => {
     fetchData(currentPage, perPage);
   }, [operator]);
 
+  // Generate QR code for row data
   const generateQR = async (data) => {
     try {
       const qrData = JSON.stringify({
@@ -92,6 +98,7 @@ const Card = ({ operator }) => {
     }
   };
 
+  // Format content for printing
   const formatPrintContent = async (row) => {
     const printDate = new Date().toLocaleString();
     const qrCodeDataUrl = await generateQR(row);
@@ -222,6 +229,7 @@ const Card = ({ operator }) => {
     `;
   };
 
+  // Handle print action
   const handlePrint = async (row) => {
     const printWindow = window.open('', '_blank');
     const content = await formatPrintContent(row);
@@ -233,6 +241,7 @@ const Card = ({ operator }) => {
     }, 500);
   };
 
+  // Table column definitions
   const columns = [
     {
       name: 'S.N.',
@@ -303,6 +312,7 @@ const Card = ({ operator }) => {
     },
   ];
 
+  // Custom styles for the DataTable component
   const customStyles = {
     header: {
       style: {
@@ -350,6 +360,7 @@ const Card = ({ operator }) => {
     },
   };
 
+  // Render DataTable with all configurations
   return (
     <div className="bg-white shadow-lg rounded-lg overflow-hidden p-4 mt-16 md:mt-20 lg:mt-24 xl:mt-20 sm:p-6 max-w-full">
       <DataTable
