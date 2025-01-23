@@ -209,6 +209,7 @@ const CreateUser = () => {
                     value={formData.userName}
                     onChange={handleInputChange}
                     placeholder="Enter user name"
+                    autoComplete="off"
                     className="px-4 py-3 pr-10 bg-gray-900 text-gray-300 rounded-lg border border-gray-700 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 transition-all duration-300"
                     required
                   />
@@ -242,6 +243,7 @@ const CreateUser = () => {
                     value={formData.password}
                     onChange={handleInputChange}
                     placeholder="Enter password"
+                    autoComplete="new-password"
                     className="px-4 py-3 pr-10 bg-gray-900 text-gray-300 rounded-lg border border-gray-700 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 transition-all duration-300 [&::-ms-reveal]:hidden [&::-ms-clear]:hidden"
                     required
                   />
