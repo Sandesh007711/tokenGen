@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FaEdit, FaTrash, FaSort } from 'react-icons/fa';
+import { FaEdit, FaTrash, FaSort, FaTimes } from 'react-icons/fa';
 
 /**
  * VehicleRate Component
@@ -15,6 +15,8 @@ const VehicleRate = () => {
   const [editIndex, setEditIndex] = useState(null);
   // State for managing sort direction (ascending/descending)
   const [sortOrder, setSortOrder] = useState('asc');
+  // State for managing error popup
+  const [errorPopup, setErrorPopup] = useState({ show: false, message: '' });
 
   /**
    * Handles adding new vehicle or updating existing one
@@ -22,6 +24,10 @@ const VehicleRate = () => {
    * If in add mode: adds new vehicle to list
    */
   const handleAddVehicle = () => {
+    if (!vehicleType.trim()) {
+      showError('Please enter the vehicle type');
+      return;
+    }
     if (vehicleType) {
       if (editIndex !== null) {
         const updatedList = [...vehicleList];
@@ -88,32 +94,48 @@ const VehicleRate = () => {
     }
   };
 
+  // Add popup error handler
+  const showError = (message) => {
+    setErrorPopup({ show: true, message });
+    setTimeout(() => {
+      setErrorPopup({ show: false, message: '' });
+    }, 3000); // Hide after 3 seconds
+  };
+
   return (
-    <div className="flex flex-col h-screen">
-      {/* Header Section:
-          - Contains input field for adding/editing vehicle types
-          - Shows total number of entries
-          - Gradient background with shadow */}
-      <div className="p-6 bg-gradient-to-b from-slate-400 via-slate-300 to-slate-100 shadow-lg rounded-lg mx-5 mb-6">
-        <h1 className="text-2xl font-bold mb-4">Manage Vehicle Type</h1>
-        <div className="flex items-center mb-4">
+    <div className="p-7 max-w-7xl mx-auto">
+      {/* Error Popup */}
+      {errorPopup.show && (
+        <div className="fixed top-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-2 animate-slide-in-top z-50">
+          <span>{errorPopup.message}</span>
+          <button
+            onClick={() => setErrorPopup({ show: false, message: '' })}
+            className="text-white hover:text-gray-200 transition-colors"
+          >
+            <FaTimes />
+          </button>
+        </div>
+      )}
+
+      {/* Header Section with Form */}
+      <div className="bg-gradient-to-b from-gray-800 to-gray-900 rounded-2xl shadow-2xl p-6 mb-6">
+        <h1 className="text-2xl font-bold text-gray-300 mb-4">Manage Vehicle Type</h1>
+        <div className="flex flex-wrap items-center gap-4">
           <input
             type="text"
             value={vehicleType}
             onChange={(e) => setVehicleType(e.target.value)}
             onKeyPress={handleKeyPress}
             placeholder="Enter vehicle type"
-            className="p-2 border border-gray-300 rounded mr-2 w-64 focus:outline-none focus:ring-2 focus:ring-blue-500 hover:bg-slate-100"
+            className="px-4 py-3 bg-gray-900 text-gray-300 rounded-lg border border-gray-700 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 transition-all duration-300"
           />
           <button
             onClick={handleAddVehicle}
-            className="bg-gradient-to-r from-slate-400 via-gray-500 to-black hover:from-black hover:via-gray-500 hover:to-slate-400 text-white font-bold py-2 px-4 rounded-full transition duration-300 ease-in-out transform hover:scale-105"
+            className="bg-gradient-to-r from-slate-400 via-gray-500 to-black hover:from-black hover:via-gray-500 hover:to-slate-400 text-white font-bold py-3 px-6 rounded-lg transition duration-300 ease-in-out transform hover:scale-[1.02]"
           >
             {editIndex !== null ? 'Update Vehicle' : 'Add Vehicle'}
           </button>
-        </div>
-        <div className="w-full mb-4">
-          <p className="text-sm font-semibold">Total Entries: {vehicleList.length}</p>
+          <p className="text-sm font-semibold text-gray-300">Total Entries: {vehicleList.length}</p>
         </div>
       </div>
 
