@@ -15,6 +15,7 @@ const Loaded_list = () => {
   const [selectedUser, setSelectedUser] = useState('');
   const [filteredData, setFilteredData] = useState([]);
   const [errorPopup, setErrorPopup] = useState({ show: false, message: '' });
+  const [showConfirm, setShowConfirm] = useState(false);
 
   // Sample data for demonstration
   const sampleUsers = [
@@ -54,11 +55,40 @@ const Loaded_list = () => {
       showError('Please select a user');
       return;
     }
+    setShowConfirm(true);
+  };
+
+  const handleConfirm = () => {
     setFilteredData(sampleTableData.filter(item => item.name === selectedUser));
+    setShowConfirm(false);
   };
 
   return (
     <div className="p-7 max-w-7xl mx-auto">
+      {/* Add Confirmation Popup */}
+      {showConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-96">
+            <h3 className="text-lg font-semibold mb-4">Confirm Submission</h3>
+            <p className="mb-4">Are you sure you want to fetch the data?</p>
+            <div className="flex justify-end gap-4">
+              <button
+                onClick={() => setShowConfirm(false)}
+                className="px-4 py-2 text-gray-600 hover:text-gray-800"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirm}
+                className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+              >
+                Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Error Popup */}
       {errorPopup.show && (
         <div className="fixed top-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-2 animate-slide-in-top z-50">

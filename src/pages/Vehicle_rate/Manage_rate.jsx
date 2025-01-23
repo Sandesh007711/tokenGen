@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FaEdit, FaTrash, FaTimes } from 'react-icons/fa';
+import { FaEdit, FaTrash, FaTimes, FaCheckCircle, FaExclamationTriangle } from 'react-icons/fa';
 
 /**
  * ManageRate Component
@@ -14,6 +14,8 @@ const ManageRate = () => {
   const [editingId, setEditingId] = useState(null);           // ID of rate being edited
   const [inputError, setInputError] = useState('');           // Error message for validation
   const [errorPopup, setErrorPopup] = useState({ show: false, message: '' }); // Error popup state
+  const [successPopup, setSuccessPopup] = useState({ show: false, message: '' }); // Success popup state
+  const [deleteConfirm, setDeleteConfirm] = useState({ show: false, id: null }); // Add this state
 
   // Mock data for vehicle types (replace with API data)
   const vehicleTypes = [
@@ -62,13 +64,15 @@ const ManageRate = () => {
           item.id === editingId 
             ? { ...item, vehicleType: selectedVehicle, rate: parseFloat(rate) }
             : item
-         ));
+          ));
+        showSuccess('Rate updated successfully!');
       } else {
         setRates([...rates, {
           id: Date.now(),
           vehicleType: selectedVehicle,
           rate: parseFloat(rate)
         }]);
+        showSuccess('New rate added successfully!');
       }
       resetForm();
       setInputError('');
@@ -92,12 +96,21 @@ const ManageRate = () => {
    * @param {number} id - ID of rate to delete
    */
   const handleDelete = (id) => {
+    setDeleteConfirm({ show: true, id });
+  };
+
+  /**
+   * Confirms deletion of a rate
+   * Deletes the rate and shows success message
+   */
+  const confirmDelete = () => {
+    const id = deleteConfirm.id;
     if (id === editingId) {
-      setSelectedVehicle('');
-      setRate('');
-      setEditingId(null);
+      resetForm();
     }
     setRates(rates.filter(rate => rate.id !== id));
+    setDeleteConfirm({ show: false, id: null });
+    showSuccess('Rate deleted successfully!');
   };
 
   /**
@@ -122,8 +135,33 @@ const ManageRate = () => {
     }, 3000); // Hide after 3 seconds
   };
 
+  /**
+   * Shows success popup with message
+   * @param {string} message - Success message to display
+   */
+  const showSuccess = (message) => {
+    setSuccessPopup({ show: true, message });
+    setTimeout(() => {
+      setSuccessPopup({ show: false, message: '' });
+    }, 3000); // Hide after 3 seconds
+  };
+
   return (
     <div className="p-7 max-w-7xl mx-auto">
+      {/* Success Popup */}
+      {successPopup.show && (
+        <div className="fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-2 animate-slide-in-top z-50">
+          <FaCheckCircle />
+          <span>{successPopup.message}</span>
+          <button
+            onClick={() => setSuccessPopup({ show: false, message: '' })}
+            className="text-white hover:text-gray-200 transition-colors"
+          >
+            <FaTimes />
+          </button>
+        </div>
+      )}
+
       {/* Error Popup */}
       {errorPopup.show && (
         <div className="fixed top-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-2 animate-slide-in-top z-50">
@@ -134,6 +172,33 @@ const ManageRate = () => {
           >
             <FaTimes />
           </button>
+        </div>
+      )}
+
+      {/* Delete Confirmation Popup */}
+      {deleteConfirm.show && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-sm w-full mx-4">
+            <div className="flex items-center text-yellow-500 mb-4">
+              <FaExclamationTriangle className="text-2xl mr-2" />
+              <h3 className="text-lg font-semibold text-gray-800">Confirm Deletion</h3>
+            </div>
+            <p className="text-gray-600 mb-6">Are you sure you want to delete this rate? This action cannot be undone.</p>
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => setDeleteConfirm({ show: false, id: null })}
+                className="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDelete}
+                className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
