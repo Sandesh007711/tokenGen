@@ -18,7 +18,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
       {/* Toggle button for sidebar */}
       <button
         className={`fixed top-1/2 transform -translate-y-1/2 bg-gradient-to-r from-slate-500 via-slate-800 to-black text-white p-2 rounded-full shadow-lg hover:scale-110 transition-transform duration-300 ease-in-out ${
-          isOpen ? 'left-64' : 'left-0'
+          isOpen ? 'left-[17rem]' : 'left-2'
         }`}
         onClick={toggleSidebar}
       >
