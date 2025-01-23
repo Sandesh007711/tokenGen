@@ -2,59 +2,88 @@ import React, { useState, useEffect } from 'react';
 import DataTable from 'react-data-table-component';
 import QRCode from 'qrcode';
 
-const Card = ({ userId }) => {
+const Card = ({ operator }) => {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [totalRows, setTotalRows] = useState(0);
   const [perPage, setPerPage] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
 
-  const fetchComments = async (page) => {
+  const fetchData = async (page, pageSize) => {
     setLoading(true);
     try {
+      console.log(`Fetching data for page ${page} with pageSize ${pageSize}`);
       const response = await fetch(
-        `https://jsonplaceholder.typicode.com/comments?postId=${userId}&_page=${page}&_limit=${perPage}`
+        `https://dummyjson.com/c/f07c-4e33-4a58-aa02?page=${page}&limit=${pageSize}&operator=${operator}`
       );
-      const total = response.headers.get('x-total-count');
       const json = await response.json();
+      console.log('Raw API response:', json);
       
-      const formattedData = json.map(item => ({
-        id: item.id,
-        name: item.name,
-        email: item.email,
-        comment: item.body.substring(0, 50) + '...'
+      // Calculate start and end indices for pagination
+      const start = (page - 1) * pageSize;
+      const end = start + pageSize;
+      
+      // Filter and slice data for current page
+      const filteredData = json
+        .filter(item => item.Operator === operator);
+      console.log('Filtered data:', filteredData);
+      
+      const paginatedData = filteredData.slice(start, end);
+      console.log('Paginated data:', paginatedData);
+      
+      const formattedData = paginatedData.map(item => ({
+        id: item['S.N.'],
+        date: new Date(item.Date).toLocaleString(),
+        tokenNo: item['Token No'],
+        driver: item.Driver,
+        vehicalNo: item['Vehical No'],
+        vehicalType: item['Vehical Type'],
+        rate: item.Rate,
+        quantity: item.Quantity,
+        place: item.Place,
+        route: item.Route,
+        operator: item.Operator,
+        chalan: item.Chalan
       }));
+      console.log('Formatted data:', formattedData);
 
+      // Set the total count of filtered records
+      const totalFilteredRecords = json.filter(item => item.Operator === operator).length;
+      console.log('Total filtered records:', totalFilteredRecords);
+      
       setData(formattedData);
-      setTotalRows(parseInt(total));
-      setLoading(false);
+      setTotalRows(totalFilteredRecords);
     } catch (error) {
-      console.error('Error:', error);
+      console.error('Error fetching data:', error);
+    } finally {
       setLoading(false);
     }
   };
 
   const handlePageChange = page => {
     setCurrentPage(page);
-    fetchComments(page);
+    fetchData(page, perPage);
   };
 
   const handlePerRowsChange = async (newPerPage, page) => {
     setPerPage(newPerPage);
-    fetchComments(page);
+    setCurrentPage(page);
+    fetchData(page, newPerPage);
   };
 
   useEffect(() => {
-    fetchComments(1);
-  }, [userId]);
+    fetchData(currentPage, perPage);
+  }, [operator]);
 
   const generateQR = async (data) => {
     try {
       const qrData = JSON.stringify({
         id: data.id,
-        name: data.name,
-        email: data.email,
-        comment: data.comment
+        date: data.date,
+        tokenNo: data.tokenNo,
+        driver: data.driver,
+        vehicalNo: data.vehicalNo,
+        vehicalType: data.vehicalType
       });
       return await QRCode.toDataURL(qrData);
     } catch (err) {
@@ -206,29 +235,54 @@ const Card = ({ userId }) => {
 
   const columns = [
     {
-      name: 'ID',
+      name: 'S.N.',
       selector: row => row.id,
       sortable: true,
-      style: {
-        overflow: 'visible' // Use CSS instead of allowOverflow prop
-      }
     },
     {
-      name: 'Name',
-      selector: row => row.name,
-      sortable: true,
-      wrap: true,
-    },
-    {
-      name: 'Email',
-      selector: row => row.email,
+      name: 'Date',
+      selector: row => row.date,
       sortable: true,
     },
     {
-      name: 'Comment',
-      selector: row => row.comment,
+      name: 'Token No',
+      selector: row => row.tokenNo,
       sortable: true,
-      wrap: true,
+    },
+    {
+      name: 'Driver',
+      selector: row => row.driver,
+      sortable: true,
+    },
+    {
+      name: 'Vehicle No',
+      selector: row => row.vehicalNo,
+      sortable: true,
+    },
+    {
+      name: 'Vehicle Type',
+      selector: row => row.vehicalType,
+      sortable: true,
+    },
+    {
+      name: 'Rate',
+      selector: row => row.rate,
+      sortable: true,
+    },
+    {
+      name: 'Quantity',
+      selector: row => row.quantity,
+      sortable: true,
+    },
+    {
+      name: 'Place',
+      selector: row => row.place,
+      sortable: true,
+    },
+    {
+      name: 'Route',
+      selector: row => row.route,
+      sortable: true,
     },
     {
       name: 'Action',
@@ -310,6 +364,7 @@ const Card = ({ userId }) => {
         paginationTotalRows={totalRows}
         onChangeRowsPerPage={handlePerRowsChange}
         onChangePage={handlePageChange}
+        paginationPerPage={perPage}
         highlightOnHover
         striped
         customStyles={customStyles}
