@@ -139,67 +139,54 @@ const VehicleRate = () => {
         </div>
       </div>
 
-      {/* Table Section:
-          - Fixed header with sorting capability
-          - Scrollable body
-          - Action buttons for edit and delete
-          - Shows "No data" message when empty */}
-      <div className="flex-1 px-6">
-        <div className="bg-white rounded-lg shadow-lg overflow-hidden h-[calc(100vh-320px)]">
-          {/* Fixed table header */}
-          <table className="w-full">
-            <thead className="bg-gradient-to-r from-slate-400 via-slate-300 to-slate-200 sticky top-0">
+      {/* Table Section */}
+      <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+        <table className="w-full">
+          <thead className="bg-gradient-to-r from-slate-400 via-slate-300 to-slate-200">
+            <tr>
+              <th className="py-3 px-4 text-left font-semibold">
+                <div className="flex items-center cursor-pointer" onClick={handleSort}>
+                  Vehicle Type
+                  <FaSort className="ml-2" />
+                </div>
+              </th>
+              <th className="py-3 px-4 text-left font-semibold">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-200">
+            {vehicleList.length === 0 ? (
               <tr>
-                <th className="py-3 px-4 text-left font-semibold w-2/3">
-                  <div className="flex items-center cursor-pointer" onClick={handleSort}>
-                    Vehicle Type
-                    <FaSort className="ml-2" />
-                  </div>
-                </th>
-                <th className="py-3 px-4 text-left font-semibold w-1/3">Actions</th>
+                <td colSpan="2" className="py-8 text-center text-gray-500 text-lg">
+                  No data available
+                </td>
               </tr>
-            </thead>
-          </table>
-          
-          {/* Scrollable table body */}
-          <div className="overflow-y-auto h-[calc(100%-48px)]">
-            <table className="w-full">
-              <tbody className="divide-y divide-gray-200">
-                {vehicleList.length === 0 ? (
-                  <tr>
-                    <td colSpan="2" className="py-8 text-center text-gray-500 text-lg">
-                      No data available
-                    </td>
-                  </tr>
-                ) : (
-                  vehicleList.map((vehicle, index) => (
-                    <tr key={index} className="hover:bg-gray-50 transition duration-200">
-                      <td className="py-3 px-4 w-2/3">{vehicle}</td>
-                      <td className="py-3 px-4 w-1/3">
-                        <div className="flex space-x-2">
-                          <button
-                            onClick={() => handleEditVehicle(index)}
-                            className="bg-gradient-to-r from-yellow-400 to-yellow-600 hover:from-yellow-600 hover:to-yellow-400 text-white px-3 py-1 rounded-full flex items-center transition duration-300 transform hover:scale-105"
-                          >
-                            <FaEdit className="mr-1" />
-                            Edit
-                          </button>
-                          <button
-                            onClick={() => handleDeleteVehicle(index)}
-                            className="bg-gradient-to-r from-red-400 to-red-600 hover:from-red-600 hover:to-red-400 text-white px-3 py-1 rounded-full flex items-center transition duration-300 transform hover:scale-105"
-                          >
-                            <FaTrash className="mr-1" />
-                            Delete
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
+            ) : (
+              vehicleList.map((vehicle, index) => (
+                <tr key={index} className="hover:bg-gray-50 transition duration-200">
+                  <td className="py-3 px-4">{vehicle}</td>
+                  <td className="py-3 px-4">
+                    <div className="flex space-x-2">
+                      <button
+                        onClick={() => handleEditVehicle(index)}
+                        className="bg-gradient-to-r from-yellow-400 to-yellow-600 hover:from-yellow-600 hover:to-yellow-400 text-white px-3 py-1 rounded-full flex items-center transition duration-300 transform hover:scale-105"
+                      >
+                        <FaEdit className="mr-1" />
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleDeleteVehicle(index)}
+                        className="bg-gradient-to-r from-red-400 to-red-600 hover:from-red-600 hover:to-red-400 text-white px-3 py-1 rounded-full flex items-center transition duration-300 transform hover:scale-105"
+                      >
+                        <FaTrash className="mr-1" />
+                        Delete
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
       </div>
     </div>
   );
