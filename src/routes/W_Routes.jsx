@@ -12,7 +12,7 @@ const AppRoutes = () => {
       <Route path="/*" element={<Home />} /> {/* Home route */}
       <Route path="/otp-verification" element={<OtpVerification />} />
       <Route path="/login" element={<Login />} />
-      <Route path="/operator-dashboard" element={< OperatorDashboard/>} />
+      <Route path="/operator/*" element={< OperatorDashboard/>} />
     </Routes>
   );
 };

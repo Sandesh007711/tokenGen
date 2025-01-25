@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
 import loginLogo from '../assets/loginLogo.gif';
 import { PiEyeClosedBold, PiEyeBold } from 'react-icons/pi';
 
@@ -11,23 +10,16 @@ const Login = () => {
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
-  const { login } = useAuth();
 
   const handleSignIn = () => {
     if (isAdminLogin && username === 'admin' && password === 'admin123') {
-      login({
-        token: 'admin-token',
-        role: 'admin',
-        username
-      });
+      sessionStorage.setItem('userRole', 'admin');
+      sessionStorage.setItem('username', username);
       navigate('/otp-verification');
     } else if (!isAdminLogin && username === 'operator' && password === 'operator123') {
-      login({
-        token: 'operator-token',
-        role: 'operator',
-        username
-      });
-      navigate('/operator-dashboard');
+      sessionStorage.setItem('userRole', 'operator');
+      sessionStorage.setItem('username', username);
+      navigate('/operator');
     } else {
       setError('Invalid credentials');
     }

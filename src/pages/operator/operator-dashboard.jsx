@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import Sidebar from '../../components/Sidebar';
-import Nav from '../../components/Nav';
+import Sidebar from '../../components/Sidebar_OP';
+import Nav from '../../components/Nav_OP';
+import O_Routes from '../../routes/O_Routes';
 
 const OperatorDashboard = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -16,8 +17,7 @@ const OperatorDashboard = () => {
         <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
         <div className={`flex-1 transition-all duration-300 ${isSidebarOpen ? 'ml-64' : 'ml-0'}`}>
           <div className="p-8">
-            <h1 className="text-2xl font-bold text-gray-800">Operator Dashboard</h1>
-            {/* Add your dashboard content here */}
+            <O_Routes />
           </div>
         </div>
       </div>
