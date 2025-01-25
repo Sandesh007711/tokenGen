@@ -27,7 +27,7 @@ const Login = () => {
         role: 'operator',
         username
       });
-      navigate('/otp-verification');
+      navigate('/operator-dashboard');
     } else {
       setError('Invalid credentials');
     }
