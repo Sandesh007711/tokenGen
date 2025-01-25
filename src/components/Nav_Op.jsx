@@ -20,7 +20,6 @@ const Nav = () => {
   };
 
   const handleLogoutConfirm = () => {
-    // Simply navigate to login page without any authentication cleanup
     setShowLogoutConfirm(false);
     navigate('/login');
   };
@@ -41,16 +40,16 @@ const Nav = () => {
               className="h-[60px] w-[60px] sm:h-[70px] sm:w-[70px] md:h-[80px] md:w-[80px] lg:h-[90px] lg:w-[90px] rounded-full transition-transform duration-300 hover:scale-110 hover:shadow-xl hover:shadow-slate-400"
             />
           
-            <Link to="/">
+            <Link to="/operator">
               <h1 className="text-white text-sm sm:text-xl md:text-2xl lg:text-3xl font-bold rounded-xl px-2 transition-transform duration-300 hover:scale-110 hover:shadow-lg hover:shadow-slate-400">
-                Ramjee Singh And Co.
+                Ramjee Singh And Co....
               </h1>
             </Link>
           </div>
 
           {/* Menu Items */}
           <div className="flex items-center gap-2 sm:gap-3 md:gap-4 lg:gap-6">
-            <Link to="/">
+            <Link to="/operator">
               <button className="transition-transform duration-300 hover:scale-110 hover:shadow-lg hover:shadow-slate-700 rounded-full group">
                 <img
                   src={home}

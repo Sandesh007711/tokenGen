@@ -13,7 +13,7 @@ export const AuthProvider = ({ children }) => {
     const token = localStorage.getItem('authToken');
     const role = localStorage.getItem('userRole');
     const otpVerified = localStorage.getItem('otpVerified');
-    if (token && otpVerified === 'true') {
+    if (token || otpVerified === 'true') {
       setIsAuthenticated(true);
       setIsOtpVerified(true);
       setUserRole(role);
@@ -22,22 +22,35 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const login = (credentials) => {
-    setTempCredentials(credentials);
-    // Don't set isAuthenticated yet, wait for OTP verification
+    if (credentials.role === 'admin') {
+      setTempCredentials(credentials);
+      // For admin, wait for OTP verification
+    } else {
+      // For operator, directly authenticate
+      localStorage.setItem('authToken', credentials.token);
+      localStorage.setItem('userRole', credentials.role);
+      localStorage.setItem('otpVerified', 'false');
+      setIsAuthenticated(true);
+      setIsOtpVerified(false);
+      setUserRole(credentials.role);
+    }
   };
 
   const verifyOtp = (otp) => {
-    // In production, verify OTP with backend
-    if (otp === '123456') { // Example OTP
-      localStorage.setItem('authToken', tempCredentials.token);
-      localStorage.setItem('userRole', tempCredentials.role);
-      localStorage.setItem('otpVerified', 'true');
-      setIsAuthenticated(true);
-      setIsOtpVerified(true);
-      setUserRole(tempCredentials.role);
-      return true;
+    // Only admins need OTP verification
+    if (tempCredentials?.role === 'admin') {
+      if (otp === '123456') { // Example OTP
+        localStorage.setItem('authToken', tempCredentials.token);
+        localStorage.setItem('userRole', tempCredentials.role);
+        localStorage.setItem('otpVerified', 'true');
+        setIsAuthenticated(true);
+        setIsOtpVerified(true);
+        setUserRole(tempCredentials.role);
+        return true;
+      }
+      return false;
     }
-    return false;
+    return true; // Always return true for non-admin roles
   };
 
   const logout = () => {
