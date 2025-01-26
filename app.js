@@ -12,7 +12,6 @@ const AppError = require('./utils/appError')
 const globalErrorHandler = require('./controllers/errorController')
 const userRouter = require('./routes/userRoutes');
 const vehicleRouter = require('./routes/vehicleRoutes');
-// const ratesRouter = require('./routes/viewRoutes')
 const userTokenRouter = require('./routes/userTokenRoutes')
 
 const app = express();
@@ -54,7 +53,6 @@ app.use(hpp({
 
 app.use('/api/v1/users', userRouter);
 app.use('/api/v1/vehicles', vehicleRouter);
-// app.use('/api/v1/rates', rateRouter);
 app.use('/api/v1/tokens', userTokenRouter);
 
 

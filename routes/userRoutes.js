@@ -15,9 +15,6 @@ router.use(authController.protect);
 // Protect all routes after this middleware for admin user
 router.use(authController.restrictTo('admin'));
 
-router.post('/forget-password', authController.forgetPassword)
-router.patch('/reset-password/:token', authController.resetPassword)
-
 router.route('/')
     .get(getAllUsers)
     .post(createUser)

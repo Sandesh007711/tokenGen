@@ -7,17 +7,7 @@ const crypto = require('crypto')
 const userSchema = new mongoose.Schema({
     name: {
         type: String,
-        // required: [true, 'A user must have a name']
     },
-    // email: {
-    //     type: String,
-    //     required: [true, 'Email is a manatory field'],
-    //     trim: true,
-    //     lowercase: true,
-    //     unique: [true, 'This email address is already registered with us'],
-    //     // match: [/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/, 'Please fill a valid email address'],
-    //     validate: [validator.isEmail, 'Please provide a valid email address']
-    // },
     username: {
         type: String, 
         required: [true, 'Please provide operator username'],
