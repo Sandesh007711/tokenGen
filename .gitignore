@@ -1,0 +1,4 @@
+statu
+node_modules
+*.env
+.config/
