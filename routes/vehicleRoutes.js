@@ -1,6 +1,7 @@
 const express = require('express');
 const {
-    getAllVehicles, createVehicle, updateVehicleStatus, deleteVehicle, addVehicleRate, updateVehicleRate, deleteVehicleRate
+    getAllVehicles, createVehicle, updateVehicleStatus, deleteVehicle, 
+    addVehicleRate, updateVehicleRate, deleteVehicleRate, getAllVehicleRates
 } = require('./../controllers/vehicleController');
 const authController = require('./../controllers/authController')
 
@@ -19,6 +20,9 @@ router.route('/')
 router.route('/:id')
     .patch(updateVehicleStatus)
     .delete(deleteVehicle)
+
+// Add this new route before the rate-specific routes
+router.get('/rates', getAllVehicleRates);
 
 // vehicle rate routes
 router.route('/:id/rate')

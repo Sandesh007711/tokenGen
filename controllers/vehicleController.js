@@ -151,3 +151,34 @@ exports.deleteVehicleRate = catchAsync(async (req, res, next) => {
         message: `Rate for ${vehicle.vehicleType} has been deleted successfully`
     });
 });
+
+exports.getAllVehicleRates = catchAsync(async (req, res, next) => {
+    const vehicleRates = await Vehicle.aggregate([
+        {
+            $lookup: {
+                from: 'rates',
+                localField: '_id',
+                foreignField: 'vehicleId',
+                as: 'rateInfo'
+            }
+        },
+        {
+            $unwind: '$rateInfo'
+        },
+        {
+            $project: {
+                vehicleType: 1,
+                active: 1,
+                rate: '$rateInfo.vehicleRate'
+            }
+        }
+    ]);
+    
+    res.status(200).json({
+        status: 'success',
+        results: vehicleRates.length,
+        data: {
+            rates: vehicleRates
+        }
+    });
+});
