@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { FaEdit, FaTrash, FaTimes, FaCheckCircle, FaExclamationTriangle } from 'react-icons/fa';
+import React, { useState, useEffect } from 'react';
+import { FaEdit, FaTrash, FaTimes, FaCheckCircle, FaExclamationTriangle, FaSpinner } from 'react-icons/fa';
 
 /**
  * ManageRate Component
@@ -16,13 +16,114 @@ const ManageRate = () => {
   const [errorPopup, setErrorPopup] = useState({ show: false, message: '' }); // Error popup state
   const [successPopup, setSuccessPopup] = useState({ show: false, message: '' }); // Success popup state
   const [deleteConfirm, setDeleteConfirm] = useState({ show: false, id: null }); // Add this state
+  const [vehicles, setVehicles] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [fetchError, setFetchError] = useState(null);
+  const [isTableLoading, setIsTableLoading] = useState(true);
+  const [isAddingRate, setIsAddingRate] = useState(false);
+  const [isDeletingRate, setIsDeletingRate] = useState(false);
 
-  // Mock data for vehicle types (replace with API data)
-  const vehicleTypes = [
-    { id: 1, type: 'Car' },
-    { id: 2, type: 'Bike' },
-    { id: 3, type: 'Truck' }
-  ];
+  // Fetch vehicles when component mounts
+  useEffect(() => {
+    const fetchVehicles = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        
+        if (!token) {
+          throw new Error('No authentication token found');
+        }
+
+        const response = await fetch('http://localhost:8000/api/v1/vehicles', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (response.status === 401) {
+          throw new Error('Unauthorized access');
+        }
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch vehicles');
+        }
+
+        const result = await response.json();
+        console.log('API Response:', result);
+
+        // Correctly access the vehicles array from the nested structure
+        const vehiclesList = result.data.vehicles || [];
+        console.log('Processed vehicles:', vehiclesList);
+        
+        setVehicles(vehiclesList);
+        setFetchError(null);
+      } catch (error) {
+        console.error('Fetch error:', error);
+        setFetchError(error.message);
+        showError(error.message);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchVehicles();
+  }, []);
+
+  // Add new useEffect to fetch rates
+  useEffect(() => {
+    fetchVehicleRates();
+  }, []); // Run once when component mounts
+
+  // Add fetchVehicleRates function
+  const fetchVehicleRates = async () => {
+    setIsTableLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+
+      const response = await fetch('http://localhost:8000/api/v1/vehicles/rates', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch vehicle rates');
+      }
+
+      const result = await response.json();
+      console.log('Raw API Response:', result);
+
+      // Handle the API response structure
+      if (result.status === 'success' && result.data && result.data.rates) {
+        const ratesList = result.data.rates;
+        console.log('Rates list:', ratesList);
+
+        const formattedRates = ratesList.map(rate => ({
+          id: rate._id,
+          vehicleType: rate.vehicleType, // Direct access to vehicleType
+          rate: rate.rate,               // Direct access to rate
+          vehicleId: rate._id
+        }));
+
+        console.log('Formatted rates:', formattedRates);
+        setRates(formattedRates);
+      } else {
+        console.log('No rates found in response');
+        setRates([]);
+      }
+    } catch (error) {
+      console.error('Error fetching rates:', error);
+      showError(error.message);
+    } finally {
+      setIsTableLoading(false);
+    }
+  };
 
   /**
    * Handles rate input changes with validation
@@ -42,9 +143,9 @@ const ManageRate = () => {
   /**
    * Handles adding or updating vehicle rates
    * Validates input before processing
-   * Updates or adds new rate based on editingId
+   * Makes API call to add rate
    */
-  const handleAddRate = () => {
+  const handleAddRate = async () => {
     if (!selectedVehicle) {
       showError('Please select a vehicle type');
       return;
@@ -57,25 +158,50 @@ const ManageRate = () => {
       showError('Please enter a valid number');
       return;
     }
-    
-    if (selectedVehicle && rate) {
-      if (editingId) {
-        setRates(rates.map(item => 
-          item.id === editingId 
-            ? { ...item, vehicleType: selectedVehicle, rate: parseFloat(rate) }
-            : item
-          ));
-        showSuccess('Rate updated successfully!');
-      } else {
-        setRates([...rates, {
-          id: Date.now(),
-          vehicleType: selectedVehicle,
-          rate: parseFloat(rate)
-        }]);
-        showSuccess('New rate added successfully!');
+
+    setIsAddingRate(true);
+    try {
+      // Get token from localStorage
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('No authentication token found');
       }
+
+      // Find the selected vehicle's ID from vehicles array
+      const selectedVehicleObj = vehicles.find(v => v.vehicleType === selectedVehicle);
+      if (!selectedVehicleObj) {
+        throw new Error('Selected vehicle not found');
+      }
+
+      // Make API call to add rate
+      const response = await fetch(`http://localhost:8000/api/v1/vehicles/${selectedVehicleObj._id}/rate`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          vehicleRate: parseFloat(rate)
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to add rate');
+      }
+
+      const data = await response.json();
+      
+      // Update local state
+      await fetchVehicleRates(); // Refresh the rates list
+      showSuccess('Rate added successfully!');
       resetForm();
       setInputError('');
+    } catch (error) {
+      console.error('Error adding rate:', error);
+      showError(error.message);
+    } finally {
+      setIsAddingRate(false);
     }
   };
 
@@ -92,25 +218,57 @@ const ManageRate = () => {
 
   /**
    * Handles deleting a rate
-   * Resets form if deleting currently edited item
-   * @param {number} id - ID of rate to delete
+   * Shows confirmation dialog and stores rate info
+   * @param {Object} item - Rate item to delete
    */
-  const handleDelete = (id) => {
-    setDeleteConfirm({ show: true, id });
+  const handleDelete = (item) => {
+    setDeleteConfirm({ 
+      show: true, 
+      id: item.id,
+      vehicleId: item.vehicleId 
+    });
   };
 
   /**
    * Confirms deletion of a rate
-   * Deletes the rate and shows success message
+   * Makes API call to delete the rate
    */
-  const confirmDelete = () => {
-    const id = deleteConfirm.id;
-    if (id === editingId) {
-      resetForm();
+  const confirmDelete = async () => {
+    setIsDeletingRate(true);
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+
+      const response = await fetch(`http://localhost:8000/api/v1/vehicles/${deleteConfirm.vehicleId}/rate`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to delete rate');
+      }
+
+      // Update local state and UI
+      setRates(rates.filter(rate => rate.id !== deleteConfirm.id));
+      setDeleteConfirm({ show: false, id: null, vehicleId: null });
+      showSuccess('Rate deleted successfully!');
+
+      // Reset form if deleting currently edited item
+      if (deleteConfirm.id === editingId) {
+        resetForm();
+      }
+    } catch (error) {
+      console.error('Error deleting rate:', error);
+      showError(error.message);
+    } finally {
+      setIsDeletingRate(false);
     }
-    setRates(rates.filter(rate => rate.id !== id));
-    setDeleteConfirm({ show: false, id: null });
-    showSuccess('Rate deleted successfully!');
   };
 
   /**
@@ -188,14 +346,23 @@ const ManageRate = () => {
               <button
                 onClick={() => setDeleteConfirm({ show: false, id: null })}
                 className="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 transition-colors"
+                disabled={isDeletingRate}
               >
                 Cancel
               </button>
               <button
                 onClick={confirmDelete}
-                className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
+                className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors flex items-center"
+                disabled={isDeletingRate}
               >
-                Delete
+                {isDeletingRate ? (
+                  <>
+                    <FaSpinner className="animate-spin mr-2" />
+                    Deleting...
+                  </>
+                ) : (
+                  'Delete'
+                )}
               </button>
             </div>
           </div>
@@ -211,13 +378,23 @@ const ManageRate = () => {
             value={selectedVehicle}
             onChange={(e) => setSelectedVehicle(e.target.value)}
             className="px-4 py-3 bg-gray-900 text-gray-300 rounded-lg border border-gray-700 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 transition-all duration-300 min-w-[200px]"
+            disabled={isLoading}
           >
             <option value="">Select Vehicle Type</option>
-            {vehicleTypes.map(vehicle => (
-              <option key={vehicle.id} value={vehicle.type}>
-                {vehicle.type}
-              </option>
-            ))}
+            {isLoading ? (
+              <option value="" disabled>Loading vehicles...</option>
+            ) : vehicles && vehicles.length > 0 ? (
+              vehicles.map(vehicle => (
+                <option 
+                  key={vehicle._id} 
+                  value={vehicle.vehicleType}
+                >
+                  {vehicle.vehicleType}
+                </option>
+              ))
+            ) : (
+              <option value="" disabled>No vehicles available</option>
+            )}
           </select>
           
           {/* Rate Input Field */}
@@ -233,9 +410,17 @@ const ManageRate = () => {
           <div className="flex items-center gap-4">
             <button
               onClick={handleAddRate}
-              className="bg-gradient-to-r from-slate-400 via-gray-500 to-black hover:from-black hover:via-gray-500 hover:to-slate-400 text-white font-bold py-3 px-6 rounded-lg transition duration-300 ease-in-out transform hover:scale-[1.02]"
+              disabled={isAddingRate}
+              className="bg-gradient-to-r from-slate-400 via-gray-500 to-black hover:from-black hover:via-gray-500 hover:to-slate-400 text-white font-bold py-3 px-6 rounded-lg transition duration-300 ease-in-out transform hover:scale-[1.02] flex items-center"
             >
-              {editingId ? 'Update Rate' : 'Add Rate'}
+              {isAddingRate ? (
+                <>
+                  <FaSpinner className="animate-spin mr-2" />
+                  {editingId ? 'Updating...' : 'Adding...'}
+                </>
+              ) : (
+                editingId ? 'Update Rate' : 'Add Rate'
+              )}
             </button>
             {editingId && (
               <button
@@ -265,7 +450,16 @@ const ManageRate = () => {
           </thead>
           {/* Table Body */}
           <tbody className="divide-y divide-gray-200">
-            {rates.length === 0 ? (
+            {isTableLoading ? (
+              <tr>
+                <td colSpan="3" className="py-8 text-center text-gray-500 text-lg">
+                  <div className="flex items-center justify-center">
+                    <FaSpinner className="animate-spin text-2xl mr-2" />
+                    Loading rates...
+                  </div>
+                </td>
+              </tr>
+            ) : rates.length === 0 ? (
               <tr>
                 <td colSpan="3" className="py-8 text-center text-gray-500 text-lg">
                   No vehicle rates available
@@ -286,7 +480,7 @@ const ManageRate = () => {
                         Edit
                       </button>
                       <button
-                        onClick={() => handleDelete(item.id)}
+                        onClick={() => handleDelete(item)}
                         className="bg-gradient-to-r from-red-400 to-red-600 hover:from-red-600 hover:to-red-400 text-white px-3 py-1 rounded-full flex items-center transition duration-300 transform hover:scale-105"
                       >
                         <FaTrash className="mr-1" />
