@@ -16,16 +16,28 @@ import Loaded_list from "../pages/Token_Report/Loaded_list";
 const I_Routes = () => {
   return (
     <Routes>
-      <Route path="/" element={<Content />} />
-      <Route path="/create-user" element={<CreateUser />} />
-      <Route path="/token-report" element={<TokenReport />} />
-      <Route path="/vehicle-rate" element={<ManageVehicle />} />
-      <Route path="/loaded" element={<Loaded />} />
-      <Route path="/manage-rate" element={<ManageRate />} />
-      <Route path="/token-list" element={<Token_list />} />
-      <Route path="/update-token-list" element={<Update_Token_list />} />
-      <Route path="/delete-token-list" element={<Delete_Token_list />} />
-      <Route path="/loaded-list" element={<Loaded_list />} />
+      {[
+        { path: "/", element: <Content /> },
+        { path: "/create-user", element: <CreateUser /> },
+        { path: "/token-report", element: <TokenReport /> },
+        { path: "/vehicle-rate", element: <ManageVehicle /> },
+        { path: "/loaded", element: <Loaded /> },
+        { path: "/manage-rate", element: <ManageRate /> },
+        { path: "/token-list", element: <Token_list /> },
+        { path: "/update-token-list", element: <Update_Token_list /> },
+        { path: "/delete-token-list", element: <Delete_Token_list /> },
+        { path: "/loaded-list", element: <Loaded_list /> }
+      ].map(({ path, element }) => (
+        <Route
+          key={path}
+          path={path}
+          element={
+            <ProtectedRoute requiredRole="admin">
+              {element}
+            </ProtectedRoute>
+          }
+        />
+      ))}
       <Route path="/otp-verification" element={<OtpVerification />} />
     </Routes>
   );

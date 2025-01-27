@@ -1,18 +1,30 @@
 import React from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
+import ProtectedRoute from '../components/ProtectedRoute';
 import Home from '../pages/Home';
 import OtpVerification from '../pages/OtpVerification';
-import Login from '../pages/Login'; 
+import Login from '../pages/Login';
 import OperatorDashboard from '../pages/operator/operator-dashboard';
-
 
 const AppRoutes = () => {
   return (
     <Routes>
-      <Route path="/*" element={<Home />} /> {/* Home route */}
-      <Route path="/otp-verification" element={<OtpVerification />} />
       <Route path="/login" element={<Login />} />
-      <Route path="/operator/*" element={< OperatorDashboard/>} />
+      <Route path="/otp-verification" element={
+        <ProtectedRoute requiredRole="admin">
+          <OtpVerification />
+        </ProtectedRoute>
+      } />
+      <Route path="/operator/*" element={
+        <ProtectedRoute requiredRole="operator">
+          <OperatorDashboard />
+        </ProtectedRoute>
+      } />
+      <Route path="/*" element={
+        <ProtectedRoute requiredRole="admin">
+          <Home />
+        </ProtectedRoute>
+      } />
     </Routes>
   );
 };

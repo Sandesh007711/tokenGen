@@ -1,17 +1,23 @@
 import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 const OtpVerification = () => {
   const [otpValues, setOtpValues] = useState(['', '', '', '', '', '']);
   const [error, setError] = useState('');
   const navigate = useNavigate();
   const inputRefs = useRef([...Array(6)].map(() => React.createRef()));
+  const { user, login } = useAuth();
 
-  const handleVerify = () => {
+  const handleVerify = async () => {
     const combinedOtp = otpValues.join('');
     // Simple verification - you can modify this logic as needed
     if (combinedOtp === '123456') {
       sessionStorage.setItem('isVerified', 'true');
+      login({
+        ...user,
+        isOtpVerified: true
+      });
       navigate('/');
     } else {
       setError('Invalid OTP');
