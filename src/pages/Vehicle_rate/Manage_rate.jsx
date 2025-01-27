@@ -358,10 +358,24 @@ const ManageRate = () => {
     }, 3000); // Hide after 3 seconds
   };
 
+  // Add loading spinner component
+  const LoadingSpinner = () => (
+    <tr>
+      <td colSpan="3" className="py-12">
+        <div className="flex flex-col items-center justify-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
+          <p className="mt-3 text-gray-600 font-medium">Loading rates data...</p>
+        </div>
+      </td>
+    </tr>
+  );
+
   // Modified table body section
   const tableBody = (
     <tbody className="divide-y divide-gray-200">
-      {rates.length === 0 ? (
+      {isLoading ? (
+        <LoadingSpinner />
+      ) : rates.length === 0 ? (
         <tr>
           <td colSpan="3" className="py-8 text-center text-gray-500 text-lg">
             No vehicle rates available

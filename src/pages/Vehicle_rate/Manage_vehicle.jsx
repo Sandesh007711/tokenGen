@@ -235,6 +235,18 @@ const VehicleRate = () => {
     setEditIndex(null);
   };
 
+  // Add loading spinner component
+  const LoadingSpinner = () => (
+    <tr>
+      <td colSpan="2" className="py-12">
+        <div className="flex flex-col items-center justify-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
+          <p className="mt-3 text-gray-600 font-medium">Loading vehicle types...</p>
+        </div>
+      </td>
+    </tr>
+  );
+
   return (
     <div className="p-7 max-w-7xl mx-auto">
       {/* Error Popup */}
@@ -334,11 +346,7 @@ const VehicleRate = () => {
           </thead>
           <tbody className="divide-y divide-gray-200">
             {loading ? (
-              <tr>
-                <td colSpan="2" className="py-8 text-center text-gray-500 text-lg">
-                  Loading vehicles...
-                </td>
-              </tr>
+              <LoadingSpinner />
             ) : vehicleList.length === 0 ? (
               <tr>
                 <td colSpan="2" className="py-8 text-center text-gray-500 text-lg">
