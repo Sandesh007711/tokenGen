@@ -1,33 +1,59 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { loginUser } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 import loginLogo from '../assets/loginLogo.gif';
 import { PiEyeClosedBold, PiEyeBold } from 'react-icons/pi';
 
 const Login = () => {
   const [isAdminLogin, setIsAdminLogin] = useState(true);
-  const [username, setUsername] = useState('');
+  const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+  const { login } = useAuth();
 
-  const handleSignIn = () => {
-    if (isAdminLogin && username === 'admin' && password === 'admin123') {
-      sessionStorage.setItem('userRole', 'admin');
-      sessionStorage.setItem('username', username);
-      navigate('/otp-verification');
-    } else if (!isAdminLogin && username === 'operator' && password === 'operator123') {
-      sessionStorage.setItem('userRole', 'operator');
-      sessionStorage.setItem('username', username);
-      navigate('/operator');
-    } else {
-      setError('Invalid credentials');
+  const handleSignIn = async () => {
+    try {
+      setIsLoading(true);
+      setError('');
+      
+      const response = await loginUser({
+        phone,
+        password
+      });
+
+      if (response.status === 'success') {
+        // Check if the user's role matches the selected login type
+        if ((isAdminLogin && response.data.user.role !== 'admin') || 
+            (!isAdminLogin && response.data.user.role !== 'operator')) {
+          setError(`Invalid credentials for ${isAdminLogin ? 'admin' : 'operator'} login`);
+          return;
+        }
+
+        login({
+          user: response.data.user,
+          token: response.token
+        });
+
+        if (response.data.user.role === 'admin') {
+          navigate('/otp-verification');
+        } else if (response.data.user.role === 'operator') {
+          navigate('/operator');
+        }
+      }
+    } catch (err) {
+      setError(err.message || 'Login failed. Please check your credentials.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleSwitchLogin = () => {
     setIsAdminLogin(!isAdminLogin);
-    setUsername('');
+    setPhone('');
     setPassword('');
     setError('');
   };
@@ -45,7 +71,6 @@ const Login = () => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-gray-800 to-black p-4">
       <div className="w-full max-w-xl bg-gradient-to-b from-gray-800 to-gray-900 rounded-2xl shadow-2xl overflow-hidden">
-        {/* Left side content */}
         <div className="p-8">
           {/* Logo and welcome section */}
           <div className="text-center mb-8">
@@ -67,18 +92,18 @@ const Login = () => {
 
           {/* Login form */}
           <form onKeyPress={handleKeyPress} className="space-y-6">
-            {/* Username input */}
+            {/* Phone input */}
             <div>
-              <label className="block text-gray-300 text-sm font-bold mb-2" htmlFor="username">
-                Username
+              <label className="block text-gray-300 text-sm font-bold mb-2" htmlFor="phone">
+                Phone Number
               </label>
               <input
                 className="w-full px-4 py-3 bg-gray-900 text-gray-300 rounded-lg border border-gray-700 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 transition-all duration-300"
-                id="username"
-                type="text"
-                placeholder={isAdminLogin ? 'Admin Username' : 'Operator Username'}
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
+                id="phone"
+                type="tel"
+                placeholder="Enter your phone number"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
               />
             </div>
 
@@ -116,9 +141,10 @@ const Login = () => {
               <button
                 type="button"
                 onClick={handleSignIn}
-                className="w-full py-3 bg-gradient-to-r from-slate-400 via-gray-500 to-black hover:from-black hover:via-gray-500 hover:to-slate-400 text-white font-bold rounded-lg transition duration-300 ease-in-out transform hover:scale-[1.02]"
+                disabled={isLoading}
+                className="w-full py-3 bg-gradient-to-r from-slate-400 via-gray-500 to-black hover:from-black hover:via-gray-500 hover:to-slate-400 text-white font-bold rounded-lg transition duration-300 ease-in-out transform hover:scale-[1.02] disabled:opacity-50"
               >
-                Sign In
+                {isLoading ? 'Signing In...' : 'Sign In'}
               </button>
               <button
                 type="button"
