@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import { FaEdit, FaTrash, FaSort, FaTimes, FaCheckCircle } from 'react-icons/fa';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+import { FaEdit, FaTrash, FaSort, FaTimes, FaCheckCircle, FaSpinner } from 'react-icons/fa';
 
 /**
  * VehicleRate Component
@@ -21,18 +22,82 @@ const VehicleRate = () => {
   const [successPopup, setSuccessPopup] = useState({ show: false, message: '' });
   // Add new state for delete confirmation
   const [deleteConfirm, setDeleteConfirm] = useState({ show: false, index: null });
+  // Add loading state
+  const [isLoading, setIsLoading] = useState(true);
+  // Add delete loading state
+  const [isDeleting, setIsDeleting] = useState(false);
+  // Add new loading state for create operation
+  const [isCreating, setIsCreating] = useState(false);
+
+  // Add function to fetch all vehicles
+  const fetchVehicles = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      
+      if (!token) {
+        showError('Please login first');
+        return;
+      }
+
+      console.log('Fetching vehicles...');
+      const response = await axios.get('http://localhost:8000/api/v1/vehicles', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      console.log('API Response:', response.data);
+
+      if (response.data && response.data.data && response.data.data.vehicles) {
+        const vehicles = response.data.data.vehicles; // Access the vehicles array correctly
+        console.log('Vehicles received:', vehicles);
+        setVehicleList(vehicles.map(vehicle => ({
+          id: vehicle._id,
+          vehicleType: vehicle.vehicleType
+        })));
+      } else {
+        console.error('Unexpected response structure:', response.data);
+        showError('Invalid data format received from server');
+      }
+    } catch (error) {
+      console.error('Fetch error:', error); // Debug log
+      if (error.response?.status === 401) {
+        showError('Session expired. Please login again');
+      } else {
+        showError(`Failed to fetch vehicles: ${error.message}`);
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Fetch vehicles when component mounts
+  useEffect(() => {
+    fetchVehicles();
+  }, []);
 
   /**
    * Handles adding new vehicle or updating existing one
    * If in edit mode: updates existing vehicle
    * If in add mode: adds new vehicle to list
    */
-  const handleAddVehicle = () => {
+  const handleAddVehicle = async () => {
     if (!vehicleType.trim()) {
       showError('Please enter the vehicle type');
       return;
     }
-    if (vehicleType) {
+
+    setIsCreating(true);
+    try {
+      // Get token from localStorage
+      const token = localStorage.getItem('token');
+      
+      if (!token) {
+        showError('Please login first');
+        return;
+      }
+
       if (editIndex !== null) {
         const updatedList = [...vehicleList];
         updatedList[editIndex] = vehicleType;
@@ -40,10 +105,35 @@ const VehicleRate = () => {
         setEditIndex(null);
         showSuccess('Vehicle type updated successfully!');
       } else {
-        setVehicleList([...vehicleList, vehicleType]);
-        showSuccess('Vehicle type added successfully!');
+        // Create new vehicle with authorization header
+        const response = await axios.post(
+          'http://localhost:8000/api/v1/vehicles', 
+          {
+            vehicleType: vehicleType
+          },
+          {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          }
+        );
+
+        if (response.data) {
+          // Refresh the vehicle list instead of manual state update
+          await fetchVehicles();
+          setVehicleType('');
+          showSuccess('Vehicle type added successfully!');
+        }
       }
-      setVehicleType('');
+    } catch (error) {
+      if (error.response?.status === 401) {
+        showError('Session expired. Please login again');
+      } else {
+        showError(error.response?.data?.message || 'Failed to add vehicle type');
+      }
+    } finally {
+      setIsCreating(false);
     }
   };
 
@@ -54,7 +144,7 @@ const VehicleRate = () => {
    * Enters edit mode for that vehicle
    */
   const handleEditVehicle = (index) => {
-    setVehicleType(vehicleList[index]);
+    setVehicleType(vehicleList[index].vehicleType);
     setEditIndex(index);
   };
 
@@ -69,16 +159,46 @@ const VehicleRate = () => {
   };
 
   // Add confirm delete handler
-  const confirmDelete = () => {
-    const index = deleteConfirm.index;
-    if (vehicleType || editIndex !== null) {
-      setVehicleType('');
-      setEditIndex(null);
+  const confirmDelete = async () => {
+    setIsDeleting(true);
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        showError('Please login first');
+        return;
+      }
+
+      const vehicleToDelete = vehicleList[deleteConfirm.index];
+      
+      await axios.delete(
+        `http://localhost:8000/api/v1/vehicles/${vehicleToDelete.id}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        }
+      );
+
+      // Refresh the list after successful deletion
+      await fetchVehicles();
+      setDeleteConfirm({ show: false, index: null });
+      showSuccess('Vehicle type deleted successfully!');
+      
+      // Reset form if deleting the vehicle being edited
+      if (editIndex === deleteConfirm.index) {
+        setVehicleType('');
+        setEditIndex(null);
+      }
+    } catch (error) {
+      if (error.response?.status === 401) {
+        showError('Session expired. Please login again');
+      } else {
+        showError(error.response?.data?.message || 'Failed to delete vehicle');
+      }
+      setDeleteConfirm({ show: false, index: null });
+    } finally {
+      setIsDeleting(false);
     }
-    const updatedList = vehicleList.filter((_, i) => i !== index);
-    setVehicleList(updatedList);
-    setDeleteConfirm({ show: false, index: null });
-    showSuccess('Vehicle type deleted successfully!');
   };
 
   /**
@@ -89,8 +209,8 @@ const VehicleRate = () => {
   const handleSort = () => {
     const sortedList = [...vehicleList].sort((a, b) => {
       return sortOrder === 'asc' 
-        ? a.localeCompare(b)
-        : b.localeCompare(a);
+        ? a.vehicleType.localeCompare(b.vehicleType)
+        : b.vehicleType.localeCompare(a.vehicleType);
     });
     setVehicleList(sortedList);
     setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
@@ -168,14 +288,23 @@ const VehicleRate = () => {
               <button
                 onClick={() => setDeleteConfirm({ show: false, index: null })}
                 className="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 transition-colors"
+                disabled={isDeleting}
               >
                 Cancel
               </button>
               <button
                 onClick={confirmDelete}
-                className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
+                className={`px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors flex items-center ${isDeleting ? 'opacity-75 cursor-not-allowed' : ''}`}
+                disabled={isDeleting}
               >
-                Delete
+                {isDeleting ? (
+                  <>
+                    <FaSpinner className="animate-spin mr-2" />
+                    Deleting...
+                  </>
+                ) : (
+                  'Delete'
+                )}
               </button>
             </div>
           </div>
@@ -193,12 +322,21 @@ const VehicleRate = () => {
             onKeyPress={handleKeyPress}
             placeholder="Enter vehicle type"
             className="px-4 py-3 bg-gray-900 text-gray-300 rounded-lg border border-gray-700 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 transition-all duration-300"
+            disabled={isCreating}
           />
           <button
             onClick={handleAddVehicle}
-            className="bg-gradient-to-r from-slate-400 via-gray-500 to-black hover:from-black hover:via-gray-500 hover:to-slate-400 text-white font-bold py-3 px-6 rounded-lg transition duration-300 ease-in-out transform hover:scale-[1.02]"
+            disabled={isCreating}
+            className={`bg-gradient-to-r from-slate-400 via-gray-500 to-black hover:from-black hover:via-gray-500 hover:to-slate-400 text-white font-bold py-3 px-6 rounded-lg transition duration-300 ease-in-out transform hover:scale-[1.02] flex items-center ${isCreating ? 'opacity-75 cursor-not-allowed' : ''}`}
           >
-            {editIndex !== null ? 'Update Vehicle' : 'Add Vehicle'}
+            {isCreating ? (
+              <>
+                <FaSpinner className="animate-spin mr-2" />
+                {editIndex !== null ? 'Updating...' : 'Creating...'}
+              </>
+            ) : (
+              editIndex !== null ? 'Update Vehicle' : 'Add Vehicle'
+            )}
           </button>
           {editIndex !== null && (
             <button
@@ -227,16 +365,25 @@ const VehicleRate = () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
-            {vehicleList.length === 0 ? (
+            {isLoading ? (
+              <tr>
+                <td colSpan="2" className="py-8">
+                  <div className="flex flex-col items-center justify-center">
+                    <FaSpinner className="animate-spin text-2xl mr-2 text-gray-400" />
+                    <span className="text-gray-500">Loading vehicles...</span>
+                  </div>
+                </td>
+              </tr>
+            ) : vehicleList.length === 0 ? (
               <tr>
                 <td colSpan="2" className="py-8 text-center text-gray-500 text-lg">
-                  No data available
+                  No vehicles available
                 </td>
               </tr>
             ) : (
               vehicleList.map((vehicle, index) => (
-                <tr key={index} className="hover:bg-gray-50 transition duration-200">
-                  <td className="py-3 px-4">{vehicle}</td>
+                <tr key={vehicle.id} className="hover:bg-gray-50 transition duration-200">
+                  <td className="py-3 px-4">{vehicle.vehicleType}</td>
                   <td className="py-3 px-4">
                     <div className="flex space-x-2">
                       <button
