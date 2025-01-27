@@ -4,11 +4,14 @@ import logo from "../assets/Ramjee Singh and company logo.gif";
 import logoutIcon from "../assets/icons8-logout-64.png";
 import profile from "../assets/profile.png";
 import home from "../assets/home.png";
+import { logoutUser } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
 const Nav = () => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const navigate = useNavigate();
+  const { logout } = useAuth();
 
   const toggleDropdown = () => {
     setIsDropdownOpen(!isDropdownOpen);
@@ -19,10 +22,19 @@ const Nav = () => {
     setIsDropdownOpen(false);
   };
 
-  const handleLogoutConfirm = () => {
-    // Simply navigate to login page without any authentication cleanup
-    setShowLogoutConfirm(false);
-    navigate('/login');
+  const handleLogoutConfirm = async () => {
+    try {
+      await logoutUser();
+      logout(); // Clear auth context
+      navigate('/login');
+    } catch (error) {
+      console.error('Logout failed:', error);
+      // Logout locally anyway
+      logout();
+      navigate('/login');
+    } finally {
+      setShowLogoutConfirm(false);
+    }
   };
 
   const handleLogoutCancel = () => {

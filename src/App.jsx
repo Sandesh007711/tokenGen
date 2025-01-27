@@ -4,9 +4,9 @@ import W_Routes from './routes/W_Routes';
 
 const App = () => {
   return (
-    
+    <AuthProvider>
       <W_Routes />
-    
+    </AuthProvider>
   );
 };
 

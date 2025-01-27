@@ -7,4 +7,8 @@ export default defineConfig({
   server: {
     port: 5175,
   },
+<<<<<<< HEAD
 })
+=======
+})
+>>>>>>> 05991ed67e2f0e622862bf77b13bf0a6869f19b5
