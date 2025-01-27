@@ -12,15 +12,10 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-<<<<<<< HEAD
   const [loading, setLoading] = useState(false);
-=======
-  const [isLoading, setIsLoading] = useState(false);
->>>>>>> 05991ed67e2f0e622862bf77b13bf0a6869f19b5
   const navigate = useNavigate();
   const { login } = useAuth();
 
-<<<<<<< HEAD
   const handleSignIn = async (e) => {
     e.preventDefault();
     setError('');
@@ -44,41 +39,6 @@ const Login = () => {
       );
     } finally {
       setLoading(false);
-=======
-  const handleSignIn = async () => {
-    try {
-      setIsLoading(true);
-      setError('');
-      
-      const response = await loginUser({
-        phone,
-        password
-      });
-
-      if (response.status === 'success') {
-        // Check if the user's role matches the selected login type
-        if ((isAdminLogin && response.data.user.role !== 'admin') || 
-            (!isAdminLogin && response.data.user.role !== 'operator')) {
-          setError(`Invalid credentials for ${isAdminLogin ? 'admin' : 'operator'} login`);
-          return;
-        }
-
-        login({
-          user: response.data.user,
-          token: response.token
-        });
-
-        if (response.data.user.role === 'admin') {
-          navigate('/otp-verification');
-        } else if (response.data.user.role === 'operator') {
-          navigate('/operator');
-        }
-      }
-    } catch (err) {
-      setError(err.message || 'Login failed. Please check your credentials.');
-    } finally {
-      setIsLoading(false);
->>>>>>> 05991ed67e2f0e622862bf77b13bf0a6869f19b5
     }
   };
 
@@ -172,17 +132,10 @@ const Login = () => {
               <button
                 type="button"
                 onClick={handleSignIn}
-<<<<<<< HEAD
                 disabled={loading}
                 className="w-full py-3 bg-gradient-to-r from-slate-400 via-gray-500 to-black hover:from-black hover:via-gray-500 hover:to-slate-400 text-white font-bold rounded-lg transition duration-300 ease-in-out transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? 'Signing in...' : 'Sign In'}
-=======
-                disabled={isLoading}
-                className="w-full py-3 bg-gradient-to-r from-slate-400 via-gray-500 to-black hover:from-black hover:via-gray-500 hover:to-slate-400 text-white font-bold rounded-lg transition duration-300 ease-in-out transform hover:scale-[1.02] disabled:opacity-50"
-              >
-                {isLoading ? 'Signing In...' : 'Sign In'}
->>>>>>> 05991ed67e2f0e622862bf77b13bf0a6869f19b5
               </button>
               <button
                 type="button"
