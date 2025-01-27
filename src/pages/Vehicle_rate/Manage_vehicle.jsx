@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FaEdit, FaTrash, FaSort, FaTimes, FaCheckCircle } from 'react-icons/fa';
 
 /**
@@ -21,29 +21,128 @@ const VehicleRate = () => {
   const [successPopup, setSuccessPopup] = useState({ show: false, message: '' });
   // Add new state for delete confirmation
   const [deleteConfirm, setDeleteConfirm] = useState({ show: false, index: null });
+  // State for managing loading state
+  const [loading, setLoading] = useState(true);
+  const [editId, setEditId] = useState(null); // Add this for tracking vehicle ID during edit
+
+  // Add function to get auth token
+  const getAuthToken = () => {
+    return localStorage.getItem('token'); // or however you store your auth token
+  };
+
+  // API Functions
+  const fetchVehicles = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('http://localhost:7002/api/v1/vehicles', {
+        headers: {
+          'Authorization': `Bearer ${getAuthToken()}`,
+        }
+      });
+      if (!response.ok) throw new Error('Failed to fetch vehicles');
+      const result = await response.json();
+      
+      // Debug log
+      console.log('API Response:', result);
+
+      // Handle the specific response structure
+      if (result.status === 'success' && result.data && result.data.vehicles) {
+        setVehicleList(result.data.vehicles);
+      } else {
+        console.error('Unexpected data structure:', result);
+        throw new Error('Invalid data format received from server');
+      }
+    } catch (error) {
+      console.error('Fetch error:', error);
+      showError(error.message);
+      setVehicleList([]); // Set to empty array on error
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const createVehicle = async (vehicleType) => {
+    try {
+      const response = await fetch('http://localhost:7002/api/v1/vehicles', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${getAuthToken()}`,
+        },
+        body: JSON.stringify({ vehicleType }),
+      });
+      if (!response.ok) throw new Error('Failed to create vehicle');
+      await fetchVehicles();
+      showSuccess('Vehicle added successfully!');
+    } catch (error) {
+      showError(error.message);
+      throw error;
+    }
+  };
+
+  const updateVehicle = async (id, vehicleType) => {
+    try {
+      const response = await fetch(`http://localhost:7002/api/v1/vehicles/${id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${getAuthToken()}`,
+        },
+        body: JSON.stringify({ vehicleType }),
+      });
+      if (!response.ok) throw new Error('Failed to update vehicle');
+      await fetchVehicles();
+      showSuccess('Vehicle updated successfully!');
+    } catch (error) {
+      showError(error.message);
+      throw error;
+    }
+  };
+
+  const deleteVehicle = async (id) => {
+    try {
+      const response = await fetch(`http://localhost:7002/api/v1/vehicles/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${getAuthToken()}`,
+        },
+      });
+      if (!response.ok) throw new Error('Failed to delete vehicle');
+      await fetchVehicles();
+      showSuccess('Vehicle deleted successfully!');
+    } catch (error) {
+      showError(error.message);
+      throw error;
+    }
+  };
+
+  // Add useEffect to fetch data on component mount
+  useEffect(() => {
+    fetchVehicles();
+  }, []);
 
   /**
    * Handles adding new vehicle or updating existing one
    * If in edit mode: updates existing vehicle
    * If in add mode: adds new vehicle to list
    */
-  const handleAddVehicle = () => {
+  const handleAddVehicle = async () => {
     if (!vehicleType.trim()) {
       showError('Please enter the vehicle type');
       return;
     }
-    if (vehicleType) {
-      if (editIndex !== null) {
-        const updatedList = [...vehicleList];
-        updatedList[editIndex] = vehicleType;
-        setVehicleList(updatedList);
-        setEditIndex(null);
-        showSuccess('Vehicle type updated successfully!');
+
+    try {
+      if (editId !== null) {
+        await updateVehicle(editId, vehicleType);
+        setEditId(null);
       } else {
-        setVehicleList([...vehicleList, vehicleType]);
-        showSuccess('Vehicle type added successfully!');
+        await createVehicle(vehicleType);
       }
       setVehicleType('');
+      setEditIndex(null);
+    } catch (error) {
+      // Error already handled in API functions
     }
   };
 
@@ -54,8 +153,10 @@ const VehicleRate = () => {
    * Enters edit mode for that vehicle
    */
   const handleEditVehicle = (index) => {
-    setVehicleType(vehicleList[index]);
+    const vehicle = vehicleList[index];
+    setVehicleType(vehicle.vehicleType || vehicle.type);
     setEditIndex(index);
+    setEditId(vehicle._id || vehicle.id);
   };
 
   /**
@@ -69,16 +170,19 @@ const VehicleRate = () => {
   };
 
   // Add confirm delete handler
-  const confirmDelete = () => {
-    const index = deleteConfirm.index;
-    if (vehicleType || editIndex !== null) {
-      setVehicleType('');
-      setEditIndex(null);
+  const confirmDelete = async () => {
+    const vehicle = vehicleList[deleteConfirm.index];
+    try {
+      await deleteVehicle(vehicle._id || vehicle.id);
+      setDeleteConfirm({ show: false, index: null });
+      if (editIndex !== null) {
+        setVehicleType('');
+        setEditIndex(null);
+        setEditId(null);
+      }
+    } catch (error) {
+      // Error already handled in API function
     }
-    const updatedList = vehicleList.filter((_, i) => i !== index);
-    setVehicleList(updatedList);
-    setDeleteConfirm({ show: false, index: null });
-    showSuccess('Vehicle type deleted successfully!');
   };
 
   /**
@@ -88,9 +192,11 @@ const VehicleRate = () => {
    */
   const handleSort = () => {
     const sortedList = [...vehicleList].sort((a, b) => {
+      const typeA = a.vehicleType || a.type || '';
+      const typeB = b.vehicleType || b.type || '';
       return sortOrder === 'asc' 
-        ? a.localeCompare(b)
-        : b.localeCompare(a);
+        ? typeA.localeCompare(typeB)
+        : typeB.localeCompare(typeA);
     });
     setVehicleList(sortedList);
     setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
@@ -227,7 +333,13 @@ const VehicleRate = () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
-            {vehicleList.length === 0 ? (
+            {loading ? (
+              <tr>
+                <td colSpan="2" className="py-8 text-center text-gray-500 text-lg">
+                  Loading vehicles...
+                </td>
+              </tr>
+            ) : vehicleList.length === 0 ? (
               <tr>
                 <td colSpan="2" className="py-8 text-center text-gray-500 text-lg">
                   No data available
@@ -235,8 +347,8 @@ const VehicleRate = () => {
               </tr>
             ) : (
               vehicleList.map((vehicle, index) => (
-                <tr key={index} className="hover:bg-gray-50 transition duration-200">
-                  <td className="py-3 px-4">{vehicle}</td>
+                <tr key={vehicle._id || vehicle.id} className="hover:bg-gray-50 transition duration-200">
+                  <td className="py-3 px-4">{vehicle.vehicleType || vehicle.type}</td>
                   <td className="py-3 px-4">
                     <div className="flex space-x-2">
                       <button
