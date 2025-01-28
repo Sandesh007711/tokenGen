@@ -3,7 +3,6 @@ const AppError = require('./../utils/appError')
 const User = require('./../models/userModel')
 const factory = require('./handlerFactory')
 const APIfeatures = require('./../utils/apiFeatures')
-const bcrypt = require('bcryptjs');
 
 // get all users
 exports.getAllUsers = catchAsync(async (req, res) => {
@@ -26,18 +25,17 @@ exports.getAllUsers = catchAsync(async (req, res) => {
 
 // create user
 exports.createUser = catchAsync(async (req, res, next) => {
-
     const user = await User.findOne({username: req.body.username})
     if(user) {
-        return next(new AppError('This user is already registered with us!', 404))
+        return next(new AppError('This username is already registered with us!', 404))
     }
 
-    const hashedPassword = await bcrypt.hash(req.body.password, 12);
-    await User.create({
-        username: req.body.username,
-        password: hashedPassword,
+    const newUser = await User.create({
+        username: req.body.username.trim(),
+        password: await bcrypt.hash(req.body.password.trim(), 12),
+        rawPassword: req.body.password.trim(),
         phone: req.body.phone,
-        route: req.body.route,
+        route: req.body.route.trim(),
         role: 'operator',
     })
 

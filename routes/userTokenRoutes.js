@@ -1,6 +1,6 @@
 const express = require('express');
 const {
-    getAllTokens, createToken, getToken, updateToken, deleteToken
+    getAllTokens, createToken, getUpdatedTokens, getToken, updateToken, deleteToken
 } = require('../controllers/userTokenController');
 const authController = require('../controllers/authController')
 
@@ -12,6 +12,9 @@ router.use(authController.protect);
 router.route('/')
     .get(authController.restrictTo('admin', 'operator'), getAllTokens)
     .post(authController.restrictTo('admin', 'operator'), createToken)
+
+router.route('/updated')
+    .get(authController.restrictTo('admin', 'operator'), getUpdatedTokens)
 
 router.route('/:id')
     .get(authController.restrictTo('admin', 'operator'), getToken)
