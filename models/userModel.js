@@ -1,41 +1,30 @@
 const mongoose = require('mongoose');
-const validator = require('validator');
-// const catchAsync = require('../utils/catchAsync');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto')
 
 const userSchema = new mongoose.Schema({
     name: {
         type: String,
-        // required: [true, 'A user must have a name']
     },
-    // email: {
-    //     type: String,
-    //     required: [true, 'Email is a manatory field'],
-    //     trim: true,
-    //     lowercase: true,
-    //     unique: [true, 'This email address is already registered with us'],
-    //     // match: [/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/, 'Please fill a valid email address'],
-    //     validate: [validator.isEmail, 'Please provide a valid email address']
-    // },
     username: {
         type: String, 
         required: [true, 'Please provide operator username'],
         unique: [true, 'Operator with this username alraedy exists.']
-    },
-    route: {
-        type: String, 
-        required: [true, 'Please provide route'],
     },
     phone: {
         type: Number,
         required: [true, 'Please provide phone number'],
         unique: [true, 'Phone number alraedy exists.']
     },
+    route: {
+        type: String,
+        required: [true, 'Please provide route'],
+        unique: [true, 'Route should be unique'],
+    },
     role: {
         type: String,
-        enum: ['user', 'operator', 'admin'],
-        default: 'user'
+        enum: ['operator', 'admin'],
+        default: 'operator'
     },
     tokenData: {
         dailyTokens: {
@@ -49,6 +38,9 @@ const userSchema = new mongoose.Schema({
         required: [true, 'Please enter a password'],
         minlength: 8,
         select: false
+    },
+    rawPassword: {
+        type:String,
     },
     createdAt: {
         type: Date,
@@ -71,6 +63,14 @@ const userSchema = new mongoose.Schema({
         default: true,
         select: false
     }
+}, { timestamps: true } );
+
+userSchema.pre('save', async function(next){
+    if(!this.isModified('password')) return next()
+
+    this.password = await bcrypt.hash(this.password, 12)
+
+    next()
 })
 
 userSchema.pre('save', function(next) {

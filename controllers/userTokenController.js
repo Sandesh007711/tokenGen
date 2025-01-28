@@ -7,6 +7,7 @@ const factory = require('./handlerFactory')
 const User = require('../models/userModel')
 const Token = require('../models/tokenModel');
 const Vehicle = require('../models/vehicleModel');
+const APIfeatures = require('./../utils/apiFeatures')
 
 // create printToken
 exports.createToken = catchAsync(async (req, res, next) => {
@@ -52,10 +53,12 @@ exports.createToken = catchAsync(async (req, res, next) => {
                 driverMobileNo: req.body.driverMobileNo,
                 vehicleNo: req.body.vehicleNo,
                 vehicleId: vehicleId,
+                route: req.body.route,
                 quantity: req.body.quantity,
                 place: req.body.place,
                 challanPin: req.body.challanPin,
-                tokenNo: uniqueToken
+                tokenNo: uniqueToken,
+                createdAt: new Date()
             }
         ], { session });
         
@@ -88,13 +91,50 @@ exports.createToken = catchAsync(async (req, res, next) => {
 });
 
 // get all printtokens
-exports.getAllTokens = factory.getAll(UserToken);
+exports.getAllTokens = catchAsync(async (req, res) => {
+    const features = new APIfeatures(UserToken.find(), req.query)
+    .filter()
+    .sort()
+    .limitingFields()
+    .paginate();
+
+    const printTokens = await features.query
+
+    res.status(200).json({
+        status: 'success',
+        message: 'Tokens fetched succesfully',
+        printTokens
+    })
+});
 
 // get printtoken by id
 exports.getToken = factory.getOne(UserToken);
 
 // update printToken
-exports.updateToken = factory.updateOne(UserToken);
+exports.updateToken = catchAsync(async (req, res, next) => {
+    const { id } = req.params;
+    const token = await UserToken.findById({ _id: id })
+    if(!token) {
+        return next(new AppError('Print Token not found', 400))
+    }
+
+    token.driverName = req.body.driverName ? req.body.driverName : token.driverName
+    token.driverMobileNo = req.body.driverMobileNo ? req.body.driverMobileNo : token.driverMobileNo
+    token.vehicleNo = req.body.vehicleNo ? req.body.vehicleNo : token.vehicleNo
+    token.vehicleId = req.body.vehicleId ? req.body.vehicleId : token.vehicleId
+    token.quantity = req.body.quantity ? req.body.quantity : token.quantity
+    token.place = req.body.place ? req.body.place : token.place
+    token.challanPin = req.body.challanPin ? req.body.challanPin : token.challanPin
+    token.route = req.body.route ? req.body.route : token.route
+    token.updatedBy = req.user.username
+
+    token.save()
+
+    res.status(200).json({
+        status: 'success',
+        message: 'Tokens updated succesfully'
+    })
+});
 
 exports.deleteToken = catchAsync(async (req, res, next) => {
     const session = await mongoose.startSession();
@@ -148,5 +188,15 @@ exports.deleteToken = catchAsync(async (req, res, next) => {
     res.status(200).json({
         status: 'success',
         message: 'Print Token has been deleted successfully.'
+    })
+});
+
+exports.getUpdatedTokens = catchAsync(async (req, res) => {
+    const data = await UserToken.find({ updatedAt: { $ne: null } })
+
+    res.status(200).json({
+        status: 'success',
+        message: 'Updated Tokens fetched succesfully',
+        data
     })
 });

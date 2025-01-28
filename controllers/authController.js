@@ -38,28 +38,15 @@ const createSendToken = (user, statusCode, res) => {
 }
 
 exports.login = catchAsync(async (req, res, next) => {
-    // const email = req.body.email
-    const {email, password } = req.body
+    const {phone, password } = req.body
 
-    //check if email and password exists
-    if(!email || !password) return next(new AppError('Pleas provide email and password', 400))
+    if(!phone || !password) return next(new AppError('Pleas provide phone and password', 400))
 
-    // check if user exists and fetch password only
-    const user = await User.findOne({email}).select('+password')
+    const user = await User.findOne({phone}).select('+password')
 
-    // const correct = await user.correctPassword(password, user.password)
     if(!user || !(await user.correctPassword(password, user.password))) {
         return next(new AppError('Your credentials do not match', 401))
     }
-
-    // send token to client after cinfirmation
-    // const token = signToken(user._id);
-
-    // // send response
-    // res.status(200).json({
-    //     status: 'success',
-    //     token
-    // })
     createSendToken(user, 200, res)
 })
 
