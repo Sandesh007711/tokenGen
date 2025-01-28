@@ -90,7 +90,6 @@ const VehicleRate = () => {
 
     setIsCreating(true);
     try {
-      // Get token from localStorage
       const token = localStorage.getItem('token');
       
       if (!token) {
@@ -99,13 +98,35 @@ const VehicleRate = () => {
       }
 
       if (editIndex !== null) {
-        const updatedList = [...vehicleList];
-        updatedList[editIndex] = vehicleType;
-        setVehicleList(updatedList);
-        setEditIndex(null);
-        showSuccess('Vehicle type updated successfully!');
+        // Update existing vehicle
+        const vehicleToUpdate = vehicleList[editIndex];
+        
+        console.log('Updating vehicle:', {
+          id: vehicleToUpdate.id,
+          vehicleType: vehicleType
+        });
+
+        const response = await axios.patch(
+          `http://localhost:8000/api/v1/vehicles/${vehicleToUpdate.id}`,
+          {
+            vehicleType: vehicleType
+          },
+          {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          }
+        );
+
+        if (response.data.status === 'success') {
+          await fetchVehicles(); // Refresh the list
+          setEditIndex(null);
+          setVehicleType('');
+          showSuccess('Vehicle type updated successfully!');
+        }
       } else {
-        // Create new vehicle with authorization header
+        // Create new vehicle code remains unchanged
         const response = await axios.post(
           'http://localhost:8000/api/v1/vehicles', 
           {
@@ -127,10 +148,13 @@ const VehicleRate = () => {
         }
       }
     } catch (error) {
+      console.error('Error details:', error.response || error);
       if (error.response?.status === 401) {
         showError('Session expired. Please login again');
+      } else if (error.response?.status === 404) {
+        showError('Vehicle not found');
       } else {
-        showError(error.response?.data?.message || 'Failed to add vehicle type');
+        showError(error.response?.data?.message || 'Failed to update vehicle type');
       }
     } finally {
       setIsCreating(false);
