@@ -36,11 +36,27 @@ exports.getAllVehicles = catchAsync(async (req, res) => {
     })
 });
 
+// get vehicle by id
+exports.getVehicle = catchAsync(async (req, res, next) => {
+    const vehicle = await Vehicle.findById(req.params.id);
+    
+    if (!vehicle) {
+        return next(new AppError('Vehicle not found!', 404));
+    }
+
+    res.status(200).json({
+        status: 'success',
+        data: {
+            vehicle
+        }
+    });
+});
+
 // update vehicle status
 exports.updateVehicleStatus = catchAsync(async (req, res, next) => {
     const { isActive } = req.body;
 
-    const vehicle = await User.findOne({_id: req.params.id})
+    const vehicle = await Vehicle.findOne({_id: req.params.id})
     if(!vehicle) {
         return next(new AppError('Vehicle not identified!', 400))
     }
@@ -61,7 +77,27 @@ exports.updateVehicleStatus = catchAsync(async (req, res, next) => {
 });
 
 // update vehicle
-exports.updateVehicle = factory.updateOne(Vehicle);
+exports.updateVehicle = catchAsync(async (req, res, next) => {
+  const vehicle = await Vehicle.findByIdAndUpdate(
+    req.params.id,
+    { vehicleType: req.body.vehicleType },
+    {
+      new: true,
+      runValidators: true
+    }
+  );
+
+  if (!vehicle) {
+    return next(new AppError('No vehicle found with that ID', 404));
+  }
+
+  res.status(200).json({
+    status: 'success',
+    data: {
+      vehicle
+    }
+  });
+});
 
 // delete vehicle
 exports.deleteVehicle = catchAsync(async (req, res, next) => {
@@ -179,6 +215,52 @@ exports.getAllVehicleRates = catchAsync(async (req, res, next) => {
         results: vehicleRates.length,
         data: {
             rates: vehicleRates
+        }
+    });
+});
+
+exports.getVehicleRate = catchAsync(async (req, res, next) => {
+    const { id } = req.params;
+    const vehicle = await Vehicle.findById(id);
+    if(!vehicle) {
+        return next(new AppError('Vehicle not found!', 400))
+    }
+
+    const rate = await Rate.findOne({ vehicleId: id });
+    if(!rate) {
+        return next(new AppError('Rate not found for this vehicle!', 404))
+    }
+
+    res.status(200).json({
+        status: 'success',
+        data: {
+            vehicleType: vehicle.vehicleType,
+            vehicleId: vehicle._id,
+            rate: rate.vehicleRate,
+            active: vehicle.active
+        }
+    });
+});
+
+exports.getRates = catchAsync(async (req, res, next) => {
+    const rates = await Rate.find().populate({
+        path: 'vehicleId',
+        select: 'vehicleType active'
+    });
+
+    const formattedRates = rates.map(rate => ({
+        vehicleType: rate.vehicleId.vehicleType,
+        vehicleId: rate.vehicleId._id,
+        rate: rate.vehicleRate,
+        active: rate.vehicleId.active,
+        createdAt: rate.createdAt
+    }));
+
+    res.status(200).json({
+        status: 'success',
+        results: rates.length,
+        data: {
+            rates: formattedRates
         }
     });
 });

@@ -1,7 +1,8 @@
 const express = require('express');
 const {
     getAllVehicles, createVehicle, updateVehicleStatus, deleteVehicle, 
-    addVehicleRate, updateVehicleRate, deleteVehicleRate, getAllVehicleRates
+    addVehicleRate, updateVehicleRate, deleteVehicleRate, getAllVehicleRates,
+    getVehicle, updateVehicle, getVehicleRate, getRates
 } = require('./../controllers/vehicleController');
 const authController = require('./../controllers/authController')
 
@@ -17,15 +18,19 @@ router.route('/')
     .get(getAllVehicles)
     .post(createVehicle)
 
-router.route('/:id')
-    .patch(updateVehicleStatus)
-    .delete(deleteVehicle)
-
-// Add this new route before the rate-specific routes
+// Move these specific routes BEFORE the :id routes
+router.get('/get-rates', getRates);
 router.get('/rates', getAllVehicleRates);
+
+// Then add the parameterized routes
+router.route('/:id')
+    .get(getVehicle)
+    .patch(updateVehicle)
+    .delete(deleteVehicle)
 
 // vehicle rate routes
 router.route('/:id/rate')
+    .get(getVehicleRate)
     .post(addVehicleRate)
     .patch(updateVehicleRate)
     .delete(deleteVehicleRate)
