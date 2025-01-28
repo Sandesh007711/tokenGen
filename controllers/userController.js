@@ -3,6 +3,7 @@ const AppError = require('./../utils/appError')
 const User = require('./../models/userModel')
 const factory = require('./handlerFactory')
 const APIfeatures = require('./../utils/apiFeatures')
+const bcrypt = require('bcryptjs')
 
 // get all users
 exports.getAllUsers = catchAsync(async (req, res) => {
