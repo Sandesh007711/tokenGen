@@ -75,7 +75,11 @@ const ManageRate = () => {
     fetchVehicleRates();
   }, []); // Run once when component mounts
 
-  // Add fetchVehicleRates function
+  /**
+   * Fetches vehicle rates from the API and formats them for display
+   * Handles loading states and error cases
+   * Updates the rates state with formatted data
+   */
   const fetchVehicleRates = async () => {
     setIsTableLoading(true);
     try {
@@ -141,11 +145,13 @@ const ManageRate = () => {
   };
 
   /**
-   * Handles adding or updating vehicle rates
-   * Validates input before processing
-   * Makes API call to add rate
+   * Handles both adding new rates and updating existing rates
+   * Determines the HTTP method (POST/PATCH) based on editingId state
+   * Validates input before making API call
+   * @returns {void}
    */
   const handleAddRate = async () => {
+    // Input validation
     if (!selectedVehicle) {
       showError('Please select a vehicle type');
       return;
@@ -161,44 +167,44 @@ const ManageRate = () => {
 
     setIsAddingRate(true);
     try {
-      // Get token from localStorage
       const token = localStorage.getItem('token');
       if (!token) {
         throw new Error('No authentication token found');
       }
 
-      // Find the selected vehicle's ID from vehicles array
+      // Find vehicle object from selected vehicle type
       const selectedVehicleObj = vehicles.find(v => v.vehicleType === selectedVehicle);
       if (!selectedVehicleObj) {
         throw new Error('Selected vehicle not found');
       }
 
-      // Make API call to add rate
+      // Determine if this is an update or new rate
+      const method = editingId ? 'PATCH' : 'POST';
+      
+      // Make API call with appropriate method
       const response = await fetch(`http://localhost:8000/api/v1/vehicles/${selectedVehicleObj._id}/rate`, {
-        method: 'POST',
+        method,
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          vehicleRate: parseFloat(rate)
+          vehicleRate: parseFloat(rate) // Ensure rate is sent as number
         })
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to add rate');
+        throw new Error(errorData.message || `Failed to ${editingId ? 'update' : 'add'} rate`);
       }
 
-      const data = await response.json();
-      
-      // Update local state
-      await fetchVehicleRates(); // Refresh the rates list
-      showSuccess('Rate added successfully!');
+      // Refresh rates list and reset form
+      await fetchVehicleRates();
+      showSuccess(`Rate ${editingId ? 'updated' : 'added'} successfully!`);
       resetForm();
       setInputError('');
     } catch (error) {
-      console.error('Error adding rate:', error);
+      console.error(`Error ${editingId ? 'updating' : 'adding'} rate:`, error);
       showError(error.message);
     } finally {
       setIsAddingRate(false);
@@ -206,9 +212,12 @@ const ManageRate = () => {
   };
 
   /**
-   * Handles editing an existing rate
-   * Populates form with selected rate data
-   * @param {Object} item - Rate item to edit
+   * Prepares the form for editing an existing rate
+   * Sets form fields with current rate data
+   * @param {Object} item - The rate item to edit
+   * @param {string} item.vehicleType - The type of vehicle
+   * @param {number} item.rate - The current rate amount
+   * @param {string} item.id - The unique identifier of the rate
    */
   const handleEdit = (item) => {
     setSelectedVehicle(item.vehicleType);
@@ -217,9 +226,11 @@ const ManageRate = () => {
   };
 
   /**
-   * Handles deleting a rate
-   * Shows confirmation dialog and stores rate info
-   * @param {Object} item - Rate item to delete
+   * Initiates the rate deletion process
+   * Shows confirmation dialog with rate details
+   * @param {Object} item - The rate item to delete
+   * @param {string} item.id - The rate ID
+   * @param {string} item.vehicleId - The associated vehicle ID
    */
   const handleDelete = (item) => {
     setDeleteConfirm({ 
