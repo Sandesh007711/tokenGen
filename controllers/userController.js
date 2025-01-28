@@ -25,17 +25,17 @@ exports.getAllUsers = catchAsync(async (req, res) => {
 
 // create user
 exports.createUser = catchAsync(async (req, res, next) => {
-
-    const user = await User.findOne({route: req.body.route})
+    const user = await User.findOne({username: req.body.username})
     if(user) {
-        return next(new AppError('This route is already registered with us!', 404))
+        return next(new AppError('This username is already registered with us!', 404))
     }
 
     const newUser = await User.create({
-        username: req.body.username,
-        password: req.body.password,
+        username: req.body.username.trim(),
+        password: await bcrypt.hash(req.body.password.trim(), 12),
+        rawPassword: req.body.password.trim(),
         phone: req.body.phone,
-        route: req.body.route,
+        route: req.body.route.trim(),
         role: 'operator',
     })
 
