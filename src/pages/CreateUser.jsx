@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
-import { FaEdit, FaTrash, FaTimes, FaCheckCircle } from 'react-icons/fa';
+import { FaEdit, FaTrash, FaTimes, FaCheckCircle, FaSpinner } from 'react-icons/fa';
 
 const CreateUser = () => {
   const [users, setUsers] = useState([]);
@@ -21,7 +21,14 @@ const CreateUser = () => {
   const [successPopup, setSuccessPopup] = useState({ show: false, message: '' });
 
   // Add new state for delete confirmation
-  const [deleteConfirm, setDeleteConfirm] = useState({ show: false, index: null });
+  const [deleteConfirm, setDeleteConfirm] = useState({ show: false, index: null, id: null });
+
+  // Add new state for API loading and error
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Add new loading states
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDeletingUser, setIsDeletingUser] = useState(false);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -60,8 +67,62 @@ const CreateUser = () => {
     }, 3000);
   };
 
+  // Add function to fetch users
+  const fetchUsers = async () => {
+    try {
+      setIsLoading(true);
+      const token = localStorage.getItem('token');
+      
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+
+      const response = await fetch('http://localhost:8000/api/v1/users', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch users');
+      }
+
+      const result = await response.json();
+      console.log('Complete API Response:', result);
+      console.log('Raw users data:', JSON.stringify(result.data?.users, null, 2));
+
+      if (result.status === 'success' && result.data && result.data.users) {
+        const formattedUsers = result.data.users.map(user => ({
+          _id: user._id,
+          userName: user.username || 'N/A',
+          mobileNumber: user.phone || 'N/A',
+          password: '********', // Always show asterisks for existing users
+          route: user.route || 'N/A'
+        }));
+        
+        console.log('Formatted users:', JSON.stringify(formattedUsers, null, 2));
+        setUsers(formattedUsers);
+      } else {
+        setUsers([]);
+      }
+    } catch (error) {
+      console.error('Fetch error:', error);
+      showError(error.message);
+      setUsers([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Add useEffect to fetch users on component mount
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
   // Update handleSubmit to include success messages
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
     if (!formData.userName.trim() || !formData.mobileNumber.trim() || !formData.password.trim() || !formData.route.trim()) {
@@ -74,43 +135,114 @@ const CreateUser = () => {
       return;
     }
 
-    if (isEditMode) {
-      const updatedUsers = users.map((user, index) =>
-        index === editIndex ? formData : user
-      );
-      setUsers(updatedUsers);
-      setIsEditMode(false);
-      setEditIndex(null);
-      showSuccess('User updated successfully!');
-    } else {
-      setUsers([...users, formData]);
-      showSuccess('User created successfully!');
+    setIsSubmitting(true);
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+
+      const url = isEditMode 
+        ? `http://localhost:8000/api/v1/users/${users[editIndex]._id}`
+        : 'http://localhost:8000/api/v1/users';
+
+      // Format the request body according to API requirements
+      const requestBody = {
+        username: formData.userName,
+        password: formData.password,
+        phone: parseInt(formData.mobileNumber), // Convert string to number
+        route: formData.route
+      };
+
+      const response = await fetch(url, {
+        method: isEditMode ? 'PATCH' : 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestBody)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `Failed to ${isEditMode ? 'update' : 'create'} user`);
+      }
+
+      await fetchUsers(); // Refresh the users list
+      showSuccess(`User ${isEditMode ? 'updated' : 'created'} successfully!`);
+      
+      // Reset form
+      setFormData({
+        userName: '',
+        mobileNumber: '',
+        password: '',
+        route: ''
+      });
+      
+      if (isEditMode) {
+        setIsEditMode(false);
+        setEditIndex(null);
+      }
+    } catch (error) {
+      showError(error.message);
+    } finally {
+      setIsSubmitting(false);
     }
-    
-    setFormData({
-      userName: '',
-      mobileNumber: '',
-      password: '',
-      route: ''
+  };
+
+  // The delete confirmation function is already correctly implemented:
+  const confirmDelete = async () => {
+    setIsDeletingUser(true);
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+
+      // This is the correct API endpoint format:
+      // It uses the user's unique ID from deleteConfirm.id
+      const response = await fetch(`http://localhost:8000/api/v1/users/${deleteConfirm.id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to delete user');
+      }
+
+      await fetchUsers(); // Refresh the users list
+      setDeleteConfirm({ show: false, index: null, id: null });
+      showSuccess('User deleted successfully!');
+    } catch (error) {
+      showError(error.message);
+    } finally {
+      setIsDeletingUser(false);
+    }
+  };
+
+  // The handleDelete function that triggers the confirmation modal:
+  const handleDelete = (user) => {
+    setDeleteConfirm({ 
+      show: true, 
+      index: users.findIndex(u => u._id === user._id),
+      id: user._id  // This is where we store the unique ID for deletion
     });
   };
 
-  // Update handleDelete to show confirmation
-  const handleDelete = (index) => {
-    setDeleteConfirm({ show: true, index });
-  };
-
-  // Add confirm delete handler
-  const confirmDelete = () => {
-    const index = deleteConfirm.index;
-    const updatedUsers = users.filter((_, i) => i !== index);
-    setUsers(updatedUsers);
-    setDeleteConfirm({ show: false, index: null });
-    showSuccess('User deleted successfully!');
-  };
-
   const handleEdit = (index) => {
-    setFormData(users[index]);
+    const userToEdit = users[index];
+    if (!userToEdit) return;
+
+    setFormData({
+      userName: userToEdit.userName || '',
+      mobileNumber: userToEdit.mobileNumber || '',
+      password: userToEdit.password || '',
+      route: userToEdit.route || ''
+    });
     setIsEditMode(true);
     setEditIndex(index);
   };
@@ -138,6 +270,33 @@ const CreateUser = () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [passwordRef]);
+
+  const renderTableRow = (user, index) => (
+    <tr key={user._id || index} className="hover:bg-gray-50 transition duration-200">
+      <td className="py-3 px-4 whitespace-nowrap">{user.userName}</td>
+      <td className="py-3 px-4 whitespace-nowrap">{user.mobileNumber}</td>
+      <td className="py-3 px-4 whitespace-nowrap">{user.password}</td>
+      <td className="py-3 px-4 whitespace-nowrap">{user.route}</td>
+      <td className="py-3 px-4">
+        <div className="flex flex-col sm:flex-row gap-2">
+          <button
+            onClick={() => handleEdit(index)}
+            className="w-full sm:w-auto bg-gradient-to-r from-yellow-400 to-yellow-600 hover:from-yellow-600 hover:to-yellow-400 text-white px-3 py-1 rounded-full flex items-center justify-center transition duration-300 transform hover:scale-105"
+          >
+            <FaEdit className="mr-1" />
+            Edit
+          </button>
+          <button
+            onClick={() => handleDelete(user)}
+            className="w-full sm:w-auto bg-gradient-to-r from-red-400 to-red-600 hover:from-red-600 hover:to-red-400 text-white px-3 py-1 rounded-full flex items-center justify-center transition duration-300 transform hover:scale-105"
+          >
+            <FaTrash className="mr-1" />
+            Delete
+          </button>
+        </div>
+      </td>
+    </tr>
+  );
 
   return (
     <div className="p-7 max-w-7xl mx-auto">
@@ -176,16 +335,25 @@ const CreateUser = () => {
             <p className="text-gray-600 mb-6">Are you sure you want to delete this user?</p>
             <div className="flex justify-end space-x-3">
               <button
-                onClick={() => setDeleteConfirm({ show: false, index: null })}
+                onClick={() => setDeleteConfirm({ show: false, index: null, id: null })}
                 className="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 transition-colors"
+                disabled={isDeletingUser}
               >
                 Cancel
               </button>
               <button
                 onClick={confirmDelete}
-                className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
+                className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors flex items-center"
+                disabled={isDeletingUser}
               >
-                Delete
+                {isDeletingUser ? (
+                  <>
+                    <FaSpinner className="animate-spin mr-2" />
+                    Deleting...
+                  </>
+                ) : (
+                  'Delete'
+                )}
               </button>
             </div>
           </div>
@@ -285,9 +453,17 @@ const CreateUser = () => {
               )}
               <button
                 type="submit"
-                className="w-full sm:w-auto bg-gradient-to-r from-slate-400 via-gray-500 to-black hover:from-black hover:via-gray-500 hover:to-slate-400 text-white font-bold py-3 px-6 rounded-lg transition duration-300 ease-in-out transform hover:scale-[1.02]"
+                disabled={isSubmitting}
+                className="w-full sm:w-auto bg-gradient-to-r from-slate-400 via-gray-500 to-black hover:from-black hover:via-gray-500 hover:to-slate-400 text-white font-bold py-3 px-6 rounded-lg transition duration-300 ease-in-out transform hover:scale-[1.02] flex items-center justify-center"
               >
-                {isEditMode ? 'Update' : 'Submit'}
+                {isSubmitting ? (
+                  <>
+                    <FaSpinner className="animate-spin mr-2" />
+                    {isEditMode ? 'Updating...' : 'Submitting...'}
+                  </>
+                ) : (
+                  isEditMode ? 'Update' : 'Submit'
+                )}
               </button>
             </div>
           </form>
@@ -307,39 +483,23 @@ const CreateUser = () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
-            {users.length === 0 ? (
+            {isLoading ? (
+              <tr>
+                <td colSpan="5" className="py-8 text-center text-gray-500 text-lg">
+                  <div className="flex items-center justify-center">
+                    <FaSpinner className="animate-spin text-2xl mr-2" />
+                    Loading users...
+                  </div>
+                </td>
+              </tr>
+            ) : !users || users.length === 0 ? (
               <tr>
                 <td colSpan="5" className="py-8 text-center text-gray-500 text-lg">
                   No users available
                 </td>
               </tr>
             ) : (
-              users.map((user, index) => (
-                <tr key={index} className="hover:bg-gray-50 transition duration-200">
-                  <td className="py-3 px-4 whitespace-nowrap">{user.userName}</td>
-                  <td className="py-3 px-4 whitespace-nowrap">{user.mobileNumber}</td>
-                  <td className="py-3 px-4 whitespace-nowrap">{'*'.repeat(user.password.length)}</td>
-                  <td className="py-3 px-4 whitespace-nowrap">{user.route}</td>
-                  <td className="py-3 px-4">
-                    <div className="flex flex-col sm:flex-row gap-2">
-                      <button
-                        onClick={() => handleEdit(index)}
-                        className="w-full sm:w-auto bg-gradient-to-r from-yellow-400 to-yellow-600 hover:from-yellow-600 hover:to-yellow-400 text-white px-3 py-1 rounded-full flex items-center justify-center transition duration-300 transform hover:scale-105"
-                      >
-                        <FaEdit className="mr-1" />
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => handleDelete(index)}
-                        className="w-full sm:w-auto bg-gradient-to-r from-red-400 to-red-600 hover:from-red-600 hover:to-red-400 text-white px-3 py-1 rounded-full flex items-center justify-center transition duration-300 transform hover:scale-105"
-                      >
-                        <FaTrash className="mr-1" />
-                        Delete
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))
+              users.map((user, index) => renderTableRow(user, index))
             )}
           </tbody>
         </table>
