@@ -8,6 +8,8 @@ const authController = require('./../controllers/authController')
 
 const router = express.Router();
 
+router.get('/get-rates', getRates); //made public for testing-abhinav
+
 // Protect all routes after this middleware
 router.use(authController.protect);
 
@@ -19,7 +21,7 @@ router.route('/')
     .post(createVehicle)
 
 // Move these specific routes BEFORE the :id routes
-router.get('/get-rates', getRates);
+
 router.get('/rates', getAllVehicleRates);
 
 // Then add the parameterized routes
