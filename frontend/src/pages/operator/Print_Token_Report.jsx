@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import DatePicker from 'react-datepicker';
 import { FaTimes, FaFileExcel } from 'react-icons/fa';
 import "react-datepicker/dist/react-datepicker.css";
@@ -11,30 +12,85 @@ import { saveAs } from 'file-saver';
  * Features: Date range selection, user filtering, and tabular display of token data
  */
 const Token_list = () => {
+  // Add currentUser to state
+  const [currentUser, setCurrentUser] = useState(null);
   // State Management
   const [fromDate, setFromDate] = useState(new Date());           // Start date for filtering
   const [toDate, setToDate] = useState(new Date());              // End date for filtering
   const [filteredData, setFilteredData] = useState([]);         // Filtered token data
   const [errorPopup, setErrorPopup] = useState({ show: false, message: '' }); // Error popup state
   const [showConfirm, setShowConfirm] = useState(false);         // Confirmation popup state
+  const [loading, setLoading] = useState(false);
+  const [tokens, setTokens] = useState([]);
 
-  // Sample data for demonstration (replace with actual data source)
-  const sampleTableData = [
-    {
-      name: 'John Doe',
-      email: 'john@example.com',
-      phone: '1234567890',
-      token: 'TK001',
-      date: '2024-01-20'
-    },
-    {
-      name: 'Jane Smith',
-      email: 'jane@example.com',
-      phone: '9876543210',
-      token: 'TK002',
-      date: '2024-01-21'
+  // Modified getCurrentUser to extract username correctly
+  const getCurrentUser = () => {
+    try {
+      const userStr = localStorage.getItem('user');
+      if (userStr) {
+        const userData = JSON.parse(userStr);
+        return userData.user; // Extract the nested user object
+      }
+      return null;
+    } catch (error) {
+      console.error('Error parsing user data:', error);
+      return null;
     }
-  ];
+  };
+
+  useEffect(() => {
+    const fetchTokens = async () => {
+      setLoading(true);
+      try {
+        const token = localStorage.getItem('token');
+        const user = getCurrentUser();
+        setCurrentUser(user);
+
+        console.log('Current username:', user?.username); // Debug log
+
+        const response = await axios.get('http://localhost:8000/api/v1/tokens', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        console.log('API Response:', response.data);
+
+        if (response.data?.status === 'success' && Array.isArray(response.data.printTokens)) {
+          // Filter tokens for current user based on username
+          const userTokens = response.data.printTokens.filter(token => 
+            token.userId?.username === user?.username
+          );
+          
+          console.log('Filtered tokens for user:', userTokens); // Debug log
+          
+          setTokens(userTokens);
+          setFilteredData(userTokens);
+          
+          if (userTokens.length === 0) {
+            showError('No tokens found for current user');
+          }
+        } else {
+          console.log('Response structure:', response.data);
+          showError('No tokens available');
+        }
+      } catch (error) {
+        console.error('Error fetching tokens:', error);
+        showError(error.response?.data?.message || 'Error fetching tokens');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTokens();
+  }, []);
+
+  // Debug user information
+  useEffect(() => {
+    const user = getCurrentUser();
+    console.log('Current user from localStorage:', user);
+  }, []);
 
   /**
    * Shows error popup with message
@@ -62,8 +118,25 @@ const Token_list = () => {
    * Handles confirmation of data fetch
    */
   const handleConfirm = () => {
-    setFilteredData(sampleTableData);
-    setShowConfirm(false);
+    try {
+      console.log('Filtering tokens between:', fromDate, toDate); // Debug log
+      console.log('Available tokens:', tokens); // Debug log
+
+      const filtered = tokens.filter(token => {
+        const tokenDate = new Date(token.createdAt);
+        const from = new Date(fromDate.setHours(0, 0, 0, 0));
+        const to = new Date(toDate.setHours(23, 59, 59, 999));
+        
+        return tokenDate >= from && tokenDate <= to;
+      });
+      
+      console.log('Filtered tokens:', filtered); // Debug log
+      setFilteredData(filtered);
+      setShowConfirm(false);
+    } catch (error) {
+      console.error('Error during filtering:', error); // Debug log
+      showError('Error filtering data');
+    }
   };
 
   /**
@@ -73,19 +146,27 @@ const Token_list = () => {
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet('Token Report');
 
-    // Add headers
+    // Updated headers to match JSON structure
     worksheet.columns = [
-      { header: 'Name', key: 'name', width: 20 },
-      { header: 'Email', key: 'email', width: 30 },
-      { header: 'Phone', key: 'phone', width: 15 },
-      { header: 'Token', key: 'token', width: 15 },
-      { header: 'Date', key: 'date', width: 15 }
+      { header: 'Token No', key: 'tokenNo', width: 15 },
+      { header: 'Driver Name', key: 'driverName', width: 20 },
+      { header: 'Mobile No', key: 'driverMobileNo', width: 15 },
+      { header: 'Vehicle No', key: 'vehicleNo', width: 15 },
+      { header: 'Vehicle Type', key: 'vehicleType', width: 15 },
+      { header: 'Route', key: 'route', width: 15 },
+      { header: 'Quantity', key: 'quantity', width: 12 },
+      { header: 'Place', key: 'place', width: 15 },
+      { header: 'Challan Pin', key: 'challanPin', width: 15 },
+      { header: 'Created At', key: 'createdAt', width: 20 }
     ];
 
-    // Add rows
-    worksheet.addRows(filteredData);
+    // Transform data to include nested vehicleType
+    const excelData = filteredData.map(item => ({
+      ...item,
+      vehicleType: item.vehicleId?.vehicleType || ''
+    }));
 
-    // Style the header row
+    worksheet.addRows(excelData);
     worksheet.getRow(1).font = { bold: true };
 
     // Generate Excel file
@@ -162,48 +243,75 @@ const Token_list = () => {
 
       {/* Table Section */}
       <div className="bg-white rounded-lg shadow-lg overflow-hidden">
-        {filteredData.length > 0 && (
-          <div className="p-4 bg-gray-50 border-b flex justify-end">
-            <button
-              onClick={exportToExcel}
-              className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition duration-300"
-            >
-              <FaFileExcel />
-              Export to Excel
-            </button>
+        {loading ? (
+          <div className="p-8 text-center text-gray-500">
+            Loading tokens...
           </div>
-        )}
-        
-        <table className="w-full">
-          <thead className="bg-gradient-to-r from-slate-400 via-slate-300 to-slate-200">
-            <tr>
-              <th className="py-3 px-4 text-left font-semibold">Name</th>
-              <th className="py-3 px-4 text-left font-semibold">Email</th>
-              <th className="py-3 px-4 text-left font-semibold">Phone</th>
-              <th className="py-3 px-4 text-left font-semibold">Token</th>
-              <th className="py-3 px-4 text-left font-semibold">Date</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200">
-            {filteredData.length === 0 ? (
-              <tr>
-                <td colSpan="5" className="py-8 text-center text-gray-500 text-lg">
-                  No data available
-                </td>
-              </tr>
-            ) : (
-              filteredData.map((item, index) => (
-                <tr key={index} className="hover:bg-gray-50 transition duration-200">
-                  <td className="py-3 px-4">{item.name}</td>
-                  <td className="py-3 px-4">{item.email}</td>
-                  <td className="py-3 px-4">{item.phone}</td>
-                  <td className="py-3 px-4">{item.token}</td>
-                  <td className="py-3 px-4">{item.date}</td>
-                </tr>
-              ))
+        ) : (
+          <>
+            {filteredData.length > 0 && (
+              <div className="p-4 bg-gray-50 border-b flex justify-between items-center">
+                <span className="text-gray-600">
+                  Total Tokens: {filteredData.length}
+                </span>
+                <button
+                  onClick={exportToExcel}
+                  className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition duration-300"
+                >
+                  <FaFileExcel />
+                  Export to Excel
+                </button>
+              </div>
             )}
-          </tbody>
-        </table>
+            
+            <table className="w-full">
+              <thead className="bg-gradient-to-r from-slate-400 via-slate-300 to-slate-200">
+                <tr>
+                  <th className="py-3 px-4 text-left font-semibold">Token No</th>
+                  <th className="py-3 px-4 text-left font-semibold">Driver Name</th>
+                  <th className="py-3 px-4 text-left font-semibold">Mobile No</th>
+                  <th className="py-3 px-4 text-left font-semibold">Vehicle No</th>
+                  <th className="py-3 px-4 text-left font-semibold">Vehicle Type</th>
+                  <th className="py-3 px-4 text-left font-semibold">Route</th>
+                  <th className="py-3 px-4 text-left font-semibold">Quantity</th>
+                  <th className="py-3 px-4 text-left font-semibold">Place</th>
+                  <th className="py-3 px-4 text-left font-semibold">Challan Pin</th>
+                  <th className="py-3 px-4 text-left font-semibold">Created At</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {loading ? (
+                  <tr>
+                    <td colSpan="10" className="py-8 text-center text-gray-500 text-lg">
+                      Loading...
+                    </td>
+                  </tr>
+                ) : filteredData.length === 0 ? (
+                  <tr>
+                    <td colSpan="10" className="py-8 text-center text-gray-500 text-lg">
+                      No data available
+                    </td>
+                  </tr>
+                ) : (
+                  filteredData.map((item, index) => (
+                    <tr key={index} className="hover:bg-gray-50 transition duration-200">
+                      <td className="py-3 px-4">{item.tokenNo}</td>
+                      <td className="py-3 px-4">{item.driverName}</td>
+                      <td className="py-3 px-4">{item.driverMobileNo}</td>
+                      <td className="py-3 px-4">{item.vehicleNo}</td>
+                      <td className="py-3 px-4">{item.vehicleId?.vehicleType}</td>
+                      <td className="py-3 px-4">{item.route}</td>
+                      <td className="py-3 px-4">{item.quantity}</td>
+                      <td className="py-3 px-4">{item.place}</td>
+                      <td className="py-3 px-4">{item.challanPin}</td>
+                      <td className="py-3 px-4">{new Date(item.createdAt).toLocaleString()}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </>
+        )}
       </div>
     </div>
   );
