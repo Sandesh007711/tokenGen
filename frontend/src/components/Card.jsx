@@ -11,53 +11,54 @@ const Card = ({ operator }) => {
   const [perPage, setPerPage] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
 
-  // Fetch data with pagination support
+  // Modified fetchData function to handle the correct data format
   const fetchData = async (page, pageSize) => {
     setLoading(true);
     try {
-      console.log(`Fetching data for page ${page} with pageSize ${pageSize}`);
-      const response = await fetch(
-        `https://dummyjson.com/c/f07c-4e33-4a58-aa02?page=${page}&limit=${pageSize}&operator=${operator}`
-      );
-      const json = await response.json();
-      console.log('Raw API response:', json);
-      
-      // Calculate start and end indices for pagination
-      const start = (page - 1) * pageSize;
-      const end = start + pageSize;
-      
-      // Filter and slice data for current page
-      const filteredData = json
-        .filter(item => item.Operator === operator);
-      console.log('Filtered data:', filteredData);
-      
-      const paginatedData = filteredData.slice(start, end);
-      console.log('Paginated data:', paginatedData);
-      
-      const formattedData = paginatedData.map(item => ({
-        id: item['S.N.'],
-        date: new Date(item.Date).toLocaleString(),
-        tokenNo: item['Token No'],
-        driver: item.Driver,
-        vehicalNo: item['Vehical No'],
-        vehicalType: item['Vehical Type'],
-        rate: item.Rate,
-        quantity: item.Quantity,
-        place: item.Place,
-        route: item.Route,
-        operator: item.Operator,
-        chalan: item.Chalan
-      }));
-      console.log('Formatted data:', formattedData);
+      const token = localStorage.getItem('token');
+      console.log('Fetching data for operator:', operator); // Log operator info
 
-      // Set the total count of filtered records
-      const totalFilteredRecords = json.filter(item => item.Operator === operator).length;
-      console.log('Total filtered records:', totalFilteredRecords);
+      const response = await fetch(`http://localhost:8000/api/v1/tokens?page=${page}&limit=${pageSize}&userId=${operator.id}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch data');
+      }
+
+      const json = await response.json();
+      console.log('Raw API response:', json); // Log raw API response
       
+      if (!json.printTokens || !Array.isArray(json.printTokens)) {
+        console.error('Invalid response format:', json);
+        throw new Error('Invalid data format received from server');
+      }
+
+      console.log('Print Tokens array:', json.printTokens); // Log tokens array
+
+      const formattedData = json.printTokens.map(item => ({
+        tokenNo: item.tokenNo,
+        date: new Date(item.createdAt).toLocaleString(),
+        driver: item.driverName,
+        mobileNo: item.driverMobileNo, // Already a number
+        vehicleNo: item.vehicleNo,
+        vehicleType: item.vehicleId.vehicleType,
+        quantity: item.quantity, // Already a number
+        route: item.route,
+        place: item.place || '-',
+        challanPin: item.challanPin || '-'
+      }));
+
+      console.log('Formatted data:', formattedData); // Log formatted data
+
       setData(formattedData);
-      setTotalRows(totalFilteredRecords);
+      setTotalRows(json.printTokens.length); // Use the actual array length for total
     } catch (error) {
       console.error('Error fetching data:', error);
+      setData([]);
+      setTotalRows(0);
     } finally {
       setLoading(false);
     }
@@ -241,11 +242,11 @@ const Card = ({ operator }) => {
     }, 500);
   };
 
-  // Table column definitions
+  // Modified table column definitions
   const columns = [
     {
-      name: 'S.N.',
-      selector: row => row.id,
+      name: 'Token No',
+      selector: row => row.tokenNo,
       sortable: true,
     },
     {
@@ -254,33 +255,35 @@ const Card = ({ operator }) => {
       sortable: true,
     },
     {
-      name: 'Token No',
-      selector: row => row.tokenNo,
-      sortable: true,
-    },
-    {
       name: 'Driver',
       selector: row => row.driver,
       sortable: true,
     },
     {
+      name: 'Mobile',
+      selector: row => row.mobileNo,
+      sortable: true,
+      format: row => row.mobileNo.toString(), // Convert number to string for display
+    },
+    {
       name: 'Vehicle No',
-      selector: row => row.vehicalNo,
+      selector: row => row.vehicleNo,
       sortable: true,
     },
     {
       name: 'Vehicle Type',
-      selector: row => row.vehicalType,
-      sortable: true,
-    },
-    {
-      name: 'Rate',
-      selector: row => row.rate,
+      selector: row => row.vehicleType,
       sortable: true,
     },
     {
       name: 'Quantity',
       selector: row => row.quantity,
+      sortable: true,
+      format: row => row.quantity.toString(), // Convert number to string for display
+    },
+    {
+      name: 'Route',
+      selector: row => row.route,
       sortable: true,
     },
     {
@@ -289,8 +292,8 @@ const Card = ({ operator }) => {
       sortable: true,
     },
     {
-      name: 'Route',
-      selector: row => row.route,
+      name: 'Challan Pin',
+      selector: row => row.challanPin,
       sortable: true,
     },
     {
@@ -363,6 +366,7 @@ const Card = ({ operator }) => {
   // Render DataTable with all configurations
   return (
     <div className="bg-white shadow-lg rounded-lg overflow-hidden p-4 mt-16 md:mt-20 lg:mt-24 xl:mt-20 sm:p-6 max-w-full">
+      <h2 className="text-2xl font-bold mb-4">Tokens for {operator.username}</h2>
       <DataTable
         columns={columns}
         data={data}
