@@ -201,25 +201,42 @@ const Content = () => {
 
   // Fetch operators data when component mounts
   useEffect(() => {
-    // Fetch data from API
-    fetch('https://dummyjson.com/c/f07c-4e33-4a58-aa02')
-      .then(response => response.json())
-      .then(json => {
-        console.log('Raw fetched data:', json);
-        // Process data to get unique operators with their stats
-        const uniqueOperators = [...new Set(json.map(item => item.Operator))].map(op => ({
-          operator: op,
-          totalEntries: json.filter(item => item.Operator === op).length, // Count total entries for each operator
-          latestEntry: json.find(item => item.Operator === op)?.['Token No'] // Get latest token number
+    const fetchOperators = async () => {
+      setLoading(true);
+      try {
+        const token = localStorage.getItem('token');
+        const response = await fetch('http://localhost:8000/api/v1/users', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch operators');
+        }
+
+        const json = await response.json();
+        // Filter only operator users and include their _id
+        const operatorData = json.data.users.filter(user => user.role === 'operator');
+        
+        const formattedOperators = operatorData.map(op => ({
+          operator: op.username,
+          operatorId: op._id, // Add this line to store the operator's ID
+          totalEntries: op.tokenData.totalTokens,
+          dailyTokens: op.tokenData.dailyTokens.count,
+          route: op.route,
+          latestDate: new Date(op.tokenData.dailyTokens.date).toLocaleDateString()
         }));
-        console.log('Processed operators data:', uniqueOperators);
-        setOperators(uniqueOperators);
-        setLoading(false);
-      })
-      .catch(error => {
+
+        setOperators(formattedOperators);
+      } catch (error) {
         console.error('Error fetching operators:', error);
+      } finally {
         setLoading(false);
-      });
+      }
+    };
+
+    fetchOperators();
   }, []);
 
   // Add new useEffect for fetching vehicle types
@@ -346,8 +363,8 @@ const Content = () => {
   }, []);
 
   // Handle operator card click - toggle selection
-  const handleCardClick = (operator) => {
-    setSelectedOperator(operator === selectedOperator ? null : operator);
+  const handleCardClick = (operator, operatorId) => {
+    setSelectedOperator(operator === selectedOperator ? null : { username: operator, id: operatorId });
   };
 
   // Render component based on loading and selection state
@@ -557,14 +574,16 @@ const Content = () => {
           {operators.map((op) => (
             <div
               key={op.operator}
-              onClick={() => handleCardClick(op.operator)}
+              onClick={() => handleCardClick(op.operator, op.operatorId)}
               className="cursor-pointer transform transition-transform duration-300 hover:scale-105"
             >
               <div className="bg-white rounded-lg shadow-lg p-4 sm:p-6 hover:shadow-xl hover:bg-slate-200">
                 <div className="text-xl sm:text-2xl font-bold mb-3 sm:mb-4 text-gray-800">Operator {op.operator}</div>
                 <div className="text-sm sm:text-base text-gray-600">
-                  <p className="mb-2">Total Entries: {op.totalEntries}</p>
-                  <p className="line-clamp-2">Latest Token: {op.latestEntry}</p>
+                  <p className="mb-2">Total Tokens: {op.totalEntries}</p>
+                  <p className="mb-2">Daily Tokens: {op.dailyTokens}</p>
+                  <p className="mb-2">Route: {op.route}</p>
+                  <p>Latest Activity: {op.latestDate}</p>
                 </div>
                 <div className="mt-3 sm:mt-4 text-blue-500 text-xs sm:text-sm">Click to view details →</div>
               </div>
