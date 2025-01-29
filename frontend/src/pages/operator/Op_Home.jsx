@@ -5,6 +5,8 @@ const Op_Home = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [entries, setEntries] = useState([]);
   const [formData, setFormData] = useState({
+    userId: '',
+    route: '',
     driverName: '',
     driverMobile: '',
     vehicleNo: '',
@@ -173,6 +175,8 @@ const Op_Home = () => {
     setEntries(prev => [newEntry, ...prev].slice(0, 10));
     setIsModalOpen(false);
     setFormData({
+      userId: '',
+      route: '',
       driverName: '',
       driverMobile: '',
       vehicleNo: '',
@@ -218,6 +222,20 @@ const Op_Home = () => {
     printWindow.print();
   };
 
+  const [users, setUsers] = useState([
+    { id: '1', name: 'User 1', route: 'Route A' },
+    { id: '2', name: 'User 2', route: 'Route B' },
+    { id: '3', name: 'User 3', route: 'Route C' },
+  ]);
+
+  const [routes] = useState([
+    'Route A',
+    'Route B',
+    'Route C',
+    'Route D',
+    'Route E'
+  ]);
+
   return (
     <div className="p-7 max-w-7xl mx-auto">
       {successPopup.show && (
@@ -262,15 +280,65 @@ const Op_Home = () => {
               id={`form-${Math.random()}`}
             >
               <div className="grid grid-cols-2 gap-4">
+                {/* Update all input containers to have consistent styling */}
+                <div className="relative">
+                  <label className="block text-gray-300 text-sm font-bold mb-2">Select User</label>
+                  <div className="inline-block relative w-full">
+                    <select
+                      name="userId"
+                      value={formData.userId}
+                      onChange={handleInputChange}
+                      className="block w-full px-4 py-3 pr-10 bg-gray-900 text-gray-300 rounded-lg border border-gray-700 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 transition-all duration-300 appearance-none"
+                      required
+                    >
+                      <option value="">Select User</option>
+                      {users.map((user) => (
+                        <option key={user.id} value={user.id}>
+                          {user.name} ({user.route})
+                        </option>
+                      ))}
+                    </select>
+                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-400">
+                      <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                        <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/>
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="relative">
+                  <label className="block text-gray-300 text-sm font-bold mb-2">Route</label>
+                  <div className="inline-block relative w-full">
+                    <select
+                      name="route"
+                      value={formData.route}
+                      onChange={handleInputChange}
+                      className="block w-full px-4 py-3 pr-10 bg-gray-900 text-gray-300 rounded-lg border border-gray-700 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 transition-all duration-300 appearance-none"
+                      required
+                    >
+                      <option value="">Select Route</option>
+                      {routes.map((route, index) => (
+                        <option key={index} value={route}>
+                          {route}
+                        </option>
+                      ))}
+                    </select>
+                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-400">
+                      <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                        <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/>
+                      </svg>
+                    </div>
+                  </div>
+                </div>
                 <div className="relative">
                   <label className="block text-gray-300 text-sm font-bold mb-2">Driver Name</label>
-                  <div className="inline-block relative">
+                  <div className="inline-block relative w-full">
                     <input 
                       type="text" 
                       name="driverName"
                       value={formData.driverName}
                       onChange={handleInputChange}
-                      className="px-4 py-3 pr-10 bg-gray-900 text-gray-300 rounded-lg border border-gray-700 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 transition-all duration-300"
+                      className="block w-full px-4 py-3 pr-10 bg-gray-900 text-gray-300 rounded-lg border border-gray-700 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 transition-all duration-300"
                       required
                       autoComplete="nope"
                       readonly
@@ -280,7 +348,7 @@ const Op_Home = () => {
                 </div>
                 <div className="relative">
                   <label className="block text-gray-300 text-sm font-bold mb-2">Driver Mobile</label>
-                  <div className="inline-block relative">
+                  <div className="inline-block relative w-full">
                     <input 
                       type="tel" 
                       name="driverMobile"
@@ -289,7 +357,7 @@ const Op_Home = () => {
                       maxLength={10}
                       pattern="[0-9]{10}"
                       title="Please enter a valid 10-digit mobile number"
-                      className="px-4 py-3 pr-10 bg-gray-900 text-gray-300 rounded-lg border border-gray-700 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 transition-all duration-300"
+                      className="block w-full px-4 py-3 pr-10 bg-gray-900 text-gray-300 rounded-lg border border-gray-700 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 transition-all duration-300"
                       required
                       autoComplete="nope"
                       readonly
@@ -299,13 +367,13 @@ const Op_Home = () => {
                 </div>
                 <div className="relative">
                   <label className="block text-gray-300 text-sm font-bold mb-2">Vehicle No</label>
-                  <div className="inline-block relative">
+                  <div className="inline-block relative w-full">
                     <input 
                       type="text" 
                       name="vehicleNo"
                       value={formData.vehicleNo}
                       onChange={handleInputChange}
-                      className="px-4 py-3 pr-10 bg-gray-900 text-gray-300 rounded-lg border border-gray-700 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 transition-all duration-300"
+                      className="block w-full px-4 py-3 pr-10 bg-gray-900 text-gray-300 rounded-lg border border-gray-700 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 transition-all duration-300"
                       required
                       autoComplete="nope"
                       readonly
@@ -399,13 +467,13 @@ const Op_Home = () => {
                 </div>
                 <div className="relative">
                   <label className="block text-gray-300 text-sm font-bold mb-2">Place</label>
-                  <div className="inline-block relative">
+                  <div className="inline-block relative w-full">
                     <input 
                       type="text" 
                       name="place"
                       value={formData.place}
                       onChange={handleInputChange}
-                      className="px-4 py-3 pr-10 bg-gray-900 text-gray-300 rounded-lg border border-gray-700 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 transition-all duration-300"
+                      className="block w-full px-4 py-3 pr-10 bg-gray-900 text-gray-300 rounded-lg border border-gray-700 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 transition-all duration-300"
                       autoComplete="nope"
                       readonly
                       onFocus={(e) => e.target.removeAttribute('readonly')}
@@ -414,13 +482,13 @@ const Op_Home = () => {
                 </div>
                 <div className="relative">
                   <label className="block text-gray-300 text-sm font-bold mb-2">Chalaan Pin</label>
-                  <div className="inline-block relative">
+                  <div className="inline-block relative w-full">
                     <input 
                       type="text" 
                       name="chalaanPin"
                       value={formData.chalaanPin}
                       onChange={handleInputChange}
-                      className="px-4 py-3 pr-10 bg-gray-900 text-gray-300 rounded-lg border border-gray-700 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 transition-all duration-300"
+                      className="block w-full px-4 py-3 pr-10 bg-gray-900 text-gray-300 rounded-lg border border-gray-700 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 transition-all duration-300"
                       autoComplete="nope"
                       readonly
                       onFocus={(e) => e.target.removeAttribute('readonly')}
