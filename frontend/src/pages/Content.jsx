@@ -20,7 +20,8 @@ const Content = () => {
     quantity: '',
     place: '',
     chalaanPin: '',
-    route: ''  // Add this line
+    route: '',
+    userId: ''  // Add this line
   });
   const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
@@ -29,30 +30,9 @@ const Content = () => {
   const [errorPopup, setErrorPopup] = useState({ show: false, message: '' });
 
   // Add form-related constants
-  const vehicleTypes = [
-    "Select Vehicle Type",
-    "Truck",
-    "Dumper",
-    "Trailer",
-    "Container",
-    "Tanker",
-    "Mini Truck",
-    "Pickup Van",
-    "Heavy Truck"
-  ];
-
-  const vehicleRates = [
-    "Select Rate",
-    "1000",
-    "1500",
-    "2000",
-    "2500",
-    "3000",
-    "3500",
-    "4000",
-    "4500",
-    "5000"
-  ];
+  const [vehicleTypes, setVehicleTypes] = useState([]);
+  const [routes, setRoutes] = useState([]);
+  const [users, setUsers] = useState([]);
 
   const generateQuantityOptions = () => {
     const options = ["Select Quantity"];
@@ -64,11 +44,25 @@ const Content = () => {
 
   const quantityOptions = generateQuantityOptions();
 
-  // Add form handling functions
+  // Modify handleInputChange to automatically set vehicle rate when vehicle type changes
   const handleInputChange = (e) => {
     const { name, value } = e.target;
 
-    if (name === 'vehicleType' && value === 'Select Vehicle Type') return;
+    if (name === 'vehicleType') {
+      if (value === '') return;
+      
+      // Find the corresponding rate for selected vehicle type
+      const selectedVehicleData = vehicleTypes.find(type => type.vehicleType === value);
+      if (selectedVehicleData) {
+        setFormData(prev => ({
+          ...prev,
+          [name]: value,
+          vehicleRate: selectedVehicleData.rate.toString()
+        }));
+      }
+      return;
+    }
+
     if (name === 'vehicleRate' && value === 'Select Rate') return;
     if (name === 'quantity' && value === 'Select Quantity') return;
 
@@ -108,7 +102,8 @@ const Content = () => {
     setTimeout(() => setSuccessPopup({ show: false, message: '' }), 3000);
   };
 
-  const handleSubmitClick = (e) => {
+  // Modify handleSubmitClick to handle API submission
+  const handleSubmitClick = async (e) => {
     e.preventDefault();
 
     // Validation checks
@@ -116,28 +111,92 @@ const Content = () => {
       showError('Driver Name is required');
       return;
     }
-    // ... add other validation checks as needed
 
-    setTempFormData({...formData});
-    setShowSubmitConfirm(true);
-  };
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
 
-  const confirmSubmit = () => {
-    // Handle form submission
-    setIsModalOpen(false);
-    setFormData({
-      driverName: '',
-      driverMobile: '',
-      vehicleNo: '',
-      vehicleType: '',
-      vehicleRate: '',
-      quantity: '',
-      place: '',
-      chalaanPin: '',
-      route: ''  // Add this line
-    });
-    setShowSubmitConfirm(false);
-    showSuccess('Token generated successfully!');
+      // Find the selected vehicle data to get the vehicleId
+      const selectedVehicleData = vehicleTypes.find(
+        type => type.vehicleType === formData.vehicleType
+      );
+
+      if (!selectedVehicleData) {
+        throw new Error('Selected vehicle type not found');
+      }
+
+      // Format the data according to API requirements
+      const submitData = {
+        userId: formData.userId,  // Add this line
+        vehicleId: selectedVehicleData._id,
+        driverName: formData.driverName.trim(),
+        driverMobileNo: parseInt(formData.driverMobile),
+        vehicleNo: formData.vehicleNo.trim(),
+        quantity: parseInt(formData.quantity),
+        place: formData.place.trim() || undefined, // Only include if not empty
+        challanPin: formData.chalaanPin ? parseInt(formData.chalaanPin) : undefined,
+        route: formData.route
+      };
+
+      // Remove undefined fields
+      Object.keys(submitData).forEach(key => 
+        submitData[key] === undefined && delete submitData[key]
+      );
+
+      // Validate required fields
+      const requiredFields = ['userId', 'vehicleId', 'driverName', 'driverMobileNo', 'vehicleNo', 'quantity', 'route'];
+      const missingFields = requiredFields.filter(field => !submitData[field]);
+      
+      if (missingFields.length > 0) {
+        throw new Error(`Please fill in all required fields: ${missingFields.join(', ')}`);
+      }
+
+      console.log('Submitting data:', submitData); // For debugging
+
+      const response = await fetch('http://localhost:8000/api/v1/tokens', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(submitData)
+      });
+
+      if (response.status === 401) {
+        throw new Error('Unauthorized access');
+      }
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to submit token');
+      }
+
+      const result = await response.json();
+
+      if (result.status === 'success') {
+        showSuccess('Token generated successfully!');
+        setIsModalOpen(false);
+        setFormData({
+          driverName: '',
+          driverMobile: '',
+          vehicleNo: '',
+          vehicleType: '',
+          vehicleRate: '',
+          quantity: '',
+          place: '',
+          chalaanPin: '',
+          route: '',
+          userId: ''
+        });
+      } else {
+        throw new Error(result.message || 'Failed to generate token');
+      }
+    } catch (error) {
+      console.error('Error submitting token:', error);
+      showError(error.message);
+    }
   };
 
   // Fetch operators data when component mounts
@@ -161,6 +220,129 @@ const Content = () => {
         console.error('Error fetching operators:', error);
         setLoading(false);
       });
+  }, []);
+
+  // Add new useEffect for fetching vehicle types
+  useEffect(() => {
+    const fetchVehicleTypes = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        
+        if (!token) {
+          throw new Error('No authentication token found');
+        }
+
+        const response = await fetch('http://localhost:8000/api/v1/vehicles/rates', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (response.status === 401) {
+          throw new Error('Unauthorized access');
+        }
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch vehicle types');
+        }
+
+        const result = await response.json();
+        
+        // Check if the response has the expected structure
+        if (result.status === 'success' && result.data && result.data.rates) {
+          setVehicleTypes(result.data.rates);
+        } else {
+          throw new Error('Invalid response format');
+        }
+      } catch (error) {
+        console.error('Error fetching vehicle types:', error);
+        showError(error.message);
+      }
+    };
+
+    fetchVehicleTypes();
+  }, []);
+
+  // Add new useEffect for fetching routes
+  useEffect(() => {
+    const fetchRoutes = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        
+        if (!token) {
+          throw new Error('No authentication token found');
+        }
+
+        const response = await fetch('http://localhost:8000/api/v1/users', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (response.status === 401) {
+          throw new Error('Unauthorized access');
+        }
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch routes');
+        }
+
+        const result = await response.json();
+        
+        if (result.status === 'success' && result.data && result.data.users) {
+          setRoutes(result.data.users);
+        } else {
+          throw new Error('Invalid response format');
+        }
+      } catch (error) {
+        console.error('Error fetching routes:', error);
+        showError(error.message);
+      }
+    };
+
+    fetchRoutes();
+  }, []);
+
+  // Add useEffect for fetching users
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        
+        if (!token) {
+          throw new Error('No authentication token found');
+        }
+
+        const response = await fetch('http://localhost:8000/api/v1/users', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch users');
+        }
+
+        const result = await response.json();
+        
+        if (result.status === 'success' && result.data && result.data.users) {
+          setUsers(result.data.users);
+        } else {
+          throw new Error('Invalid response format');
+        }
+      } catch (error) {
+        console.error('Error fetching users:', error);
+        showError(error.message);
+      }
+    };
+
+    fetchUsers();
   }, []);
 
   // Handle operator card click - toggle selection
@@ -211,6 +393,23 @@ const Content = () => {
             <form onSubmit={handleSubmitClick} autoComplete="off">
               <div className="grid grid-cols-2 gap-4">
                 <div className="relative">
+                  <label className="block text-gray-300 text-sm font-bold mb-2">Select User</label>
+                  <select
+                    name="userId"
+                    value={formData.userId}
+                    onChange={handleInputChange}
+                    className="px-4 py-3 w-full bg-gray-900 text-gray-300 rounded-lg border border-gray-700 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 transition-all duration-300"
+                    required
+                  >
+                    <option value="">Select User</option>
+                    {Array.isArray(users) && users.map((user) => (
+                      <option key={user._id} value={user._id}>
+                        {user.name} ({user.route})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="relative">
                   <label className="block text-gray-300 text-sm font-bold mb-2">Driver Name</label>
                   <input 
                     type="text" 
@@ -253,24 +452,26 @@ const Content = () => {
                     className="px-4 py-3 w-full bg-gray-900 text-gray-300 rounded-lg border border-gray-700 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 transition-all duration-300"
                     required
                   >
-                    {vehicleTypes.map((type, index) => (
-                      <option key={index} value={type}>{type}</option>
+                    <option value="">Select Vehicle Type</option>
+                    {Array.isArray(vehicleTypes) && vehicleTypes.map((type, index) => (
+                      <option key={index} value={type.vehicleType}>
+                        {type.vehicleType} - ₹{type.rate}
+                      </option>
                     ))}
                   </select>
                 </div>
+
+                {/* Replace Vehicle Rate dropdown with read-only input */}
                 <div className="relative">
                   <label className="block text-gray-300 text-sm font-bold mb-2">Vehicle Rate</label>
-                  <select
+                  <input 
+                    type="text"
                     name="vehicleRate"
-                    value={formData.vehicleRate}
-                    onChange={handleInputChange}
+                    value={formData.vehicleRate ? `₹${formData.vehicleRate}` : ''}
                     className="px-4 py-3 w-full bg-gray-900 text-gray-300 rounded-lg border border-gray-700 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 transition-all duration-300"
+                    readOnly
                     required
-                  >
-                    {vehicleRates.map((rate, index) => (
-                      <option key={index} value={rate}>{rate}</option>
-                    ))}
-                  </select>
+                  />
                 </div>
                 <div className="relative">
                   <label className="block text-gray-300 text-sm font-bold mb-2">Quantity</label>
@@ -288,13 +489,20 @@ const Content = () => {
                 </div>
                 <div className="relative">
                   <label className="block text-gray-300 text-sm font-bold mb-2">Route</label>
-                  <input 
-                    type="text" 
+                  <select
                     name="route"
                     value={formData.route}
                     onChange={handleInputChange}
                     className="px-4 py-3 w-full bg-gray-900 text-gray-300 rounded-lg border border-gray-700 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 transition-all duration-300"
-                  />
+                    required
+                  >
+                    <option value="">Select Route</option>
+                    {Array.isArray(routes) && routes.map((route, index) => (
+                      <option key={index} value={route.route}>
+                        {route.route}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div className="relative">
                   <label className="block text-gray-300 text-sm font-bold mb-2">Place</label>
