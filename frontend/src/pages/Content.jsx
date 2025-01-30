@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Card from '../components/Card';
 import { FaCheckCircle, FaTimes } from 'react-icons/fa';
+import { StyledButton } from '../components/StyledButton';
 
 // Main Content component that displays operators and their details
 const Content = () => {
@@ -387,12 +388,9 @@ const Content = () => {
       )}
 
       {/* Add Print Token Button */}
-      <button 
-        onClick={() => setIsModalOpen(true)}
-        className="mb-4 bg-gradient-to-r from-slate-400 via-gray-500 to-black hover:from-black hover:via-gray-500 hover:to-slate-400 text-white font-bold py-3 px-6 rounded-lg transition duration-300 ease-in-out transform hover:scale-[1.02]"
-      >
+      <StyledButton onClick={() => setIsModalOpen(true)}>
         Add Print Token
-      </button>
+      </StyledButton>
 
       {/* Form Modal */}
       {isModalOpen && (
@@ -569,7 +567,7 @@ const Content = () => {
         </div>
       ) : !selectedOperator ? (
         // Grid layout for operator cards when no operator is selected
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 md:gap-6 mt-8">
           {/* Map through operators and create cards */}
           {operators.map((op) => (
             <div
