@@ -7,15 +7,18 @@ const Card = ({ operator }) => {
   // State management for table data and pagination
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [totalRows, setTotalRows] = useState(0);
+  const [perPage, setPerPage] = useState(10);
+  const [currentPage, setCurrentPage] = useState(1);
 
-  // Simplified fetchData function without pagination parameters
-  const fetchData = async () => {
+  // Modified fetchData function to handle the correct data format
+  const fetchData = async (page, pageSize) => {
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
       console.log('Fetching data for operator:', operator); // Log operator info
 
-      const response = await fetch(`http://localhost:8000/api/v1/tokens?userId=${operator.id}`, {
+      const response = await fetch(`http://localhost:8000/api/v1/tokens?page=${page}&limit=${pageSize}&userId=${operator.id}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -51,17 +54,31 @@ const Card = ({ operator }) => {
       console.log('Formatted data:', formattedData); // Log formatted data
 
       setData(formattedData);
+      setTotalRows(json.printTokens.length); // Use the actual array length for total
     } catch (error) {
       console.error('Error fetching data:', error);
       setData([]);
+      setTotalRows(0);
     } finally {
       setLoading(false);
     }
   };
 
+  // Pagination handlers
+  const handlePageChange = page => {
+    setCurrentPage(page);
+    fetchData(page, perPage);
+  };
+
+  const handlePerRowsChange = async (newPerPage, page) => {
+    setPerPage(newPerPage);
+    setCurrentPage(page);
+    fetchData(page, newPerPage);
+  };
+
   // Load initial data when operator changes
   useEffect(() => {
-    fetchData();
+    fetchData(currentPage, perPage);
   }, [operator]);
 
   // Generate QR code for row data
@@ -358,6 +375,11 @@ const Card = ({ operator }) => {
           <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-gray-900"></div>
         }
         pagination
+        paginationServer
+        paginationTotalRows={totalRows}
+        onChangeRowsPerPage={handlePerRowsChange}
+        onChangePage={handlePageChange}
+        paginationPerPage={perPage}
         highlightOnHover
         striped
         customStyles={customStyles}
