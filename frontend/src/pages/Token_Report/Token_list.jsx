@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import DatePicker from 'react-datepicker';
 import { FaTimes, FaFileExcel, FaSpinner, FaEdit, FaTrash } from 'react-icons/fa';
+import DataTable from 'react-data-table-component';
 import "react-datepicker/dist/react-datepicker.css";
 import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
@@ -24,6 +25,10 @@ const Token_list = () => {
   const [successPopup, setSuccessPopup] = useState({ show: false, message: '' }); // Success popup state
   const [selectedToken, setSelectedToken] = useState(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [pending, setPending] = useState(true);
+  const [perPage, setPerPage] = useState(10);
+  const [totalRows, setTotalRows] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
 
   // Helper function to sort tokens by date (newest first)
   const sortTokensByDate = (tokens) => {
@@ -73,52 +78,121 @@ const Token_list = () => {
     fetchUsers();
   }, []);
 
-  // Modify the useEffect for fetching tokens to properly handle state updates
-  useEffect(() => {
-    const initialFetch = async () => {
-      setIsLoading(true); // Set loading to true before fetching
-      try {
-        const token = localStorage.getItem('token');
-        if (!token) {
-          throw new Error('No authentication token found');
+  // Add helper function to compare only dates
+  const isSameOrAfterDate = (date1, date2) => {
+    const d1 = new Date(date1.getFullYear(), date1.getMonth(), date1.getDate());
+    const d2 = new Date(date2.getFullYear(), date2.getMonth(), date2.getDate());
+    return d1 >= d2;
+  };
+
+  const isSameOrBeforeDate = (date1, date2) => {
+    const d1 = new Date(date1.getFullYear(), date1.getMonth(), date1.getDate());
+    const d2 = new Date(date2.getFullYear(), date2.getMonth(), date2.getDate());
+    return d1 <= d2;
+  };
+
+  // Replace initialFetch with this new fetch function
+  const fetchTokens = async (page, perPage, searchParams = {}) => {
+    setIsLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+
+      // Remove username from query params and fetch all tokens
+      const queryParams = new URLSearchParams({
+        page: page.toString(),
+        limit: perPage.toString()
+      });
+
+      const response = await fetch(`http://localhost:8000/api/v1/tokens?${queryParams}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
         }
+      });
 
-        // Add artificial delay to show loading state (optional, remove in production)
-        await new Promise(resolve => setTimeout(resolve, 1000));
+      if (!response.ok) {
+        throw new Error('Failed to fetch tokens');
+      }
 
-        const response = await fetch('http://localhost:8000/api/v1/tokens', {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
+      const result = await response.json();
+      console.log('Token API Response:', result);
+
+      if (result.status === 'success' && Array.isArray(result.printTokens)) {
+        // Filter by both date and username on frontend
+        const filteredTokens = result.printTokens.filter(token => {
+          // Date filtering
+          const dateMatches = (() => {
+            if (!searchParams.fromDate || !searchParams.toDate) return true;
+            
+            const tokenDate = new Date(token.createdAt);
+            const fromDateTime = new Date(searchParams.fromDate);
+            const toDateTime = new Date(searchParams.toDate);
+            
+            return isSameOrAfterDate(tokenDate, fromDateTime) && 
+                   isSameOrBeforeDate(tokenDate, toDateTime);
+          })();
+
+          // Username filtering
+          const usernameMatches = (() => {
+            if (!searchParams.username) return true;
+            return token.userId?.username === searchParams.username;
+          })();
+
+          return dateMatches && usernameMatches;
         });
 
-        if (!response.ok) {
-          throw new Error('Failed to fetch tokens');
-        }
+        const startIndex = (page - 1) * perPage;
+        const endIndex = startIndex + perPage;
+        const paginatedData = filteredTokens.slice(startIndex, endIndex);
 
-        const result = await response.json();
-        console.log('Token API Response:', result);
-
-        if (result.status === 'success' && result.printTokens) {
-          const tokenData = result.printTokens;
-          const sortedTokens = sortTokensByDate(tokenData);
-          setTokens(sortedTokens);
-          setFilteredData(sortedTokens); // Set initial filtered data directly
-          console.log('Setting initial sorted data:', sortedTokens);
-        }
-      } catch (error) {
-        console.error('Error in initial fetch:', error);
-        showError(error.message);
-      } finally {
-        setIsLoading(false); // Set loading to false after everything is done
+        setFilteredData(paginatedData);
+        setTotalRows(filteredTokens.length);
+        showSuccess(`Found ${filteredTokens.length} matching records`);
+      } else {
+        setFilteredData([]);
+        setTotalRows(0);
+        showError('No matching records found');
       }
+    } catch (error) {
+      console.error('Error fetching tokens:', error);
+      showError(error.message);
+      setFilteredData([]);
+      setTotalRows(0);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Replace the useEffect for initial fetch
+  useEffect(() => {
+    fetchTokens(currentPage, perPage);
+  }, []); // Initial fetch
+
+  // Add handlePageChange function
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+    const searchParams = {
+      fromDate,
+      toDate,
+      ...(selectedUser && { username: selectedUser })
     };
+    fetchTokens(page, perPage, searchParams);
+  };
 
-    initialFetch();
-  }, []); // Empty dependency array for initial load only
-
-  // Remove the separate fetchTokens function since it's now integrated into initialFetch
+  // Add handlePerPageChange function
+  const handlePerPageChange = async (newPerPage, page) => {
+    setPerPage(newPerPage);
+    setCurrentPage(page);
+    const searchParams = {
+      fromDate,
+      toDate,
+      ...(selectedUser && { username: selectedUser })
+    };
+    await fetchTokens(page, newPerPage, searchParams);
+  };
 
   /**
    * Shows error popup with message
@@ -157,37 +231,19 @@ const Token_list = () => {
     setShowConfirm(true);
   };
 
-  // Update handleConfirm to use the tokens state directly
-  const handleConfirm = () => {
-    console.log('Current tokens:', tokens);
-    console.log('Filtering with:', { selectedUser, fromDate, toDate });
-    
-    const filtered = tokens.filter(token => {
-      const tokenDate = new Date(token.createdAt);
-      const fromDateTime = new Date(fromDate);
-      const toDateTime = new Date(toDate);
-      
-      fromDateTime.setHours(0, 0, 0, 0);
-      toDateTime.setHours(23, 59, 59, 999);
-
-      // Base date filter
-      const dateMatches = tokenDate >= fromDateTime && tokenDate <= toDateTime;
-
-      // If user is selected, apply user filter, otherwise return date filter only
-      if (selectedUser) {
-        return dateMatches && token.userId?.username === selectedUser;
-      }
-      
-      return dateMatches;
-    });
-
-    // Sort filtered results by date (newest first)
-    const sortedFiltered = sortTokensByDate(filtered);
-    
-    console.log('Filtered and sorted results:', sortedFiltered);
-    setFilteredData(sortedFiltered);
-    showSuccess(`Found ${sortedFiltered.length} matching records`);
+  // Update handleConfirm to use pagination
+  const handleConfirm = async () => {
     setShowConfirm(false);
+    setCurrentPage(1); // Reset to first page
+
+    const searchParams = {
+      fromDate: fromDate,
+      toDate: toDate,
+      ...(selectedUser && { username: selectedUser })
+    };
+
+    console.log('Submitting search with params:', searchParams);
+    await fetchTokens(1, perPage, searchParams);
   };
 
   /**
@@ -281,6 +337,115 @@ const Token_list = () => {
       setShowDeleteConfirm(false);
       setSelectedToken(null);
     }
+  };
+
+  // Define the columns for DataTable
+  const columns = [
+    {
+      name: 'Driver Name',
+      selector: row => row.driverName,
+      sortable: true,
+    },
+    {
+      name: 'Driver Mobile No.',
+      selector: row => row.driverMobileNo,
+      sortable: true,
+    },
+    {
+      name: 'Vehicle No',
+      selector: row => row.vehicleNo,
+      sortable: true,
+    },
+    {
+      name: 'Place',
+      selector: row => row.place,
+      sortable: true,
+    },
+    {
+      name: 'Route',
+      selector: row => row.route || 'N/A',
+      sortable: true,
+    },
+    {
+      name: 'Token No',
+      selector: row => row.tokenNo,
+      sortable: true,
+    },
+    {
+      name: 'Challan Pin',
+      selector: row => row.challanPin || 'N/A',
+      sortable: true,
+    },
+    {
+      name: 'Quantity',
+      selector: row => row.quantity,
+      sortable: true,
+    },
+    {
+      name: 'User',
+      selector: row => row.userId?.username || 'N/A',
+      sortable: true,
+    },
+    {
+      name: 'Updated By',
+      selector: row => row.updatedBy?.username || 'N/A',
+      sortable: true,
+    },
+    {
+      name: 'Date',
+      selector: row => formatDateTime(row.createdAt),
+      sortable: true,
+    },
+    {
+      name: 'Actions',
+      cell: (row) => (
+        <div className="flex gap-2">
+          <button
+            onClick={() => handleUpdate(row)}
+            className="p-2 text-blue-600 hover:text-blue-800 transition-colors"
+            title="Update"
+          >
+            <FaEdit />
+          </button>
+          <button
+            onClick={() => {
+              setSelectedToken(row);
+              setShowDeleteConfirm(true);
+            }}
+            className="p-2 text-red-600 hover:text-red-800 transition-colors"
+            title="Delete"
+          >
+            <FaTrash />
+          </button>
+        </div>
+      ),
+      ignoreRowClick: true,
+      // Removed allowOverflow property as it's not needed
+    },
+  ];
+
+  // Custom styles for DataTable
+  const customStyles = {
+    headRow: {
+      style: {
+        background: 'linear-gradient(to right, #94a3b8, #cbd5e1, #e2e8f0)',
+        fontWeight: 'bold',
+      },
+    },
+    rows: {
+      style: {
+        minHeight: '60px',
+        '&:hover': {
+          backgroundColor: '#f8fafc',
+        },
+      },
+    },
+    pagination: {
+      style: {
+        border: 'none',
+        backgroundColor: '#f8fafc',
+      },
+    },
   };
 
   return (
@@ -426,84 +591,40 @@ const Token_list = () => {
           </div>
         )}
         
-        <table className="w-full">
-          <thead className="bg-gradient-to-r from-slate-400 via-slate-300 to-slate-200">
-            <tr>
-              <th className="py-3 px-4 text-left font-semibold">Driver Name</th>
-              <th className="py-3 px-4 text-left font-semibold">Driver Mobile No.</th>
-              <th className="py-3 px-4 text-left font-semibold">Vehicle No</th>
-              <th className="py-3 px-4 text-left font-semibold">Place</th>
-              <th className="py-3 px-4 text-left font-semibold">Route</th>
-              <th className="py-3 px-4 text-left font-semibold">Token No</th>
-              <th className="py-3 px-4 text-left font-semibold">Challan Pin</th>
-              <th className="py-3 px-4 text-left font-semibold">Quantity</th>
-              <th className="py-3 px-4 text-left font-semibold">User</th>
-              <th className="py-3 px-4 text-left font-semibold">Updated By</th>
-              <th className="py-3 px-4 text-left font-semibold">Date</th>
-              <th className="py-3 px-4 text-left font-semibold">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200">
-            {isLoading ? (
-              <tr>
-                <td colSpan="11" className="py-8 text-center text-gray-500">
-                  <div className="flex flex-col items-center justify-center">
-                    <FaSpinner className="animate-spin text-2xl mb-2" />
-                    <span className="font-medium">Loading tokens...</span>
-                  </div>
-                </td>
-              </tr>
-            ) : filteredData.length === 0 ? (
-              <tr>
-                <td colSpan="11" className="py-8 text-center text-gray-500 text-lg">
-                  <div className="flex flex-col items-center justify-center">
-                    <span className="font-medium">No data available</span>
-                    <span className="text-sm text-gray-400 mt-1">Select date range to view tokens</span>
-                  </div>
-                </td>
-              </tr>
-            ) : (
-              filteredData.map((item) => (
-                <tr key={item._id} className="hover:bg-gray-50 transition duration-200">
-                  <td className="py-3 px-4">{item.driverName}</td>
-                  <td className="py-3 px-4">{item.driverMobileNo}</td>
-                  <td className="py-3 px-4">{item.vehicleNo}</td>
-                  <td className="py-3 px-4">{item.place}</td>
-                  <td className="py-3 px-4">{item.route || 'N/A'}</td>
-                  <td className="py-3 px-4">{item.tokenNo}</td>
-                  <td className="py-3 px-4">{item.challanPin || 'N/A'}</td>
-                  <td className="py-3 px-4">{item.quantity}</td>
-                  <td className="py-3 px-4">{item.userId?.username || 'N/A'}</td>
-                  <td className="py-3 px-4">{item.updatedBy?.username || 'N/A'}</td>
-                  <td className="py-3 px-4">
-                    {formatDateTime(item.createdAt)}
-                  </td>
-                  <td className="py-3 px-4">
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => handleUpdate(item)}
-                        className="p-2 text-blue-600 hover:text-blue-800 transition-colors"
-                        title="Update"
-                      >
-                        <FaEdit />
-                      </button>
-                      <button
-                        onClick={() => {
-                          setSelectedToken(item);
-                          setShowDeleteConfirm(true);
-                        }}
-                        className="p-2 text-red-600 hover:text-red-800 transition-colors"
-                        title="Delete"
-                      >
-                        <FaTrash />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+        <DataTable
+          columns={columns}
+          data={filteredData}
+          pagination
+          paginationServer
+          paginationTotalRows={totalRows}
+          onChangePage={handlePageChange}
+          onChangeRowsPerPage={handlePerPageChange}
+          paginationPerPage={perPage}
+          paginationRowsPerPageOptions={[10, 25, 50, 100]}
+          progressPending={isLoading}
+          progressComponent={
+            <div className="py-8 text-center text-gray-500">
+              <div className="flex flex-col items-center justify-center">
+                <FaSpinner className="animate-spin text-2xl mb-2" />
+                <span className="font-medium">Loading tokens...</span>
+              </div>
+            </div>
+          }
+          noDataComponent={
+            <div class="py-8 text-center text-gray-500 text-lg">
+              <div class="flex flex-col items-center justify-center">
+                <span class="font-medium">No data available</span>
+                <span class="text-sm text-gray-400 mt-1">Select date range to view tokens</span>
+              </div>
+            </div>
+          }
+          customStyles={customStyles}
+          sortIcon={<span className="ml-2">↕</span>}
+          responsive
+          highlightOnHover
+          pointerOnHover
+          striped
+        />
       </div>
     </div>
   );
