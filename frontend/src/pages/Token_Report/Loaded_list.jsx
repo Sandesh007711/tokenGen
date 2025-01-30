@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import DatePicker from 'react-datepicker';
 import { FaTimes } from 'react-icons/fa';
 import "react-datepicker/dist/react-datepicker.css";
@@ -16,30 +16,139 @@ const Loaded_list = () => {
   const [filteredData, setFilteredData] = useState([]);
   const [errorPopup, setErrorPopup] = useState({ show: false, message: '' });
   const [showConfirm, setShowConfirm] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [users, setUsers] = useState([]);
 
-  // Sample data for demonstration
-  const sampleUsers = [
-    { id: 1, name: 'John Doe' },
-    { id: 2, name: 'Jane Smith' },
-    { id: 3, name: 'Mike Johnson' }
-  ];
-
-  const sampleTableData = [
-    {
-      name: 'John Doe',
-      email: 'john@example.com',
-      phone: '1234567890',
-      token: 'TK001',
-      date: '2024-01-20'
-    },
-    {
-      name: 'Jane Smith',
-      email: 'jane@example.com',
-      phone: '9876543210',
-      token: 'TK002',
-      date: '2024-01-21'
+  const getAuthHeaders = () => {
+    const token = localStorage.getItem('token'); // Changed from 'authToken' to 'token'
+    if (!token) {
+      throw new Error('No authentication token found');
     }
-  ];
+    return {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
+    };
+  };
+
+  const fetchUsers = async () => {
+    try {
+      const headers = getAuthHeaders();
+      const response = await fetch('http://localhost:8000/api/v1/tokens/updated', {
+        method: 'GET',
+        headers,
+        credentials: 'include' // Add this to include cookies
+      });
+
+      if (response.status === 401 || response.status === 403) {
+        throw new Error('Unauthorized: Please login again');
+      }
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Server error occurred');
+      }
+
+      const data = await response.json();
+      if (data.status === 'success' && Array.isArray(data.data)) {
+        const uniqueUsers = [...new Set(data.data.map(token => token.driverName))].map(name => ({
+          id: name,
+          name: name
+        }));
+        setUsers(uniqueUsers);
+      }
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      showError(error.message);
+      if (error.message.includes('login again')) {
+        // Redirect to login page or handle reauthorization
+        window.location.href = '/login';
+      }
+    }
+  };
+
+  // Add new function for initial data load
+  const loadInitialData = async () => {
+    try {
+      const headers = getAuthHeaders();
+      const response = await fetch('http://localhost:8000/api/v1/tokens/updated', {
+        method: 'GET',
+        headers,
+        credentials: 'include'
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch data');
+      }
+
+      const data = await response.json();
+      console.log('Initial data load:', data);
+
+      if (data.status === 'success' && Array.isArray(data.data)) {
+        const loadedTokens = data.data.filter(token => token.isLoaded === true);
+        console.log('Initial loaded tokens:', loadedTokens);
+        setFilteredData(loadedTokens);
+      }
+    } catch (error) {
+      console.error('Error loading initial data:', error);
+      showError(error.message);
+    }
+  };
+
+  // Modified fetchTokenData function
+  const fetchTokenData = async () => {
+    setLoading(true);
+    try {
+      const headers = getAuthHeaders();
+      const response = await fetch('http://localhost:8000/api/v1/tokens/updated', {
+        method: 'GET',
+        headers,
+        credentials: 'include'
+      });
+
+      const data = await response.json();
+      console.log('Fetch data response:', data);
+
+      if (data.status === 'success' && Array.isArray(data.data)) {
+        // First filter loaded tokens
+        let tokens = data.data.filter(token => token.isLoaded === true);
+        console.log('Loaded tokens:', tokens);
+
+        // Then apply user filter if selected
+        if (selectedUser && selectedUser !== '') {
+          tokens = tokens.filter(token => token.driverName === selectedUser);
+          console.log('After user filter:', tokens);
+        }
+
+        // Then apply date filter if dates are valid
+        if (fromDate && toDate) {
+          const start = new Date(fromDate);
+          start.setHours(0, 0, 0, 0);
+          const end = new Date(toDate);
+          end.setHours(23, 59, 59, 999);
+
+          tokens = tokens.filter(token => {
+            const date = new Date(token.createdAt);
+            return date >= start && date <= end;
+          });
+          console.log('After date filter:', tokens);
+        }
+
+        setFilteredData(tokens);
+      }
+    } catch (error) {
+      console.error('Error in fetchTokenData:', error);
+      showError(error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Modified useEffects
+  useEffect(() => {
+    fetchUsers();
+    loadInitialData(); // Load initial data when component mounts
+  }, []);
 
   // Error handling and form submission functions
   const showError = (message) => {
@@ -59,7 +168,7 @@ const Loaded_list = () => {
   };
 
   const handleConfirm = () => {
-    setFilteredData(sampleTableData.filter(item => item.name === selectedUser));
+    fetchTokenData();
     setShowConfirm(false);
   };
 
@@ -126,7 +235,7 @@ const Loaded_list = () => {
             className="px-4 py-3 bg-gray-900 text-gray-300 rounded-lg border border-gray-700 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 transition-all duration-300 min-w-[200px]"
           >
             <option value="">Select User</option>
-            {sampleUsers.map((user) => (
+            {users.map((user) => (
               <option key={user.id} value={user.name}>{user.name}</option>
             ))}
           </select>
@@ -142,36 +251,54 @@ const Loaded_list = () => {
 
       {/* Table Section */}
       <div className="bg-white rounded-lg shadow-lg overflow-hidden">
-        <table className="w-full">
-          <thead className="bg-gradient-to-r from-slate-400 via-slate-300 to-slate-200">
-            <tr>
-              <th className="py-3 px-4 text-left font-semibold">Name</th>
-              <th className="py-3 px-4 text-left font-semibold">Email</th>
-              <th className="py-3 px-4 text-left font-semibold">Phone</th>
-              <th className="py-3 px-4 text-left font-semibold">Token</th>
-              <th className="py-3 px-4 text-left font-semibold">Date</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200">
-            {filteredData.length === 0 ? (
+        {loading ? (
+          <div className="py-8 text-center text-gray-500 text-lg">
+            Loading data...
+          </div>
+        ) : (
+          <table className="w-full">
+            <thead className="bg-gradient-to-r from-slate-400 via-slate-300 to-slate-200">
               <tr>
-                <td colSpan="5" className="py-8 text-center text-gray-500 text-lg">
-                  No data available
-                </td>
+                <th className="py-3 px-4 text-left font-semibold">Driver Name</th>
+                <th className="py-3 px-4 text-left font-semibold">Mobile No</th>
+                <th className="py-3 px-4 text-left font-semibold">Token No</th>
+                <th className="py-3 px-4 text-left font-semibold">Challan Pin</th>
+                <th className="py-3 px-4 text-left font-semibold">Place</th>
+                <th className="py-3 px-4 text-left font-semibold">Route</th>
+                <th className="py-3 px-4 text-left font-semibold">Quantity</th>
+                <th className="py-3 px-4 text-left font-semibold">Vehicle Type</th>
+                <th className="py-3 px-4 text-left font-semibold">Vehicle No</th>
+                <th className="py-3 px-4 text-left font-semibold">Created By</th>
+                <th className="py-3 px-4 text-left font-semibold">Created At</th>
               </tr>
-            ) : (
-              filteredData.map((item, index) => (
-                <tr key={index} className="hover:bg-gray-50 transition duration-200">
-                  <td className="py-3 px-4">{item.name}</td>
-                  <td className="py-3 px-4">{item.email}</td>
-                  <td className="py-3 px-4">{item.phone}</td>
-                  <td className="py-3 px-4">{item.token}</td>
-                  <td className="py-3 px-4">{item.date}</td>
+            </thead>
+            <tbody className="divide-y divide-gray-200">
+              {filteredData.length === 0 ? (
+                <tr>
+                  <td colSpan="11" className="py-8 text-center text-gray-500 text-lg">
+                    No data available
+                  </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              ) : (
+                filteredData.map((item) => (
+                  <tr key={item._id} className="hover:bg-gray-50 transition duration-200">
+                    <td className="py-3 px-4">{item.driverName}</td>
+                    <td className="py-3 px-4">{item.driverMobileNo}</td>
+                    <td className="py-3 px-4">{item.tokenNo}</td>
+                    <td className="py-3 px-4">{item.challanPin}</td>
+                    <td className="py-3 px-4">{item.place}</td>
+                    <td className="py-3 px-4">{item.route}</td>
+                    <td className="py-3 px-4">{item.quantity}</td>
+                    <td className="py-3 px-4">{item.vehicleId?.vehicleType}</td>
+                    <td className="py-3 px-4">{item.vehicleNo}</td>
+                    <td className="py-3 px-4">{item.userId?.username}</td>
+                    <td className="py-3 px-4">{new Date(item.createdAt).toLocaleDateString()}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        )}
       </div>
     </div>
   );

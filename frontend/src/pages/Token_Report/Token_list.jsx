@@ -291,7 +291,6 @@ const Token_list = () => {
       { header: 'Challan Pin', key: 'challanPin', width: 15 },
       { header: 'Quantity', key: 'quantity', width: 10 },
       { header: 'User', key: 'createdBy', width: 20 }, // Updated header
-      { header: 'Updated By', key: 'updatedBy', width: 20 },
       { header: 'Date', key: 'createdAt', width: 20 }
     ];
 
@@ -300,7 +299,6 @@ const Token_list = () => {
       ...item,
       vehicleType: item.vehicleId?.vehicleType || 'N/A', // Add this line
       createdBy: item.userId?.username || 'N/A', // Add user info
-      updatedBy: item.updatedBy?.username || 'N/A', // Add updated by info
       createdAt: formatDateTime(item.createdAt)
     }));
 
@@ -473,11 +471,6 @@ const Token_list = () => {
     {
       name: 'User',
       selector: row => row.userId?.username || 'N/A',
-      sortable: true,
-    },
-    {
-      name: 'Updated By',
-      selector: row => row.updatedBy?.username || 'N/A',
       sortable: true,
     },
     {
