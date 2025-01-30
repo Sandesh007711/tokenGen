@@ -34,6 +34,7 @@ const Token_list = () => {
   const [vehicleTypes, setVehicleTypes] = useState([]);
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false); // Add this new state with other states
+  const [isSearchActive, setIsSearchActive] = useState(false); // Add this with other state declarations
 
   // Helper function to sort tokens by date (newest first)
   const sortTokensByDate = (tokens) => {
@@ -96,8 +97,8 @@ const Token_list = () => {
     return d1 <= d2;
   };
 
-  // Replace initialFetch with this new fetch function
-  const fetchTokens = async (page, perPage, searchParams = {}) => {
+  // Replace fetchTokens with this simplified version
+  const fetchTokens = async (searchParams = {}) => {
     setIsLoading(true);
     try {
       const token = localStorage.getItem('token');
@@ -105,13 +106,7 @@ const Token_list = () => {
         throw new Error('No authentication token found');
       }
 
-      // Remove username from query params and fetch all tokens
-      const queryParams = new URLSearchParams({
-        page: page.toString(),
-        limit: perPage.toString()
-      });
-
-      const response = await fetch(`http://localhost:8000/api/v1/tokens?${queryParams}`, {
+      const response = await fetch('http://localhost:8000/api/v1/tokens', {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -154,11 +149,7 @@ const Token_list = () => {
           return dateMatches && usernameMatches;
         });
 
-        const startIndex = (page - 1) * perPage;
-        const endIndex = startIndex + perPage;
-        const paginatedData = filteredTokens.slice(startIndex, endIndex);
-
-        setFilteredData(paginatedData);
+        setFilteredData(filteredTokens);
         setTotalRows(filteredTokens.length);
         showSuccess(`Found ${filteredTokens.length} matching records`);
       } else {
@@ -176,33 +167,10 @@ const Token_list = () => {
     }
   };
 
-  // Replace the useEffect for initial fetch
+  // Replace initial useEffect
   useEffect(() => {
-    fetchTokens(currentPage, perPage);
-  }, []); // Initial fetch
-
-  // Add handlePageChange function
-  const handlePageChange = (page) => {
-    setCurrentPage(page);
-    const searchParams = {
-      fromDate,
-      toDate,
-      ...(selectedUser && { username: selectedUser })
-    };
-    fetchTokens(page, perPage, searchParams);
-  };
-
-  // Add handlePerPageChange function
-  const handlePerPageChange = async (newPerPage, page) => {
-    setPerPage(newPerPage);
-    setCurrentPage(page);
-    const searchParams = {
-      fromDate,
-      toDate,
-      ...(selectedUser && { username: selectedUser })
-    };
-    await fetchTokens(page, newPerPage, searchParams);
-  };
+    fetchTokens();
+  }, []);
 
   /**
    * Shows error popup with message
@@ -241,10 +209,11 @@ const Token_list = () => {
     setShowConfirm(true);
   };
 
-  // Update handleConfirm to use pagination
+  // Replace handleConfirm
   const handleConfirm = async () => {
     setShowConfirm(false);
-    setCurrentPage(1); // Reset to first page
+    setCurrentPage(1);
+    setIsSearchActive(true); // Set search as active when confirming search
 
     const searchParams = {
       fromDate: fromDate,
@@ -253,7 +222,7 @@ const Token_list = () => {
     };
 
     console.log('Submitting search with params:', searchParams);
-    await fetchTokens(1, perPage, searchParams);
+    await fetchTokens(searchParams);
   };
 
   /**
@@ -419,6 +388,16 @@ const Token_list = () => {
       setShowDeleteConfirm(false);
       setSelectedToken(null);
     }
+  };
+
+  // Add this new function after other function declarations
+  const handleResetSearch = async () => {
+    setFromDate(new Date());
+    setToDate(new Date());
+    setSelectedUser('');
+    setIsSearchActive(false); // Reset search active state
+    await fetchTokens();
+    showSuccess('Reset to all tokens');
   };
 
   // Define the columns for DataTable
@@ -679,14 +658,25 @@ const Token_list = () => {
             </select>
           </div>
 
-          <div className="flex flex-col">
-            <label className="text-transparent mb-1">Submit</label>
-            <button
-              type="submit"
-              className="bg-gradient-to-r from-slate-400 via-gray-500 to-black hover:from-black hover:via-gray-500 hover:to-slate-400 text-white font-bold py-3 px-6 rounded-lg transition duration-300 ease-in-out transform hover:scale-[1.02]"
-            >
-              Submit
-            </button>
+          <div className="flex flex-col gap-2">
+            <label className="text-transparent mb-1">Actions</label>
+            <div className="flex gap-2">
+              <button
+                type="submit"
+                className="bg-gradient-to-r from-slate-400 via-gray-500 to-black hover:from-black hover:via-gray-500 hover:to-slate-400 text-white font-bold py-3 px-6 rounded-lg transition duration-300 ease-in-out transform hover:scale-[1.02]"
+              >
+                Submit
+              </button>
+              {isSearchActive && (
+                <button
+                  type="button"
+                  onClick={handleResetSearch}
+                  className="bg-gradient-to-r from-red-400 via-red-500 to-red-600 hover:from-red-600 hover:via-red-500 hover:to-red-400 text-white font-bold py-3 px-6 rounded-lg transition duration-300 ease-in-out transform hover:scale-[1.02]"
+                >
+                  Reset Search
+                </button>
+              )}
+            </div>
           </div>
         </form>
       </div>
@@ -719,13 +709,12 @@ const Token_list = () => {
             columns={columns}
             data={filteredData}
             pagination
-            paginationServer
             paginationTotalRows={totalRows}
-            onChangePage={handlePageChange}
-            onChangeRowsPerPage={handlePerPageChange}
             paginationPerPage={perPage}
             paginationRowsPerPageOptions={[10, 25, 50, 100]}
             progressPending={isLoading}
+            // Remove paginationServer prop
+            // Remove onChangePage and onChangeRowsPerPage props
             progressComponent={
               <div className="py-8 text-center text-gray-500">
                 <div className="flex flex-col items-center justify-center">
