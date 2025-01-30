@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import DatePicker from 'react-datepicker';
-import { FaTimes, FaFileExcel, FaSpinner, FaEdit, FaTrash } from 'react-icons/fa';
+import { FaTimes, FaFileExcel, FaSpinner, FaEdit, FaTrash, FaExpandAlt, FaCompressAlt } from 'react-icons/fa';
 import DataTable from 'react-data-table-component';
 import "react-datepicker/dist/react-datepicker.css";
 import ExcelJS from 'exceljs';
@@ -29,6 +29,11 @@ const Token_list = () => {
   const [perPage, setPerPage] = useState(10);
   const [totalRows, setTotalRows] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
+  const [showUpdateForm, setShowUpdateForm] = useState(false);
+  const [updateFormData, setUpdateFormData] = useState(null);
+  const [vehicleTypes, setVehicleTypes] = useState([]);
+  const [isFullScreen, setIsFullScreen] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false); // Add this new state with other states
 
   // Helper function to sort tokens by date (newest first)
   const sortTokensByDate = (tokens) => {
@@ -121,8 +126,13 @@ const Token_list = () => {
       console.log('Token API Response:', result);
 
       if (result.status === 'success' && Array.isArray(result.printTokens)) {
-        // Filter by both date and username on frontend
-        const filteredTokens = result.printTokens.filter(token => {
+        // Sort tokens by createdAt date in descending order (newest first)
+        const sortedTokens = result.printTokens.sort((a, b) => 
+          new Date(b.createdAt) - new Date(a.createdAt)
+        );
+
+        // Then apply filters
+        const filteredTokens = sortedTokens.filter(token => {
           // Date filtering
           const dateMatches = (() => {
             if (!searchParams.fromDate || !searchParams.toDate) return true;
@@ -273,6 +283,7 @@ const Token_list = () => {
     worksheet.columns = [
       { header: 'Driver Name', key: 'driverName', width: 20 },
       { header: 'Driver Mobile No.', key: 'driverMobileNo', width: 15 }, // Updated header
+      { header: 'Vehicle Type', key: 'vehicleType', width: 15 }, // Add this line
       { header: 'Vehicle No', key: 'vehicleNo', width: 15 },
       { header: 'Place', key: 'place', width: 20 },
       { header: 'Route', key: 'route', width: 20 },
@@ -287,6 +298,7 @@ const Token_list = () => {
     // Format the data for Excel with date and time
     const formattedData = filteredData.map(item => ({
       ...item,
+      vehicleType: item.vehicleId?.vehicleType || 'N/A', // Add this line
       createdBy: item.userId?.username || 'N/A', // Add user info
       updatedBy: item.updatedBy?.username || 'N/A', // Add updated by info
       createdAt: formatDateTime(item.createdAt)
@@ -306,8 +318,80 @@ const Token_list = () => {
 
   // Add these new functions for handling updates and deletes
   const handleUpdate = (token) => {
-    // Implement your update logic here
-    console.log('Update token:', token);
+    setUpdateFormData(token);
+    setShowUpdateForm(true);
+  };
+
+  const handleUpdateSubmit = async (updatedData) => {
+    setIsUpdating(true);
+    try {
+      const authToken = localStorage.getItem('token');
+      
+      // Find the selected vehicle data from vehicleTypes array
+      const selectedVehicle = vehicleTypes.find(type => type.vehicleType === updatedData.vehicleId?.vehicleType);
+      
+      if (!selectedVehicle) {
+        throw new Error('Selected vehicle type not found');
+      }
+
+      // Format the payload with the correct vehicleId structure
+      const updatePayload = {
+        route: updatedData.route || '',
+        quantity: parseInt(updatedData.quantity) || 0,
+        place: updatedData.place || '',
+        challanPin: updatedData.challanPin || '',
+        driverName: updatedData.driverName || '',
+        driverMobileNo: parseInt(updatedData.driverMobileNo) || 0,
+        vehicleId: selectedVehicle._id, // Send the vehicle ID instead of the vehicle type object
+        vehicleNo: updatedData.vehicleNo || ''
+      };
+
+      console.log('Selected Vehicle:', selectedVehicle);
+      console.log('Sending update payload:', updatePayload);
+
+      const response = await fetch(`http://localhost:8000/api/v1/tokens/${updatedData._id}`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(updatePayload)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to update token');
+      }
+
+      const result = await response.json();
+      
+      // Update the local state with the new data
+      setFilteredData(prevData =>
+        prevData.map(token =>
+          token._id === updatedData._id 
+            ? {
+                ...token,
+                ...result.data,
+                vehicleId: {
+                  _id: selectedVehicle._id,
+                  vehicleType: selectedVehicle.vehicleType
+                }
+              }
+            : token
+        )
+      );
+
+      // Refresh the data to ensure everything is in sync
+      await fetchTokens(currentPage, perPage);
+
+      setShowUpdateForm(false);
+      showSuccess('Token updated successfully');
+    } catch (error) {
+      console.error('Update error:', error);
+      showError(error.message);
+    } finally {
+      setIsUpdating(false);
+    }
   };
 
   const handleDelete = async () => {
@@ -349,6 +433,11 @@ const Token_list = () => {
     {
       name: 'Driver Mobile No.',
       selector: row => row.driverMobileNo,
+      sortable: true,
+    },
+    {
+      name: 'Vehicle Type',  // Add this new column
+      selector: row => row.vehicleId?.vehicleType || 'N/A',
       sortable: true,
     },
     {
@@ -446,6 +535,38 @@ const Token_list = () => {
         backgroundColor: '#f8fafc',
       },
     },
+  };
+
+  useEffect(() => {
+    const fetchVehicleTypes = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const response = await fetch('http://localhost:8000/api/v1/vehicles/rates', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch vehicle types');
+        }
+
+        const result = await response.json();
+        if (result.data && result.data.rates) {
+          setVehicleTypes(result.data.rates); // Store complete vehicle data
+        }
+      } catch (error) {
+        console.error('Error fetching vehicle types:', error);
+        showError(error.message);
+      }
+    };
+
+    fetchVehicleTypes();
+  }, []);
+
+  const toggleFullScreen = () => {
+    setIsFullScreen(!isFullScreen);
   };
 
   return (
@@ -578,9 +699,18 @@ const Token_list = () => {
       </div>
 
       {/* Table Section */}
-      <div className="bg-white rounded-lg shadow-lg overflow-hidden">
-        {filteredData.length > 0 && (
-          <div className="p-4 bg-gray-50 border-b flex justify-end">
+      <div className={`bg-white rounded-lg shadow-lg overflow-hidden transition-all duration-300 ${
+        isFullScreen ? 'fixed inset-0 z-50' : ''
+      }`}>
+        <div className="p-4 bg-gray-50 border-b flex justify-between items-center">
+          <button
+            onClick={toggleFullScreen}
+            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition duration-300"
+          >
+            {isFullScreen ? <FaCompressAlt /> : <FaExpandAlt />}
+            {isFullScreen ? 'Exit Full Screen' : 'Full Screen'}
+          </button>
+          {filteredData.length > 0 && (
             <button
               onClick={exportToExcel}
               className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition duration-300"
@@ -588,44 +718,174 @@ const Token_list = () => {
               <FaFileExcel />
               Export to Excel
             </button>
-          </div>
-        )}
+          )}
+        </div>
         
-        <DataTable
-          columns={columns}
-          data={filteredData}
-          pagination
-          paginationServer
-          paginationTotalRows={totalRows}
-          onChangePage={handlePageChange}
-          onChangeRowsPerPage={handlePerPageChange}
-          paginationPerPage={perPage}
-          paginationRowsPerPageOptions={[10, 25, 50, 100]}
-          progressPending={isLoading}
-          progressComponent={
-            <div className="py-8 text-center text-gray-500">
-              <div className="flex flex-col items-center justify-center">
-                <FaSpinner className="animate-spin text-2xl mb-2" />
-                <span className="font-medium">Loading tokens...</span>
+        <div className={`${isFullScreen ? 'h-[calc(100vh-80px)] overflow-auto' : ''}`}>
+          <DataTable
+            columns={columns}
+            data={filteredData}
+            pagination
+            paginationServer
+            paginationTotalRows={totalRows}
+            onChangePage={handlePageChange}
+            onChangeRowsPerPage={handlePerPageChange}
+            paginationPerPage={perPage}
+            paginationRowsPerPageOptions={[10, 25, 50, 100]}
+            progressPending={isLoading}
+            progressComponent={
+              <div className="py-8 text-center text-gray-500">
+                <div className="flex flex-col items-center justify-center">
+                  <FaSpinner className="animate-spin text-2xl mb-2" />
+                  <span className="font-medium">Loading tokens...</span>
+                </div>
               </div>
-            </div>
-          }
-          noDataComponent={
-            <div class="py-8 text-center text-gray-500 text-lg">
-              <div class="flex flex-col items-center justify-center">
-                <span class="font-medium">No data available</span>
-                <span class="text-sm text-gray-400 mt-1">Select date range to view tokens</span>
+            }
+            noDataComponent={
+              <div className="py-8 text-center text-gray-500 text-lg">
+                <div className="flex flex-col items-center justify-center">
+                  <span className="font-medium">No data available</span>
+                  <span className="text-sm text-gray-400 mt-1">Select date range to view tokens</span>
+                </div>
               </div>
-            </div>
-          }
-          customStyles={customStyles}
-          sortIcon={<span className="ml-2">↕</span>}
-          responsive
-          highlightOnHover
-          pointerOnHover
-          striped
-        />
+            }
+            customStyles={customStyles}
+            sortIcon={<span className="ml-2">↕</span>}
+            responsive
+            highlightOnHover
+            pointerOnHover
+            striped
+            className={isFullScreen ? 'h-full' : ''}
+          />
+        </div>
       </div>
+
+      {/* Add Update Form Popup */}
+      {showUpdateForm && updateFormData && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center pt-20 z-50">
+          <div className="bg-gradient-to-b from-gray-800 to-gray-900 rounded-2xl shadow-2xl p-6 w-[800px] max-h-[85vh] overflow-y-auto relative">
+            {/* Close button */}
+            <button
+              onClick={() => setShowUpdateForm(false)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-white"
+            >
+              <FaTimes className="w-6 h-6" />
+            </button>
+
+            <h2 className="text-2xl font-bold text-gray-300 mb-4">Update Token</h2>
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              handleUpdateSubmit(updateFormData);
+            }}>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="relative">
+                  <label className="block text-gray-300 text-sm font-bold mb-2">Driver Name</label>
+                  <input
+                    type="text"
+                    value={updateFormData.driverName}
+                    onChange={(e) => setUpdateFormData({...updateFormData, driverName: e.target.value})}
+                    className="px-4 py-3 w-full bg-gray-900 text-gray-300 rounded-lg border border-gray-700 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 transition-all duration-300"
+                  />
+                </div>
+                <div className="relative">
+                  <label className="block text-gray-300 text-sm font-bold mb-2">Driver Mobile No.</label>
+                  <input
+                    type="text"
+                    value={updateFormData.driverMobileNo}
+                    onChange={(e) => setUpdateFormData({...updateFormData, driverMobileNo: e.target.value})}
+                    className="px-4 py-3 w-full bg-gray-900 text-gray-300 rounded-lg border border-gray-700 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 transition-all duration-300"
+                  />
+                </div>
+                <div className="relative">
+                  <label className="block text-gray-300 text-sm font-bold mb-2">Vehicle Type</label>
+                  <select
+                    value={updateFormData.vehicleId?.vehicleType || ''}
+                    onChange={(e) => setUpdateFormData({
+                      ...updateFormData,
+                      vehicleId: { ...updateFormData.vehicleId, vehicleType: e.target.value }
+                    })}
+                    className="px-4 py-3 w-full bg-gray-900 text-gray-300 rounded-lg border border-gray-700 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 transition-all duration-300"
+                  >
+                    <option value="">Select Vehicle Type</option>
+                    {vehicleTypes.map((type) => (
+                      <option key={type.vehicleType} value={type.vehicleType}>{type.vehicleType}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="relative">
+                  <label className="block text-gray-300 text-sm font-bold mb-2">Vehicle No</label>
+                  <input
+                    type="text"
+                    value={updateFormData.vehicleNo}
+                    onChange={(e) => setUpdateFormData({...updateFormData, vehicleNo: e.target.value})}
+                    className="px-4 py-3 w-full bg-gray-900 text-gray-300 rounded-lg border border-gray-700 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 transition-all duration-300"
+                  />
+                </div>
+                <div className="relative">
+                  <label className="block text-gray-300 text-sm font-bold mb-2">Place</label>
+                  <input
+                    type="text"
+                    value={updateFormData.place}
+                    onChange={(e) => setUpdateFormData({...updateFormData, place: e.target.value})}
+                    className="px-4 py-3 w-full bg-gray-900 text-gray-300 rounded-lg border border-gray-700 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 transition-all duration-300"
+                  />
+                </div>
+                <div className="relative">
+                  <label className="block text-gray-300 text-sm font-bold mb-2">Route</label>
+                  <input
+                    type="text"
+                    value={updateFormData.route}
+                    onChange={(e) => setUpdateFormData({...updateFormData, route: e.target.value})}
+                    className="px-4 py-3 w-full bg-gray-900 text-gray-300 rounded-lg border border-gray-700 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 transition-all duration-300"
+                  />
+                </div>
+                <div className="relative">
+                  <label className="block text-gray-300 text-sm font-bold mb-2">Challan Pin</label>
+                  <input
+                    type="text"
+                    value={updateFormData.challanPin}
+                    onChange={(e) => setUpdateFormData({...updateFormData, challanPin: e.target.value})}
+                    className="px-4 py-3 w-full bg-gray-900 text-gray-300 rounded-lg border border-gray-700 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 transition-all duration-300"
+                  />
+                </div>
+                <div className="relative">
+                  <label className="block text-gray-300 text-sm font-bold mb-2">Quantity</label>
+                  <input
+                    type="number"
+                    value={updateFormData.quantity}
+                    onChange={(e) => setUpdateFormData({...updateFormData, quantity: e.target.value})}
+                    className="px-4 py-3 w-full bg-gray-900 text-gray-300 rounded-lg border border-gray-700 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 transition-all duration-300"
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end space-x-3 mt-6">
+                <button
+                  type="button"
+                  onClick={() => setShowUpdateForm(false)}
+                  className="px-6 py-2.5 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                  disabled={isUpdating}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isUpdating}
+                  className="px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+                >
+                  {isUpdating ? (
+                    <>
+                      <FaSpinner className="animate-spin" />
+                      Updating...
+                    </>
+                  ) : (
+                    'Update'
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
