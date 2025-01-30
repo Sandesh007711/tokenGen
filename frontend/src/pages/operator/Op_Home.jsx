@@ -1,10 +1,13 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react';
 import { FaCheckCircle, FaTimes } from 'react-icons/fa';
+import axios from 'axios';
 
 const Op_Home = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [entries, setEntries] = useState([]);
   const [formData, setFormData] = useState({
+    userId: '',
+    route: '',
     driverName: '',
     driverMobile: '',
     vehicleNo: '',
@@ -19,6 +22,9 @@ const Op_Home = () => {
   const [tempFormData, setTempFormData] = useState(null);
   const [successPopup, setSuccessPopup] = useState({ show: false, message: '' });
   const [errorPopup, setErrorPopup] = useState({ show: false, message: '' });
+  const [vehicleRates, setVehicleRates] = useState([]);
+  const [apiTokens, setApiTokens] = useState([]);
+  const [loading, setLoading] = useState(false);
 
   const generateRandomToken = () => {
     return Math.floor(100000 + Math.random() * 900000).toString();
@@ -40,20 +46,6 @@ const Op_Home = () => {
     "Heavy Truck"
   ];
 
-  // Add vehicle rates array
-  const vehicleRates = [
-    "Select Rate",
-    "1000",
-    "1500",
-    "2000",
-    "2500",
-    "3000",
-    "3500",
-    "4000",
-    "4500",
-    "5000"
-  ];
-
   // Add quantity options generator
   const generateQuantityOptions = () => {
     const options = ["Select Quantity"];
@@ -65,11 +57,146 @@ const Op_Home = () => {
 
   const quantityOptions = generateQuantityOptions();
 
+  useEffect(() => {
+    const setLoggedInUserData = () => {
+      try {
+        const userStr = localStorage.getItem('user');
+        if (userStr) {
+          const userData = JSON.parse(userStr);
+          const currentUser = userData.user;
+
+          console.log('Current user data:', currentUser);
+
+          if (currentUser) {
+            setFormData(prev => ({
+              ...prev,
+              userId: currentUser._id,
+              username: currentUser.username,
+              route: currentUser.route
+            }));
+
+            // Update users state with current user data
+            setUsers([{
+              id: currentUser._id,
+              name: currentUser.username,
+              route: currentUser.route
+            }]);
+          }
+        }
+      } catch (error) {
+        console.error('Error setting user data:', error);
+        showError('Error loading user data');
+      }
+    };
+
+    setLoggedInUserData();
+  }, []);
+
+  useEffect(() => {
+    const fetchVehicleRates = async () => {
+      try {
+        const userStr = localStorage.getItem('user');
+        if (!userStr) {
+          showError('User not authenticated');
+          return;
+        }
+
+        const userData = JSON.parse(userStr);
+        const authToken = userData.token;
+
+        const response = await axios.get('http://localhost:8000/api/v1/vehicles/get-rates', {
+          headers: {
+            'Authorization': `Bearer ${authToken}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        console.log('Vehicle Rates Response:', response.data);
+
+        // Updated to handle the nested response structure
+        if (response.data?.status === 'success' && response.data?.data?.rates) {
+          const rates = response.data.data.rates;
+          console.log('Available rates:', rates);
+          setVehicleRates(rates);
+        } else {
+          console.log('Invalid response structure:', response.data);
+          showError('Failed to load vehicle rates');
+        }
+      } catch (error) {
+        console.error('Error fetching vehicle rates:', error);
+        showError(error.response?.data?.message || 'Error loading vehicle rates');
+      }
+    };
+
+    fetchVehicleRates();
+  }, []);
+
+  useEffect(() => {
+    const fetchUserTokens = async () => {
+      setLoading(true);
+      try {
+        const userStr = localStorage.getItem('user');
+        if (!userStr) return;
+
+        const userData = JSON.parse(userStr);
+        const authToken = userData.token;
+        const currentUser = userData.user;
+
+        const response = await axios.get('http://localhost:8000/api/v1/tokens', {
+          headers: {
+            'Authorization': `Bearer ${authToken}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        console.log('Tokens Response:', response.data);
+
+        if (response.data?.status === 'success' && Array.isArray(response.data.printTokens)) {
+          // Filter tokens for current user
+          const userTokens = response.data.printTokens.filter(token => 
+            token.userId?.username === currentUser.username
+          );
+          console.log('User tokens:', userTokens);
+          setApiTokens(userTokens);
+          setEntries(userTokens); // Update entries with API data
+        }
+      } catch (error) {
+        console.error('Error fetching tokens:', error);
+        showError(error.response?.data?.message || 'Error loading tokens');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUserTokens();
+  }, []); // Run once on component mount
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
 
-    if (name === 'vehicleType' && value === 'Select Vehicle Type') {
-      return; // Don't update state if default option is selected
+    // Prevent changes to userId and route
+    if (name === 'userId' || name === 'route') {
+      return;
+    }
+
+    if (name === 'vehicleType') {
+      console.log('Selected vehicle type:', value);
+      console.log('Available rates:', vehicleRates);
+      
+      const selectedVehicle = vehicleRates.find(v => v.vehicleType === value);
+      console.log('Selected vehicle data:', selectedVehicle);
+      
+      if (selectedVehicle) {
+        setFormData(prev => ({
+          ...prev,
+          vehicleType: value,
+          vehicleId: selectedVehicle.vehicleId,
+          vehicleRate: selectedVehicle.rate.toString()
+        }));
+      } else {
+        showError('Invalid vehicle selection');
+      }
+      return;
     }
 
     if (name === 'vehicleRate' && value === 'Select Rate') {
@@ -163,28 +290,83 @@ const Op_Home = () => {
     }, 3000);
   };
 
-  const confirmSubmit = () => {
-    const newEntry = {
-      ...tempFormData,
-      dateTime: new Date().toLocaleString(),
-      tokenNo: generateRandomToken(),
-    };
-    
-    setEntries(prev => [newEntry, ...prev].slice(0, 10));
-    setIsModalOpen(false);
-    setFormData({
-      driverName: '',
-      driverMobile: '',
-      vehicleNo: '',
-      vehicleType: '',
-      vehicleRate: '',
-      quantity: '',
-      place: '',
-      chalaanPin: ''
-    });
-    setShowSubmitConfirm(false);
-    showSuccess('Token generated successfully!');
+  const confirmSubmit = async () => {
+    try {
+      const userStr = localStorage.getItem('user');
+      const userData = JSON.parse(userStr);
+      const currentUser = userData.user;
+      const authToken = userData.token;
+  
+      const tokenData = {
+        userId: currentUser._id,
+        route: currentUser.route,
+        driverName: tempFormData.driverName,
+        driverMobileNo: tempFormData.driverMobile,
+        vehicleNo: tempFormData.vehicleNo,
+        vehicleId: tempFormData.vehicleId, // From vehicle selection
+        vehicleType: tempFormData.vehicleType,
+        vehicleRate: tempFormData.vehicleRate,
+        quantity: tempFormData.quantity,
+        place: tempFormData.place,
+        challanPin: tempFormData.chalaanPin
+      };
+  
+      console.log('Sending token data:', tokenData);
+  
+      const response = await axios.post(
+        'http://localhost:8000/api/v1/tokens',
+        tokenData,
+        {
+          headers: {
+            'Authorization': `Bearer ${authToken}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+  
+      console.log('API Response:', response.data);
+  
+      if (response.data && response.data.status === 'success') {
+        // Fetch updated tokens after creation
+        const updatedTokensResponse = await axios.get('http://localhost:8000/api/v1/tokens', {
+          headers: {
+            'Authorization': `Bearer ${authToken}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (updatedTokensResponse.data?.status === 'success') {
+          const userTokens = updatedTokensResponse.data.printTokens.filter(token => 
+            token.userId?.username === currentUser.username
+          );
+          setApiTokens(userTokens);
+          setEntries(userTokens);
+        }
+
+        setIsModalOpen(false);
+        setFormData({
+          userId: '',
+          route: '',
+          driverName: '',
+          driverMobile: '',
+          vehicleNo: '',
+          vehicleType: '',
+          vehicleRate: '',
+          quantity: '',
+          place: '',
+          chalaanPin: ''
+        });
+        setShowSubmitConfirm(false);
+        showSuccess('Token generated successfully!');
+      } else {
+        showError(response.data?.message || 'Error creating token');
+      }
+    } catch (error) {
+      console.error('Error submitting token:', error);
+      showError(error.response?.data?.message || 'Error creating token');
+    }
   };
+  
 
   const handleCancelClick = () => {
     if (Object.values(formData).some(value => value !== '')) {
@@ -217,6 +399,21 @@ const Op_Home = () => {
     printWindow.document.close();
     printWindow.print();
   };
+
+  const [users, setUsers] = useState([]);
+
+  const [routes] = useState([
+    'Route A',
+    'Route B',
+    'Route C',
+    'Route D',
+    'Route E'
+  ]);
+
+  // Add this sorting function before the return statement
+  const sortedEntries = entries.sort((a, b) => {
+    return new Date(b.createdAt) - new Date(a.createdAt);
+  });
 
   return (
     <div className="p-7 max-w-7xl mx-auto">
@@ -262,25 +459,49 @@ const Op_Home = () => {
               id={`form-${Math.random()}`}
             >
               <div className="grid grid-cols-2 gap-4">
+                {/* Update all input containers to have consistent styling */}
+                <div className="relative">
+                  <label className="block text-gray-300 text-sm font-bold mb-2">User</label>
+                  <div className="inline-block relative w-full">
+                    <input 
+                      type="text"
+                      value={formData.username || ''}
+                      className="block w-full px-4 py-3 bg-gray-900 text-gray-300 rounded-lg border border-gray-700 focus:outline-none cursor-not-allowed opacity-70"
+                      disabled
+                    />
+                  </div>
+                </div>
+
+                <div className="relative">
+                  <label className="block text-gray-300 text-sm font-bold mb-2">Route</label>
+                  <div className="inline-block relative w-full">
+                    <input 
+                      type="text"
+                      value={formData.route || ''}
+                      className="block w-full px-4 py-3 bg-gray-900 text-gray-300 rounded-lg border border-gray-700 focus:outline-none cursor-not-allowed opacity-70"
+                      disabled
+                    />
+                  </div>
+                </div>
                 <div className="relative">
                   <label className="block text-gray-300 text-sm font-bold mb-2">Driver Name</label>
-                  <div className="inline-block relative">
+                  <div className="inline-block relative w-full">
                     <input 
                       type="text" 
                       name="driverName"
                       value={formData.driverName}
                       onChange={handleInputChange}
-                      className="px-4 py-3 pr-10 bg-gray-900 text-gray-300 rounded-lg border border-gray-700 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 transition-all duration-300"
+                      className="block w-full px-4 py-3 pr-10 bg-gray-900 text-gray-300 rounded-lg border border-gray-700 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 transition-all duration-300"
                       required
                       autoComplete="nope"
-                      readonly
-                      onFocus={(e) => e.target.removeAttribute('readonly')}
+                      readOnly
+                      onFocus={(e) => e.target.removeAttribute('readOnly')}
                     />
                   </div>
                 </div>
                 <div className="relative">
                   <label className="block text-gray-300 text-sm font-bold mb-2">Driver Mobile</label>
-                  <div className="inline-block relative">
+                  <div className="inline-block relative w-full">
                     <input 
                       type="tel" 
                       name="driverMobile"
@@ -289,27 +510,27 @@ const Op_Home = () => {
                       maxLength={10}
                       pattern="[0-9]{10}"
                       title="Please enter a valid 10-digit mobile number"
-                      className="px-4 py-3 pr-10 bg-gray-900 text-gray-300 rounded-lg border border-gray-700 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 transition-all duration-300"
+                      className="block w-full px-4 py-3 pr-10 bg-gray-900 text-gray-300 rounded-lg border border-gray-700 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 transition-all duration-300"
                       required
                       autoComplete="nope"
-                      readonly
-                      onFocus={(e) => e.target.removeAttribute('readonly')}
+                      readOnly
+                      onFocus={(e) => e.target.removeAttribute('readOnly')}
                     />
                   </div>
                 </div>
                 <div className="relative">
                   <label className="block text-gray-300 text-sm font-bold mb-2">Vehicle No</label>
-                  <div className="inline-block relative">
+                  <div className="inline-block relative w-full">
                     <input 
                       type="text" 
                       name="vehicleNo"
                       value={formData.vehicleNo}
                       onChange={handleInputChange}
-                      className="px-4 py-3 pr-10 bg-gray-900 text-gray-300 rounded-lg border border-gray-700 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 transition-all duration-300"
+                      className="block w-full px-4 py-3 pr-10 bg-gray-900 text-gray-300 rounded-lg border border-gray-700 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 transition-all duration-300"
                       required
                       autoComplete="nope"
-                      readonly
-                      onFocus={(e) => e.target.removeAttribute('readonly')}
+                      readOnly
+                      onFocus={(e) => e.target.removeAttribute('readOnly')}
                     />
                   </div>
                 </div>
@@ -323,14 +544,14 @@ const Op_Home = () => {
                       className="block w-full px-4 py-3 pr-10 bg-gray-900 text-gray-300 rounded-lg border border-gray-700 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 transition-all duration-300 appearance-none"
                       required
                     >
-                      {vehicleTypes.map((type, index) => (
+                      <option value="">Select Vehicle Type</option>
+                      {vehicleRates.map((vehicle, index) => (
                         <option 
                           key={index} 
-                          value={type}
-                          disabled={type === "Select Vehicle Type"}
-                          className={`${type === "Select Vehicle Type" ? "text-gray-500" : "text-gray-300"} bg-gray-900`}
+                          value={vehicle.vehicleType}
+                          className="text-gray-300 bg-gray-900"
                         >
-                          {type}
+                          {vehicle.vehicleType}
                         </option>
                       ))}
                     </select>
@@ -344,29 +565,12 @@ const Op_Home = () => {
                 <div className="relative">
                   <label className="block text-gray-300 text-sm font-bold mb-2">Vehicle Rate</label>
                   <div className="inline-block relative w-full">
-                    <select
-                      name="vehicleRate"
+                    <input 
+                      type="text"
                       value={formData.vehicleRate}
-                      onChange={handleInputChange}
-                      className="block w-full px-4 py-3 pr-10 bg-gray-900 text-gray-300 rounded-lg border border-gray-700 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 transition-all duration-300 appearance-none"
-                      required
-                    >
-                      {vehicleRates.map((rate, index) => (
-                        <option 
-                          key={index} 
-                          value={rate}
-                          disabled={rate === "Select Rate"}
-                          className={`${rate === "Select Rate" ? "text-gray-500" : "text-gray-300"} bg-gray-900`}
-                        >
-                          {rate}
-                        </option>
-                      ))}
-                    </select>
-                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-400">
-                      <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-                        <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/>
-                      </svg>
-                    </div>
+                      className="block w-full px-4 py-3 bg-gray-900 text-gray-300 rounded-lg border border-gray-700 focus:outline-none cursor-not-allowed opacity-70"
+                      disabled
+                    />
                   </div>
                 </div>
                 <div className="relative">
@@ -399,31 +603,31 @@ const Op_Home = () => {
                 </div>
                 <div className="relative">
                   <label className="block text-gray-300 text-sm font-bold mb-2">Place</label>
-                  <div className="inline-block relative">
+                  <div className="inline-block relative w-full">
                     <input 
                       type="text" 
                       name="place"
                       value={formData.place}
                       onChange={handleInputChange}
-                      className="px-4 py-3 pr-10 bg-gray-900 text-gray-300 rounded-lg border border-gray-700 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 transition-all duration-300"
+                      className="block w-full px-4 py-3 pr-10 bg-gray-900 text-gray-300 rounded-lg border border-gray-700 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 transition-all duration-300"
                       autoComplete="nope"
-                      readonly
-                      onFocus={(e) => e.target.removeAttribute('readonly')}
+                      readOnly
+                      onFocus={(e) => e.target.removeAttribute('readOnly')}
                     />
                   </div>
                 </div>
                 <div className="relative">
                   <label className="block text-gray-300 text-sm font-bold mb-2">Chalaan Pin</label>
-                  <div className="inline-block relative">
+                  <div className="inline-block relative w-full">
                     <input 
                       type="text" 
                       name="chalaanPin"
                       value={formData.chalaanPin}
                       onChange={handleInputChange}
-                      className="px-4 py-3 pr-10 bg-gray-900 text-gray-300 rounded-lg border border-gray-700 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 transition-all duration-300"
+                      className="block w-full px-4 py-3 pr-10 bg-gray-900 text-gray-300 rounded-lg border border-gray-700 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 transition-all duration-300"
                       autoComplete="nope"
-                      readonly
-                      onFocus={(e) => e.target.removeAttribute('readonly')}
+                      readOnly
+                      onFocus={(e) => e.target.removeAttribute('readOnly')}
                     />
                   </div>
                 </div>
@@ -499,47 +703,63 @@ const Op_Home = () => {
       )}
 
       <div className="bg-white rounded-lg shadow-lg overflow-x-auto">
-        <table className="w-full min-w-[640px]">
-          <thead className="bg-gradient-to-r from-slate-400 via-slate-300 to-slate-200">
-            <tr>
-              <th className="py-3 px-4 text-left font-semibold">Sr No.</th>
-              <th className="py-3 px-4 text-left font-semibold">Token No.</th>
-              <th className="py-3 px-4 text-left font-semibold">Date/Time</th>
-              <th className="py-3 px-4 text-left font-semibold">Driver Name</th>
-              <th className="py-3 px-4 text-left font-semibold">Vehicle No</th>
-              <th className="py-3 px-4 text-left font-semibold">Vehicle Type</th>
-              <th className="py-3 px-4 text-left font-semibold">Place</th>
-              <th className="py-3 px-4 text-left font-semibold">Quantity</th>
-              <th className="py-3 px-4 text-left font-semibold">Rate</th>
-              <th className="py-3 px-4 text-left font-semibold">Chalaan Pin</th>
-              <th className="py-3 px-4 text-left font-semibold">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200">
-            {entries.map((entry, index) => (
-              <tr key={index} className="hover:bg-gray-50 transition duration-200">
-                <td className="py-3 px-4 whitespace-nowrap">{index + 1}</td>
-                <td className="py-3 px-4 whitespace-nowrap font-medium text-blue-600">{entry.tokenNo}</td>
-                <td className="py-3 px-4 whitespace-nowrap">{entry.dateTime}</td>
-                <td className="py-3 px-4 whitespace-nowrap font-medium">{entry.driverName}</td>
-                <td className="py-3 px-4 whitespace-nowrap font-medium">{entry.vehicleNo}</td>
-                <td className="py-3 px-4 whitespace-nowrap">{entry.vehicleType}</td>
-                <td className="py-3 px-4 whitespace-nowrap">{entry.place}</td>
-                <td className="py-3 px-4 whitespace-nowrap">{entry.quantity}</td>
-                <td className="py-3 px-4 whitespace-nowrap">{entry.vehicleRate}</td>
-                <td className="py-3 px-4 whitespace-nowrap">{entry.chalaanPin}</td>
-                <td className="py-3 px-4">
-                  <button
-                    onClick={() => handlePrint(entry)}
-                    className="bg-gradient-to-r from-green-400 to-green-600 hover:from-green-600 hover:to-green-400 text-white px-3 py-1 rounded-full flex items-center justify-center transition duration-300 transform hover:scale-105"
-                  >
-                    Print
-                  </button>
-                </td>
+        {loading ? (
+          <div className="p-8 text-center text-gray-500">Loading tokens...</div>
+        ) : (
+          <table className="w-full min-w-[640px]">
+            <thead className="bg-gradient-to-r from-slate-400 via-slate-300 to-slate-200">
+              <tr>
+                <th className="py-3 px-4 text-left font-semibold">Sr No.</th>
+                <th className="py-3 px-4 text-left font-semibold">Token No.</th>
+                <th className="py-3 px-4 text-left font-semibold">Date/Time</th>
+                <th className="py-3 px-4 text-left font-semibold">Driver Name</th>
+                <th className="py-3 px-4 text-left font-semibold">Vehicle No</th>
+                <th className="py-3 px-4 text-left font-semibold">Vehicle Type</th>
+                <th className="py-3 px-4 text-left font-semibold">Place</th>
+                <th className="py-3 px-4 text-left font-semibold">Quantity</th>
+                <th className="py-3 px-4 text-left font-semibold">Rate</th>
+                <th className="py-3 px-4 text-left font-semibold">Chalaan Pin</th>
+                <th className="py-3 px-4 text-left font-semibold">Actions</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-gray-200">
+              {entries.length === 0 ? (
+                <tr>
+                  <td colSpan="11" className="py-8 text-center text-gray-500">
+                    No tokens found
+                  </td>
+                </tr>
+              ) : (
+                sortedEntries.map((entry, index) => (
+                  <tr key={entry._id || index} className="hover:bg-gray-50 transition duration-200">
+                    <td className="py-3 px-4 whitespace-nowrap">{index + 1}</td>
+                    <td className="py-3 px-4 whitespace-nowrap font-medium text-blue-600">
+                      {entry.tokenNo}
+                    </td>
+                    <td className="py-3 px-4 whitespace-nowrap">
+                      {new Date(entry.createdAt).toLocaleString()}
+                    </td>
+                    <td className="py-3 px-4 whitespace-nowrap">{entry.driverName}</td>
+                    <td className="py-3 px-4 whitespace-nowrap">{entry.vehicleNo}</td>
+                    <td className="py-3 px-4 whitespace-nowrap">{entry.vehicleType}</td>
+                    <td className="py-3 px-4 whitespace-nowrap">{entry.place}</td>
+                    <td className="py-3 px-4 whitespace-nowrap">{entry.quantity}</td>
+                    <td className="py-3 px-4 whitespace-nowrap">{entry.vehicleRate}</td>
+                    <td className="py-3 px-4 whitespace-nowrap">{entry.challanPin}</td>
+                    <td className="py-3 px-4">
+                      <button
+                        onClick={() => handlePrint(entry)}
+                        className="bg-gradient-to-r from-green-400 to-green-600 hover:from-green-600 hover:to-green-400 text-white px-3 py-1 rounded-full flex items-center justify-center transition duration-300 transform hover:scale-105"
+                      >
+                        Print
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        )}
       </div>
     </div>
   )

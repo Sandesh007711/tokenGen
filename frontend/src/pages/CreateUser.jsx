@@ -90,20 +90,9 @@ const CreateUser = () => {
       }
 
       const result = await response.json();
-      console.log('Complete API Response:', result);
-      console.log('Raw users data:', JSON.stringify(result.data?.users, null, 2));
-
+      
       if (result.status === 'success' && result.data && result.data.users) {
-        const formattedUsers = result.data.users.map(user => ({
-          _id: user._id,
-          userName: user.username || 'N/A',
-          mobileNumber: user.phone || 'N/A',
-          password: '********', // Always show asterisks for existing users
-          route: user.route || 'N/A'
-        }));
-        
-        console.log('Formatted users:', JSON.stringify(formattedUsers, null, 2));
-        setUsers(formattedUsers);
+        setUsers(result.data.users); // Store raw user data directly
       } else {
         setUsers([]);
       }
@@ -238,9 +227,9 @@ const CreateUser = () => {
     if (!userToEdit) return;
 
     setFormData({
-      userName: userToEdit.userName || '',
-      mobileNumber: userToEdit.mobileNumber || '',
-      password: userToEdit.password || '',
+      userName: userToEdit.username || '',
+      mobileNumber: userToEdit.phone?.toString() || '',
+      password: userToEdit.rawPassword || '',
       route: userToEdit.route || ''
     });
     setIsEditMode(true);
@@ -273,9 +262,9 @@ const CreateUser = () => {
 
   const renderTableRow = (user, index) => (
     <tr key={user._id || index} className="hover:bg-gray-50 transition duration-200">
-      <td className="py-3 px-4 whitespace-nowrap">{user.userName}</td>
-      <td className="py-3 px-4 whitespace-nowrap">{user.mobileNumber}</td>
-      <td className="py-3 px-4 whitespace-nowrap">{user.password}</td>
+      <td className="py-3 px-4 whitespace-nowrap">{user.username}</td>
+      <td className="py-3 px-4 whitespace-nowrap">{user.phone}</td>
+      <td className="py-3 px-4 whitespace-nowrap">{user.rawPassword}</td>
       <td className="py-3 px-4 whitespace-nowrap">{user.route}</td>
       <td className="py-3 px-4">
         <div className="flex flex-col sm:flex-row gap-2">

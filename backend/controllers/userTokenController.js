@@ -11,16 +11,16 @@ const APIfeatures = require('./../utils/apiFeatures')
 
 // create printToken
 exports.createToken = catchAsync(async (req, res, next) => {
-    const { username } = req.user;
-    const { vehicleId } = req.body;
+   // const { username } = req.user;
+    const { vehicleId , userId } = req.body;
 
     // Start a session for transaction
     const session = await mongoose.startSession();
     session.startTransaction();
 
     try {
-        const user = await User.findOne({ username }).session(session);
-        const userId = user._id.toString().trim();
+        const user = await User.findById(userId).session(session);
+        const loggedUserId = user._id.toString().trim();
         if (!user) return next(new AppError(`User with username ${username} not found.`, 400));
 
         const vehicle = await Vehicle.findById(vehicleId).session(session);
@@ -48,7 +48,7 @@ exports.createToken = catchAsync(async (req, res, next) => {
         // Create the token
         await UserToken.create([
             {
-                userId: userId,
+                userId: loggedUserId,
                 driverName: req.body.driverName,
                 driverMobileNo: req.body.driverMobileNo,
                 vehicleNo: req.body.vehicleNo,
