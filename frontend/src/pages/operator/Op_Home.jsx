@@ -1,5 +1,6 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react';
 import { FaCheckCircle, FaTimes } from 'react-icons/fa';
+import axios from 'axios';
 
 const Op_Home = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -21,6 +22,7 @@ const Op_Home = () => {
   const [tempFormData, setTempFormData] = useState(null);
   const [successPopup, setSuccessPopup] = useState({ show: false, message: '' });
   const [errorPopup, setErrorPopup] = useState({ show: false, message: '' });
+  const [vehicleRates, setVehicleRates] = useState([]);
 
   const generateRandomToken = () => {
     return Math.floor(100000 + Math.random() * 900000).toString();
@@ -42,20 +44,6 @@ const Op_Home = () => {
     "Heavy Truck"
   ];
 
-  // Add vehicle rates array
-  const vehicleRates = [
-    "Select Rate",
-    "1000",
-    "1500",
-    "2000",
-    "2500",
-    "3000",
-    "3500",
-    "4000",
-    "4500",
-    "5000"
-  ];
-
   // Add quantity options generator
   const generateQuantityOptions = () => {
     const options = ["Select Quantity"];
@@ -67,11 +55,98 @@ const Op_Home = () => {
 
   const quantityOptions = generateQuantityOptions();
 
+  useEffect(() => {
+    const setLoggedInUserData = () => {
+      try {
+        const userStr = localStorage.getItem('user');
+        if (userStr) {
+          const userData = JSON.parse(userStr);
+          const currentUser = userData.user;
+
+          console.log('Current user data:', currentUser);
+
+          if (currentUser) {
+            setFormData(prev => ({
+              ...prev,
+              userId: currentUser._id,
+              username: currentUser.username,
+              route: currentUser.route
+            }));
+
+            // Update users state with current user data
+            setUsers([{
+              id: currentUser._id,
+              name: currentUser.username,
+              route: currentUser.route
+            }]);
+          }
+        }
+      } catch (error) {
+        console.error('Error setting user data:', error);
+        showError('Error loading user data');
+      }
+    };
+
+    setLoggedInUserData();
+  }, []);
+
+  useEffect(() => {
+    const fetchVehicleRates = async () => {
+      try {
+        const userStr = localStorage.getItem('user');
+        if (!userStr) {
+          showError('User not authenticated');
+          return;
+        }
+
+        const userData = JSON.parse(userStr);
+        const authToken = userData.token; // Get token from user data
+
+        console.log('Auth Token:', authToken); // Debug log
+
+        const response = await axios.get('http://localhost:8000/api/v1/vehicles/rates', {
+          headers: {
+            'Authorization': `Bearer ${authToken}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        console.log('Vehicle Rates Response:', response.data); // Debug log
+
+        if (response.data && response.data.success) {
+          setVehicleRates(response.data.data || []);
+        } else {
+          showError('Failed to load vehicle rates');
+        }
+      } catch (error) {
+        console.error('Error fetching vehicle rates:', error);
+        showError(error.response?.data?.message || 'Error loading vehicle rates');
+      }
+    };
+
+    fetchVehicleRates();
+  }, []);
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
 
-    if (name === 'vehicleType' && value === 'Select Vehicle Type') {
-      return; // Don't update state if default option is selected
+    // Prevent changes to userId and route
+    if (name === 'userId' || name === 'route') {
+      return;
+    }
+
+    if (name === 'vehicleType') {
+      const selectedVehicle = vehicleRates.find(v => v.vehicleType === value);
+      if (selectedVehicle) {
+        setFormData(prev => ({
+          ...prev,
+          vehicleType: value,
+          vehicleRate: selectedVehicle.rate?.toString() || ''
+        }));
+      } else {
+        showError('Invalid vehicle selection');
+      }
+      return;
     }
 
     if (name === 'vehicleRate' && value === 'Select Rate') {
@@ -166,28 +241,40 @@ const Op_Home = () => {
   };
 
   const confirmSubmit = () => {
-    const newEntry = {
-      ...tempFormData,
-      dateTime: new Date().toLocaleString(),
-      tokenNo: generateRandomToken(),
-    };
-    
-    setEntries(prev => [newEntry, ...prev].slice(0, 10));
-    setIsModalOpen(false);
-    setFormData({
-      userId: '',
-      route: '',
-      driverName: '',
-      driverMobile: '',
-      vehicleNo: '',
-      vehicleType: '',
-      vehicleRate: '',
-      quantity: '',
-      place: '',
-      chalaanPin: ''
-    });
-    setShowSubmitConfirm(false);
-    showSuccess('Token generated successfully!');
+    try {
+      const userStr = localStorage.getItem('user');
+      const userData = JSON.parse(userStr);
+      const currentUser = userData.user;
+
+      const newEntry = {
+        ...tempFormData,
+        userId: currentUser._id,
+        username: currentUser.username,
+        route: currentUser.route,
+        dateTime: new Date().toLocaleString(),
+        tokenNo: generateRandomToken(),
+      };
+      
+      setEntries(prev => [newEntry, ...prev].slice(0, 10));
+      setIsModalOpen(false);
+      setFormData({
+        userId: '',
+        route: '',
+        driverName: '',
+        driverMobile: '',
+        vehicleNo: '',
+        vehicleType: '',
+        vehicleRate: '',
+        quantity: '',
+        place: '',
+        chalaanPin: ''
+      });
+      setShowSubmitConfirm(false);
+      showSuccess('Token generated successfully!');
+    } catch (error) {
+      console.error('Error submitting token:', error);
+      showError('Error creating token');
+    }
   };
 
   const handleCancelClick = () => {
@@ -222,11 +309,7 @@ const Op_Home = () => {
     printWindow.print();
   };
 
-  const [users, setUsers] = useState([
-    { id: '1', name: 'User 1', route: 'Route A' },
-    { id: '2', name: 'User 2', route: 'Route B' },
-    { id: '3', name: 'User 3', route: 'Route C' },
-  ]);
+  const [users, setUsers] = useState([]);
 
   const [routes] = useState([
     'Route A',
@@ -282,52 +365,26 @@ const Op_Home = () => {
               <div className="grid grid-cols-2 gap-4">
                 {/* Update all input containers to have consistent styling */}
                 <div className="relative">
-                  <label className="block text-gray-300 text-sm font-bold mb-2">Select User</label>
+                  <label className="block text-gray-300 text-sm font-bold mb-2">User</label>
                   <div className="inline-block relative w-full">
-                    <select
-                      name="userId"
-                      value={formData.userId}
-                      onChange={handleInputChange}
-                      className="block w-full px-4 py-3 pr-10 bg-gray-900 text-gray-300 rounded-lg border border-gray-700 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 transition-all duration-300 appearance-none"
-                      required
-                    >
-                      <option value="">Select User</option>
-                      {users.map((user) => (
-                        <option key={user.id} value={user.id}>
-                          {user.name} ({user.route})
-                        </option>
-                      ))}
-                    </select>
-                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-400">
-                      <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-                        <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/>
-                      </svg>
-                    </div>
+                    <input 
+                      type="text"
+                      value={formData.username || ''}
+                      className="block w-full px-4 py-3 bg-gray-900 text-gray-300 rounded-lg border border-gray-700 focus:outline-none cursor-not-allowed opacity-70"
+                      disabled
+                    />
                   </div>
                 </div>
 
                 <div className="relative">
                   <label className="block text-gray-300 text-sm font-bold mb-2">Route</label>
                   <div className="inline-block relative w-full">
-                    <select
-                      name="route"
-                      value={formData.route}
-                      onChange={handleInputChange}
-                      className="block w-full px-4 py-3 pr-10 bg-gray-900 text-gray-300 rounded-lg border border-gray-700 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 transition-all duration-300 appearance-none"
-                      required
-                    >
-                      <option value="">Select Route</option>
-                      {routes.map((route, index) => (
-                        <option key={index} value={route}>
-                          {route}
-                        </option>
-                      ))}
-                    </select>
-                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-400">
-                      <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-                        <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/>
-                      </svg>
-                    </div>
+                    <input 
+                      type="text"
+                      value={formData.route || ''}
+                      className="block w-full px-4 py-3 bg-gray-900 text-gray-300 rounded-lg border border-gray-700 focus:outline-none cursor-not-allowed opacity-70"
+                      disabled
+                    />
                   </div>
                 </div>
                 <div className="relative">
@@ -341,8 +398,8 @@ const Op_Home = () => {
                       className="block w-full px-4 py-3 pr-10 bg-gray-900 text-gray-300 rounded-lg border border-gray-700 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 transition-all duration-300"
                       required
                       autoComplete="nope"
-                      readonly
-                      onFocus={(e) => e.target.removeAttribute('readonly')}
+                      readOnly
+                      onFocus={(e) => e.target.removeAttribute('readOnly')}
                     />
                   </div>
                 </div>
@@ -360,8 +417,8 @@ const Op_Home = () => {
                       className="block w-full px-4 py-3 pr-10 bg-gray-900 text-gray-300 rounded-lg border border-gray-700 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 transition-all duration-300"
                       required
                       autoComplete="nope"
-                      readonly
-                      onFocus={(e) => e.target.removeAttribute('readonly')}
+                      readOnly
+                      onFocus={(e) => e.target.removeAttribute('readOnly')}
                     />
                   </div>
                 </div>
@@ -376,8 +433,8 @@ const Op_Home = () => {
                       className="block w-full px-4 py-3 pr-10 bg-gray-900 text-gray-300 rounded-lg border border-gray-700 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 transition-all duration-300"
                       required
                       autoComplete="nope"
-                      readonly
-                      onFocus={(e) => e.target.removeAttribute('readonly')}
+                      readOnly
+                      onFocus={(e) => e.target.removeAttribute('readOnly')}
                     />
                   </div>
                 </div>
@@ -391,14 +448,14 @@ const Op_Home = () => {
                       className="block w-full px-4 py-3 pr-10 bg-gray-900 text-gray-300 rounded-lg border border-gray-700 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 transition-all duration-300 appearance-none"
                       required
                     >
-                      {vehicleTypes.map((type, index) => (
+                      <option value="">Select Vehicle Type</option>
+                      {vehicleRates.map((vehicle, index) => (
                         <option 
                           key={index} 
-                          value={type}
-                          disabled={type === "Select Vehicle Type"}
-                          className={`${type === "Select Vehicle Type" ? "text-gray-500" : "text-gray-300"} bg-gray-900`}
+                          value={vehicle.vehicleType}
+                          className="text-gray-300 bg-gray-900"
                         >
-                          {type}
+                          {vehicle.vehicleType}
                         </option>
                       ))}
                     </select>
@@ -412,29 +469,12 @@ const Op_Home = () => {
                 <div className="relative">
                   <label className="block text-gray-300 text-sm font-bold mb-2">Vehicle Rate</label>
                   <div className="inline-block relative w-full">
-                    <select
-                      name="vehicleRate"
+                    <input 
+                      type="text"
                       value={formData.vehicleRate}
-                      onChange={handleInputChange}
-                      className="block w-full px-4 py-3 pr-10 bg-gray-900 text-gray-300 rounded-lg border border-gray-700 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 transition-all duration-300 appearance-none"
-                      required
-                    >
-                      {vehicleRates.map((rate, index) => (
-                        <option 
-                          key={index} 
-                          value={rate}
-                          disabled={rate === "Select Rate"}
-                          className={`${rate === "Select Rate" ? "text-gray-500" : "text-gray-300"} bg-gray-900`}
-                        >
-                          {rate}
-                        </option>
-                      ))}
-                    </select>
-                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-400">
-                      <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-                        <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/>
-                      </svg>
-                    </div>
+                      className="block w-full px-4 py-3 bg-gray-900 text-gray-300 rounded-lg border border-gray-700 focus:outline-none cursor-not-allowed opacity-70"
+                      disabled
+                    />
                   </div>
                 </div>
                 <div className="relative">
@@ -475,8 +515,8 @@ const Op_Home = () => {
                       onChange={handleInputChange}
                       className="block w-full px-4 py-3 pr-10 bg-gray-900 text-gray-300 rounded-lg border border-gray-700 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 transition-all duration-300"
                       autoComplete="nope"
-                      readonly
-                      onFocus={(e) => e.target.removeAttribute('readonly')}
+                      readOnly
+                      onFocus={(e) => e.target.removeAttribute('readOnly')}
                     />
                   </div>
                 </div>
@@ -490,8 +530,8 @@ const Op_Home = () => {
                       onChange={handleInputChange}
                       className="block w-full px-4 py-3 pr-10 bg-gray-900 text-gray-300 rounded-lg border border-gray-700 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 transition-all duration-300"
                       autoComplete="nope"
-                      readonly
-                      onFocus={(e) => e.target.removeAttribute('readonly')}
+                      readOnly
+                      onFocus={(e) => e.target.removeAttribute('readOnly')}
                     />
                   </div>
                 </div>
