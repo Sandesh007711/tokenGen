@@ -33,37 +33,34 @@ const Loaded_list = () => {
 
   const fetchUsers = async () => {
     try {
+      console.log('Fetching users...');
       const headers = getAuthHeaders();
-      const response = await fetch('http://localhost:8000/api/v1/tokens/updated', {
+
+      const response = await fetch('http://localhost:8000/api/v1/users', {
         method: 'GET',
         headers,
-        credentials: 'include' // Add this to include cookies
+        credentials: 'include'
       });
 
-      if (response.status === 401 || response.status === 403) {
-        throw new Error('Unauthorized: Please login again');
-      }
-      
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || 'Server error occurred');
-      }
-
       const data = await response.json();
-      if (data.status === 'success' && Array.isArray(data.data)) {
-        const uniqueUsers = [...new Set(data.data.map(token => token.driverName))].map(name => ({
-          id: name,
-          name: name
+      console.log('Raw API response:', data);
+
+      // Handle the correct API response structure
+      if (data.status === 'success' && data.data && data.data.users) {
+        const usersArray = data.data.users;
+        const uniqueUsers = usersArray.map(user => ({
+          id: user._id,
+          name: user.username
         }));
+        console.log('Processed users for dropdown:', uniqueUsers);
         setUsers(uniqueUsers);
+      } else {
+        console.error('Invalid users data structure:', data);
+        showError('Invalid users data format');
       }
     } catch (error) {
-      console.error('Error fetching users:', error);
-      showError(error.message);
-      if (error.message.includes('login again')) {
-        // Redirect to login page or handle reauthorization
-        window.location.href = '/login';
-      }
+      console.error('Error in fetchUsers:', error);
+      showError('Failed to fetch users: ' + error.message);
     }
   };
 
@@ -234,9 +231,11 @@ const Loaded_list = () => {
             onChange={(e) => setSelectedUser(e.target.value)}
             className="px-4 py-3 bg-gray-900 text-gray-300 rounded-lg border border-gray-700 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 transition-all duration-300 min-w-[200px]"
           >
-            <option value="">Select User</option>
+            <option key="default" value="">Select User</option>
             {users.map((user) => (
-              <option key={user.id} value={user.name}>{user.name}</option>
+              <option key={`user-${user.id}`} value={user.name}>
+                {user.name}
+              </option>
             ))}
           </select>
 
