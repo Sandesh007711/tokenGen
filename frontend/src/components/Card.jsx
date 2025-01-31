@@ -302,7 +302,7 @@ const Card = ({ operator }) => {
         <div className="print-button-wrapper">
           <button
             onClick={() => handlePrint(row)}
-            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-3 rounded transition duration-300 ease-in-out transform hover:scale-105 flex items-center gap-2"
+            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-1.5 rounded transition duration-300 ease-in-out transform hover:scale-105 flex items-center gap-2"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
@@ -365,7 +365,7 @@ const Card = ({ operator }) => {
 
   // Render DataTable with all configurations
   return (
-    <div className="bg-white shadow-lg rounded-lg overflow-hidden p-4 mt-16 md:mt-20 lg:mt-24 xl:mt-20 sm:p-6 max-w-full">
+    <div className="bg-white shadow-lg rounded-lg overflow-hidden p-4 mt-4 md:mt-6 lg:mt-8 xl:mt-6 sm:p-6 max-w-full">
       <h2 className="text-2xl font-bold mb-4">Tokens for {operator.username}</h2>
       <DataTable
         columns={columns}
