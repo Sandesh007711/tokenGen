@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import styled from 'styled-components';
-import logo from "../assets/Ramjee Singh and company logo.gif";
+import logo from "../assets/logo.png";
 import home from "../assets/home.png";
 import { logoutUser } from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -111,10 +111,10 @@ const Nav = () => {
             <img
               src={logo}
               alt="Ramjee Singh & Co Logo"
-              className="h-[60px] w-[60px] sm:h-[70px] sm:w-[70px] md:h-[80px] md:w-[80px] lg:h-[90px] lg:w-[90px] rounded-full transition-transform duration-300 hover:scale-110 hover:shadow-xl hover:shadow-slate-400"
+              className="h-[60px] w-[60px] sm:h-[70px] sm:w-[70px] md:h-[80px] md:w-[80px] lg:h-[90px] lg:w-[90px] rounded-full"
             />
           
-            <Link to="/">
+            <Link to="/" className="ml-2 sm:ml-3 md:ml-4 lg:ml-5">
               <h1 className="text-white text-sm sm:text-xl md:text-2xl lg:text-3xl font-bold rounded-xl px-2 transition-transform duration-300 hover:scale-110 hover:shadow-lg hover:shadow-slate-400">
                 Ramjee Singh And Co.
               </h1>
