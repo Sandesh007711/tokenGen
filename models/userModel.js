@@ -14,7 +14,7 @@ const userSchema = new mongoose.Schema({
     phone: {
         type: Number,
         required: [true, 'Please provide phone number'],
-        unique: [true, 'Phone number alraedy exists.']
+        unique: [true, 'Phone number already exists.']
     },
     route: {
         type: String,

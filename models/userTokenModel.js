@@ -26,7 +26,7 @@ const UserTokenSchema = new mongoose.Schema({
     route: {
         type: String, 
         required: [true, 'Please provide route'],
-        unique: [true, 'Route should be unique'],
+        // unique: [true, 'Route should be unique'],
     },
     quantity: {
         type: Number,
@@ -43,6 +43,10 @@ const UserTokenSchema = new mongoose.Schema({
     tokenNo: {
         type: String,
     },
+    isLoaded: {
+        type: Boolean,
+        default: false,
+    },
     active: {
         type: Boolean,
         default: true,
@@ -58,34 +62,23 @@ const UserTokenSchema = new mongoose.Schema({
     },
     updatedBy: {
         type: String,
-    }
-});
-
-/* UserTokenSchema.add({
-    updatedAt: {
+    },
+    deletedAt: {
         type: Date,
         default: null
+    },
+    deleteBy: {
+        type: String,
     }
-}) */
+}, { timestamps: {
+    createdAt: true,
+    updatedAt: false
+} });
 
 UserTokenSchema.pre('save', function (next) {
-    if (this.isModified()) {
-        this.updatedAt = new Date();
-
-        if (this.$locals && this.$locals.req) {
-            const req = this.$locals.req;
-            this.updatedBy = req.user?.username
-        }
+    if(this.isNew) {        
+        this.updatedAt = null
     }
-   /*  const update = this.getUpdate();
-
-    if (this.options.context && this.options.context.req) {
-        const req = this.options.context.req;
-        update.updatedBy = req.user?.username
-    }
-
-    update.updatedAt = new Date(); */
-
     next()
 })
 

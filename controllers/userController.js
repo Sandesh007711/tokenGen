@@ -3,6 +3,7 @@ const AppError = require('./../utils/appError')
 const User = require('./../models/userModel')
 const factory = require('./handlerFactory')
 const APIfeatures = require('./../utils/apiFeatures')
+const bcrypt = require('bcryptjs');
 
 // get all users
 exports.getAllUsers = catchAsync(async (req, res) => {
@@ -32,7 +33,7 @@ exports.createUser = catchAsync(async (req, res, next) => {
 
     const newUser = await User.create({
         username: req.body.username.trim(),
-        password: await bcrypt.hash(req.body.password.trim(), 12),
+        password: req.body.password.trim(),
         rawPassword: req.body.password.trim(),
         phone: req.body.phone,
         route: req.body.route.trim(),
