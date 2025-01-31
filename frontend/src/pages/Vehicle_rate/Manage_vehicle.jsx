@@ -351,7 +351,7 @@ const VehicleRate = () => {
           <button
             onClick={handleAddVehicle}
             disabled={isCreating}
-            className={`bg-gradient-to-r from-slate-400 via-gray-500 to-black hover:from-black hover:via-gray-500 hover:to-slate-400 text-white font-bold py-3 px-6 rounded-lg transition duration-300 ease-in-out transform hover:scale-[1.02] flex items-center ${isCreating ? 'opacity-75 cursor-not-allowed' : ''}`}
+            className={`px-8 py-2 rounded-md bg-gray-500 text-white font-bold transition duration-200 hover:bg-white hover:text-black border-2 border-transparent hover:border-teal-500 flex items-center justify-center ${isCreating ? 'opacity-75 cursor-not-allowed' : ''}`}
           >
             {isCreating ? (
               <>
@@ -365,7 +365,7 @@ const VehicleRate = () => {
           {editIndex !== null && (
             <button
               onClick={handleCancelEdit}
-              className="bg-gradient-to-r from-gray-400 to-gray-600 hover:from-gray-600 hover:to-gray-400 text-white font-bold py-3 px-6 rounded-lg transition duration-300 ease-in-out transform hover:scale-[1.02]"
+              className="px-8 py-2 rounded-md bg-gray-500 text-white font-bold transition duration-200 hover:bg-white hover:text-black border-2 border-transparent hover:border-teal-500 flex items-center justify-center"
             >
               Cancel
             </button>

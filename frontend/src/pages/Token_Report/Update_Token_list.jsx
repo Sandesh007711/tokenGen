@@ -288,13 +288,13 @@ const Update_Token_list = () => {
 
           <button
             type="submit"
-            disabled={loading || isSubmitting}
-            className="bg-gradient-to-r from-slate-400 via-gray-500 to-black hover:from-black hover:via-gray-500 hover:to-slate-400 text-white font-bold py-3 px-6 rounded-lg transition duration-300 ease-in-out transform hover:scale-[1.02] flex items-center gap-2"
+            className="px-8 py-2 rounded-md bg-gray-500 text-white font-bold transition duration-200 hover:bg-white hover:text-black border-2 border-transparent hover:border-teal-500 flex items-center justify-center"
+            disabled={isSubmitting}
           >
-            {loading || isSubmitting ? (
+            {isSubmitting ? (
               <>
                 <FaSpinner className="animate-spin" />
-                {loading ? 'Loading...' : 'Processing...'}
+                Processing...
               </>
             ) : (
               'Submit'
