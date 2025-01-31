@@ -34,7 +34,6 @@ const Token_list = () => {
   const [vehicleTypes, setVehicleTypes] = useState([]);
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false); // Add this new state with other states
-  const [isSearchActive, setIsSearchActive] = useState(false); // Add this with other state declarations
 
   // Helper function to sort tokens by date (newest first)
   const sortTokensByDate = (tokens) => {
@@ -97,8 +96,8 @@ const Token_list = () => {
     return d1 <= d2;
   };
 
-  // Replace fetchTokens with this simplified version
-  const fetchTokens = async (searchParams = {}) => {
+  // Replace initialFetch with this new fetch function
+  const fetchTokens = async (page, perPage, searchParams = {}) => {
     setIsLoading(true);
     try {
       const token = localStorage.getItem('token');
@@ -106,7 +105,13 @@ const Token_list = () => {
         throw new Error('No authentication token found');
       }
 
-      const response = await fetch('http://localhost:8000/api/v1/tokens', {
+      // Remove username from query params and fetch all tokens
+      const queryParams = new URLSearchParams({
+        page: page.toString(),
+        limit: perPage.toString()
+      });
+
+      const response = await fetch(`http://localhost:8000/api/v1/tokens?${queryParams}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -149,7 +154,11 @@ const Token_list = () => {
           return dateMatches && usernameMatches;
         });
 
-        setFilteredData(filteredTokens);
+        const startIndex = (page - 1) * perPage;
+        const endIndex = startIndex + perPage;
+        const paginatedData = filteredTokens.slice(startIndex, endIndex);
+
+        setFilteredData(paginatedData);
         setTotalRows(filteredTokens.length);
         showSuccess(`Found ${filteredTokens.length} matching records`);
       } else {
@@ -167,10 +176,33 @@ const Token_list = () => {
     }
   };
 
-  // Replace initial useEffect
+  // Replace the useEffect for initial fetch
   useEffect(() => {
-    fetchTokens();
-  }, []);
+    fetchTokens(currentPage, perPage);
+  }, []); // Initial fetch
+
+  // Add handlePageChange function
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+    const searchParams = {
+      fromDate,
+      toDate,
+      ...(selectedUser && { username: selectedUser })
+    };
+    fetchTokens(page, perPage, searchParams);
+  };
+
+  // Add handlePerPageChange function
+  const handlePerPageChange = async (newPerPage, page) => {
+    setPerPage(newPerPage);
+    setCurrentPage(page);
+    const searchParams = {
+      fromDate,
+      toDate,
+      ...(selectedUser && { username: selectedUser })
+    };
+    await fetchTokens(page, newPerPage, searchParams);
+  };
 
   /**
    * Shows error popup with message
@@ -209,11 +241,10 @@ const Token_list = () => {
     setShowConfirm(true);
   };
 
-  // Replace handleConfirm
+  // Update handleConfirm to use pagination
   const handleConfirm = async () => {
     setShowConfirm(false);
-    setCurrentPage(1);
-    setIsSearchActive(true); // Set search as active when confirming search
+    setCurrentPage(1); // Reset to first page
 
     const searchParams = {
       fromDate: fromDate,
@@ -222,7 +253,7 @@ const Token_list = () => {
     };
 
     console.log('Submitting search with params:', searchParams);
-    await fetchTokens(searchParams);
+    await fetchTokens(1, perPage, searchParams);
   };
 
   /**
@@ -388,16 +419,6 @@ const Token_list = () => {
       setShowDeleteConfirm(false);
       setSelectedToken(null);
     }
-  };
-
-  // Add this new function after other function declarations
-  const handleResetSearch = async () => {
-    setFromDate(new Date());
-    setToDate(new Date());
-    setSelectedUser('');
-    setIsSearchActive(false); // Reset search active state
-    await fetchTokens();
-    showSuccess('Reset to all tokens');
   };
 
   // Define the columns for DataTable
@@ -698,12 +719,13 @@ const Token_list = () => {
             columns={columns}
             data={filteredData}
             pagination
+            paginationServer
             paginationTotalRows={totalRows}
+            onChangePage={handlePageChange}
+            onChangeRowsPerPage={handlePerPageChange}
             paginationPerPage={perPage}
             paginationRowsPerPageOptions={[10, 25, 50, 100]}
             progressPending={isLoading}
-            // Remove paginationServer prop
-            // Remove onChangePage and onChangeRowsPerPage props
             progressComponent={
               <div className="py-8 text-center text-gray-500">
                 <div className="flex flex-col items-center justify-center">
