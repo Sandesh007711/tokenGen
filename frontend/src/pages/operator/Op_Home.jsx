@@ -34,17 +34,7 @@ const Op_Home = () => {
     setIsModalOpen(true);
   };
 
-  const vehicleTypes = [
-    "Select Vehicle Type", // default option
-    "Truck",
-    "Dumper",
-    "Trailer",
-    "Container",
-    "Tanker",
-    "Mini Truck",
-    "Pickup Van",
-    "Heavy Truck"
-  ];
+ 
 
   // Add quantity options generator
   const generateQuantityOptions = () => {
