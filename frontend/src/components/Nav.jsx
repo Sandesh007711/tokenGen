@@ -124,11 +124,11 @@ const Nav = () => {
           {/* Menu Items */}
           <div className="flex items-center gap-4 sm:gap-6 md:gap-8 lg:gap-10">
             <Link to="/">
-              <button className="transition-transform duration-300 hover:scale-110 hover:shadow-lg hover:shadow-slate-700 rounded-full group">
+              <button className="transition-transform duration-300 hover:scale-110 group">
                 <img
                   src={home}
                   alt="Home"
-                  className="h-[25px] w-[25px] sm:h-[30px] sm:w-[30px] md:h-[40px] md:w-[40px] rounded-xl"
+                  className="h-[25px] w-[25px] sm:h-[30px] sm:w-[30px] md:h-[40px] md:w-[40px]"
                 />
                 <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-black rounded opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                   Home
@@ -159,7 +159,7 @@ const Nav = () => {
             <div className="flex justify-end space-x-4">
               <button
                 onClick={handleLogoutCancel}
-                className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+                className="px-4 py-2 bg-gray-200 text-gray-800 hover:bg-gray-400 transition-colors"
               >
                 Cancel
               </button>

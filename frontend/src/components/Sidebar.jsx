@@ -67,10 +67,10 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
                     <FaTruckLoading /><Link to="/loaded-list"><span>Loaded List</span></Link>
                   </li>
                   <li className={`flex items-center space-x-2 p-2 rounded ${isActive('/update-token-list') ? 'bg-gray-700' : 'hover:bg-gray-700'}`}>
-                    <FaEdit /><Link to="/update-token-list"><span>Update Token List</span></Link>
+                    <FaEdit /><Link to="/update-token-list"><span>Updated Token List</span></Link>
                   </li>
                   <li className={`flex items-center space-x-2 p-2 rounded ${isActive('/delete-token-list') ? 'bg-gray-700' : 'hover:bg-gray-700'}`}>
-                    <FaTrashAlt /><Link to="/delete-token-list"><span>Delete Token List</span></Link>
+                    <FaTrashAlt /><Link to="/delete-token-list"><span>Deleted Token List</span></Link>
                   </li>
                 </ul>
               )}
