@@ -7,6 +7,7 @@ const factory = require('./handlerFactory')
 const User = require('../models/userModel')
 const Token = require('../models/tokenModel');
 const Vehicle = require('../models/vehicleModel');
+const Rate = require('../models/rateModel');
 const APIfeatures = require('./../utils/apiFeatures')
 
 // create printToken
@@ -99,18 +100,27 @@ exports.getAllTokens = catchAsync(async (req, res) => {
         filter = {userId: req.user.id} 
     }
 
-    const features = new APIfeatures(UserToken.find(filter), req.query)
-    .filter()
-    .sort()
-    .limitingFields()
-    .paginate();
+    const userTokens = await UserToken.find(filter)
+        .populate('userId', {_id: 0, 'username': 1})
+        .populate('vehicleId', 'vehicleType')
+        .lean()
 
-    const printTokens = await features.query
+    const vehicleIds = userTokens.map(token => token.vehicleId._id);
+
+    const rates = await Rate.find({ vehicleId: { $in: vehicleIds } }).select('vehicleId vehicleRate').lean();
+
+    const data = userTokens.map(token => {
+        const rate = rates.find(rate => rate.vehicleId.toString() === token.vehicleId._id.toString());
+        return {
+            ...token,
+            vehicleRate: rate ? rate.vehicleRate : null
+        }
+    })
 
     res.status(200).json({
         status: 'success',
         message: 'Tokens fetched succesfully',
-        printTokens
+        data
     })
 });
 
@@ -125,6 +135,7 @@ exports.updateToken = catchAsync(async (req, res, next) => {
         return next(new AppError('Print Token not found', 400))
     }
 
+    token.userId = req.body.user
     token.driverName = req.body.driverName ? req.body.driverName : token.driverName
     token.driverMobileNo = req.body.driverMobileNo ? req.body.driverMobileNo : token.driverMobileNo
     token.vehicleNo = req.body.vehicleNo ? req.body.vehicleNo : token.vehicleNo
@@ -151,18 +162,17 @@ exports.deleteToken = catchAsync(async (req, res, next) => {
     try {
         const tokenId = req.params.id
         // Find the token
-        const token = await UserToken.findById(tokenId).session(session);
+        const token = await UserToken.findOne({ _id: tokenId, isLoaded: false }).session(session);
         if (!token) return next(new AppError('Token not found!', 400))
     
         const userId = token.userId;
         const user = await User.findById(userId).session(session);
-        const currentDate = new Date().toISOString().split('T')[0];
 
         const today = new Date().toISOString().split('T')[0];
-        const tokenCreationDate = token.createdAt.toISOString().split('T')[0];
+        const tokenCreationDate = token.createdAt.toISOString().split('T')[0] ;
     
         // Decrement daily and total token counts
-        const dailyTokens = user.tokenData.dailyTokens.date === currentDate ? user.tokenData.dailyTokens.count - 1 : 0;
+        const dailyTokens = user.tokenData.dailyTokens.date === today ? user.tokenData.dailyTokens.count - 1 : 0;
         const totalTokens = user.tokenData.totalTokens - 1;
   
         // Update the user's token data
@@ -200,7 +210,7 @@ exports.deleteToken = catchAsync(async (req, res, next) => {
 });
 
 exports.getUpdatedTokens = catchAsync(async (req, res) => {
-    const data = await UserToken.find({ updatedAt: { $ne: null } })
+    const data = await UserToken.find({ updatedAt: { $ne: null } }).populate('vehicleId', {_id: 0, 'vehicleType': 1}).populate('userId', {_id: 0, 'username': 1})
 
     res.status(200).json({
         status: 'success',
@@ -210,13 +220,18 @@ exports.getUpdatedTokens = catchAsync(async (req, res) => {
 });
 
 exports.exitToken = catchAsync(async (req, res, next) => {
+    const { _id: userId, role: loggedUserRole } = req.user;
     const { tokenNo, isLoaded } = req.body;
     const token = await UserToken.findOne({ tokenNo })
     if(!token) {
         return next(new AppError('Print Token not found', 400))
     }
-
+    
     // add validation if logged user is owner of token
+    if(loggedUserRole !== 'admin')
+        if(userId.toString() !== token.userId.toString())
+            return next(new AppError('You don\'t have permission to perform this action', 401))
+
 
     token.isLoaded = isLoaded;
     token.updatedAt = new Date(),
