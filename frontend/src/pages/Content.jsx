@@ -419,7 +419,7 @@ const Content = () => {
                     <option value="">Select User</option>
                     {Array.isArray(users) && users.map((user) => (
                       <option key={user._id} value={user._id}>
-                        {user.name} ({user.route})
+                        {user.username}
                       </option>
                     ))}
                   </select>

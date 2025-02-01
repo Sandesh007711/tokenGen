@@ -14,7 +14,7 @@ const userSchema = new mongoose.Schema({
     phone: {
         type: Number,
         required: [true, 'Please provide phone number'],
-        unique: [true, 'Phone number alraedy exists.']
+        unique: [true, 'Phone number already exists.']
     },
     route: {
         type: String,
@@ -73,7 +73,14 @@ userSchema.pre('save', async function(next){
     next()
 })
 
+userSchema.pre('save', function(next) {
+    if(!this.isModified('password') || this.new) { // if we DO NOT MODIFY the password OR if the document is new
+        return next();
+    }
 
+    this.passwordUpdatedAt = Date.now() - 1000;
+    next();
+})
 
 userSchema.pre(/^find/, function(next) {
     // this points to the current query
