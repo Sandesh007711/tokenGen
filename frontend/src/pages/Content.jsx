@@ -594,7 +594,7 @@ const Content = () => {
           {/* Back button */}
           <button
             onClick={() => setSelectedOperator(null)}
-            className="mb-4 bg-gray-500 hover:bg-gray-700 text-white font-bold py-1.5 sm:py-2 px-3 sm:px-4 rounded-full transition duration-300 ease-in-out transform hover:scale-105 text-sm sm:text-base"
+            className="mb-4 bg-gray-500 hover:bg-gray-700 text-white font-bold py-1.5 sm:py-2 px-3 sm:px-4 my-4 rounded-full transition duration-300 ease-in-out transform hover:scale-105 text-sm sm:text-base"
           >
             ← Back to Operators
           </button>
