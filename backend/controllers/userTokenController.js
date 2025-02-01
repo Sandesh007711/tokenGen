@@ -11,8 +11,7 @@ const APIfeatures = require('./../utils/apiFeatures')
 
 // create printToken
 exports.createToken = catchAsync(async (req, res, next) => {
-   // const { username } = req.user;
-    const { vehicleId , userId } = req.body;
+    const { vehicleId, userId } = req.body;
 
     // Start a session for transaction
     const session = await mongoose.startSession();
@@ -20,8 +19,8 @@ exports.createToken = catchAsync(async (req, res, next) => {
 
     try {
         const user = await User.findById(userId).session(session);
-        const loggedUserId = user._id.toString().trim();
-        if (!user) return next(new AppError(`User with username ${username} not found.`, 400));
+        const loggedUser = user._id.toString().trim();
+        if (!user) return next(new AppError(`User not found.`, 400));
 
         const vehicle = await Vehicle.findById(vehicleId).session(session);
         if (!vehicle) return next(new AppError('Vehicle not found!', 400));
@@ -48,7 +47,7 @@ exports.createToken = catchAsync(async (req, res, next) => {
         // Create the token
         await UserToken.create([
             {
-                userId: loggedUserId,
+                userId: loggedUser,
                 driverName: req.body.driverName,
                 driverMobileNo: req.body.driverMobileNo,
                 vehicleNo: req.body.vehicleNo,
@@ -58,7 +57,8 @@ exports.createToken = catchAsync(async (req, res, next) => {
                 place: req.body.place,
                 challanPin: req.body.challanPin,
                 tokenNo: uniqueToken,
-                createdAt: new Date()
+                createdAt: new Date(),
+                updatedAt: null,
             }
         ], { session });
         
@@ -92,7 +92,14 @@ exports.createToken = catchAsync(async (req, res, next) => {
 
 // get all printtokens
 exports.getAllTokens = catchAsync(async (req, res) => {
-    const features = new APIfeatures(UserToken.find(), req.query)
+    const { role } = req.user;
+
+    let filter = {};
+    if(role !== 'admin') {
+        filter = {userId: req.user.id} 
+    }
+
+    const features = new APIfeatures(UserToken.find(filter), req.query)
     .filter()
     .sort()
     .limitingFields()
@@ -126,6 +133,7 @@ exports.updateToken = catchAsync(async (req, res, next) => {
     token.place = req.body.place ? req.body.place : token.place
     token.challanPin = req.body.challanPin ? req.body.challanPin : token.challanPin
     token.route = req.body.route ? req.body.route : token.route
+    token.updatedAt = new Date(),
     token.updatedBy = req.user.username
 
     token.save()
@@ -193,6 +201,37 @@ exports.deleteToken = catchAsync(async (req, res, next) => {
 
 exports.getUpdatedTokens = catchAsync(async (req, res) => {
     const data = await UserToken.find({ updatedAt: { $ne: null } })
+
+    res.status(200).json({
+        status: 'success',
+        message: 'Updated Tokens fetched succesfully',
+        data
+    })
+});
+
+exports.exitToken = catchAsync(async (req, res, next) => {
+    const { tokenNo, isLoaded } = req.body;
+    const token = await UserToken.findOne({ tokenNo })
+    if(!token) {
+        return next(new AppError('Print Token not found', 400))
+    }
+
+    // add validation if logged user is owner of token
+
+    token.isLoaded = isLoaded;
+    token.updatedAt = new Date(),
+    token.updatedBy = req.user.username
+
+    token.save()
+
+    res.status(200).json({
+        status: 'success',
+        message: 'Tokens loaded succesfully'
+    })
+});
+
+exports.getLoadedList = catchAsync(async (req, res, next) => {
+    const data = await UserToken.find({ isLoaded: { $eq: true } })
 
     res.status(200).json({
         status: 'success',
