@@ -68,7 +68,7 @@ const Loaded_list = () => {
   const loadInitialData = async () => {
     try {
       const headers = getAuthHeaders();
-      const response = await fetch('http://localhost:8000/api/v1/tokens/updated', {
+      const response = await fetch('http://localhost:8000/api/v1/tokens/loaded', {
         method: 'GET',
         headers,
         credentials: 'include'
@@ -82,9 +82,7 @@ const Loaded_list = () => {
       console.log('Initial data load:', data);
 
       if (data.status === 'success' && Array.isArray(data.data)) {
-        const loadedTokens = data.data.filter(token => token.isLoaded === true);
-        console.log('Initial loaded tokens:', loadedTokens);
-        setFilteredData(loadedTokens);
+        setFilteredData(data.data);
       }
     } catch (error) {
       console.error('Error loading initial data:', error);
@@ -97,7 +95,7 @@ const Loaded_list = () => {
     setLoading(true);
     try {
       const headers = getAuthHeaders();
-      const response = await fetch('http://localhost:8000/api/v1/tokens/updated', {
+      const response = await fetch('http://localhost:8000/api/v1/tokens/loaded', {
         method: 'GET',
         headers,
         credentials: 'include'
@@ -107,17 +105,14 @@ const Loaded_list = () => {
       console.log('Fetch data response:', data);
 
       if (data.status === 'success' && Array.isArray(data.data)) {
-        // First filter loaded tokens
-        let tokens = data.data.filter(token => token.isLoaded === true);
-        console.log('Loaded tokens:', tokens);
+        let tokens = data.data;
 
-        // Then apply user filter if selected
+        // Apply user filter if selected
         if (selectedUser && selectedUser !== '') {
           tokens = tokens.filter(token => token.driverName === selectedUser);
-          console.log('After user filter:', tokens);
         }
 
-        // Then apply date filter if dates are valid
+        // Apply date filter if dates are valid
         if (fromDate && toDate) {
           const start = new Date(fromDate);
           start.setHours(0, 0, 0, 0);
@@ -128,7 +123,6 @@ const Loaded_list = () => {
             const date = new Date(token.createdAt);
             return date >= start && date <= end;
           });
-          console.log('After date filter:', tokens);
         }
 
         setFilteredData(tokens);
