@@ -67,12 +67,13 @@ const UserTokenSchema = new mongoose.Schema({
         type: Date,
         default: null
     },
-    deleteBy: {
+    deletedBy: {
         type: String,
     }
 }, { timestamps: {
     createdAt: true,
-    updatedAt: false
+    updatedAt: false,
+    deletedAt: false,
 } });
 
 UserTokenSchema.pre('save', function (next) {

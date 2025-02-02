@@ -94,10 +94,26 @@ exports.createToken = catchAsync(async (req, res, next) => {
 // get all printtokens
 exports.getAllTokens = catchAsync(async (req, res) => {
     const { role } = req.user;
+    const { updated, loaded, deleted } = req.query;
 
     let filter = {};
     if(role !== 'admin') {
-        filter = {userId: req.user.id} 
+        filter.userId =  req.user.id
+    }
+
+    if(role === 'admin') {
+        if(loaded) {
+            filter.isLoaded = {}
+            filter.isLoaded.$eq = true
+        }
+        if(updated) {
+            filter.updatedAt = {}
+            filter.updatedAt.$ne = null
+        }
+        if(deleted) {
+            filter.deletedAt = {}
+            filter.deletedAt.$ne = null
+        }
     }
 
     const userTokens = await UserToken.find(filter)
@@ -193,7 +209,15 @@ exports.deleteToken = catchAsync(async (req, res, next) => {
         );
 
         // Delete the token
-        await UserToken.findByIdAndDelete(tokenId, { session });
+        // await UserToken.findByIdAndDelete(tokenId, { session });
+        await UserToken.findByIdAndUpdate(tokenId, 
+            {
+                $set: {
+                    deletedAt: new Date()
+                }
+            },
+            { session }
+        );
 
         await session.commitTransaction();
         session.endSession();
@@ -251,6 +275,16 @@ exports.getLoadedList = catchAsync(async (req, res, next) => {
     res.status(200).json({
         status: 'success',
         message: 'Updated Tokens fetched succesfully',
+        data
+    })
+});
+
+exports.getDeletedTokens = catchAsync(async (req, res, next) => {
+    const data = await UserToken.find({ deletedAt: { $ne: null } }).populate('vehicleId', {_id: 0, 'vehicleType': 1}).populate('userId', {_id: 0, 'username': 1})
+
+    res.status(200).json({
+        status: 'success',
+        message: 'Deleted Tokens fetched succesfully',
         data
     })
 });

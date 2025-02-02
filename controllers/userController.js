@@ -63,7 +63,29 @@ exports.getUser = catchAsync(async(req, res, next) => {
 });
 
 // update user data [DO NOT update password with this method]
-exports.updateUser = factory.updateOne(User);
+exports.updateUser = catchAsync(async (req, res, next) => {
+    const { id: userId } = req.params
+    const user = await User.findById(userId)
+
+    if(!user) return next(new AppError('User not found !', 404))
+
+    user.username = req.body.username.trim()
+    user.password = req.body.password.trim()
+    user.rawPassword = req.body.password.trim()
+    user.phone = req.body.phone
+    user.route = req.body.route.trim()
+
+    // if(user.isModified('username')) {
+    //     return next(new AppError('User not found !', 404))
+    // }
+
+    user.save();
+
+    res.status(200).json({
+        status: 'success',
+        message: 'Operator has been updated succesfully'
+    })
+});
 
 // delete user
 exports.deleteUser = factory.deleteOne(User);

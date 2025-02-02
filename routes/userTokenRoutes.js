@@ -1,8 +1,9 @@
 const express = require('express');
 const {
     getAllTokens, createToken, getUpdatedTokens, getToken, updateToken, deleteToken,
-    exitToken,
-    getLoadedList
+    exitToken, 
+    getLoadedList,
+    getDeletedTokens
 } = require('../controllers/userTokenController');
 const authController = require('../controllers/authController')
 
@@ -20,7 +21,10 @@ router.route('/loaded')
     .get(authController.restrictTo('admin'), getLoadedList)
 
 router.route('/updated')
-    .get(authController.restrictTo('admin', 'operator'), getUpdatedTokens)
+    .get(authController.restrictTo('admin'), getUpdatedTokens)
+
+router.route('/deleted')
+    .get(authController.restrictTo('admin'), getDeletedTokens)
 
 router.route('/:id')
     .get(authController.restrictTo('admin', 'operator'), getToken)
