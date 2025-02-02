@@ -34,7 +34,44 @@ const Op_Home = () => {
     setIsModalOpen(true);
   };
 
- 
+  const buttonStyle = {
+    appearance: 'none',
+    backgroundColor: 'transparent',
+    border: '0.125em solid #1A1A1A',
+    borderRadius: '0.9375em',
+    boxSizing: 'border-box',
+    color: '#3B3B3B',
+    cursor: 'pointer',
+    display: 'inline-block',
+    fontFamily: 'Roobert, -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol"',
+    fontSize: '16px',
+    fontWeight: '600',
+    lineHeight: 'normal',
+    margin: '0',
+    minHeight: '3.75em',
+    minWidth: '0',
+    outline: 'none',
+    padding: '1em 2.3em',
+    textAlign: 'center',
+    textDecoration: 'none',
+    transition: 'all 300ms cubic-bezier(.23, 1, 0.32, 1)',
+    userSelect: 'none',
+    WebkitUserSelect: 'none',
+    touchAction: 'manipulation',
+    willChange: 'transform'
+  };
+
+  const buttonHoverStyle = {
+    color: '#fff',
+    backgroundColor: '#1A1A1A',
+    boxShadow: 'rgba(0, 0, 0, 0.25) 0 8px 15px',
+    transform: 'translateY(-2px)'
+  };
+
+  const buttonActiveStyle = {
+    boxShadow: 'none',
+    transform: 'translateY(0)'
+  };
 
   // Add quantity options generator
   const generateQuantityOptions = () => {
@@ -434,7 +471,11 @@ const Op_Home = () => {
 
       <button 
         onClick={handleAddToken}
-        className="mb-4 bg-gradient-to-r from-slate-400 via-gray-500 to-black hover:from-black hover:via-gray-500 hover:to-slate-400 text-white font-bold py-3 px-6 rounded-lg transition duration-300 ease-in-out transform hover:scale-[1.02]"
+        style={buttonStyle}
+        onMouseOver={(e) => Object.assign(e.target.style, buttonHoverStyle)}
+        onMouseOut={(e) => Object.assign(e.target.style, buttonStyle)}
+        onMouseDown={(e) => Object.assign(e.target.style, buttonActiveStyle)}
+        onMouseUp={(e) => Object.assign(e.target.style, buttonHoverStyle)}
       >
         Add Print Token
       </button>
@@ -626,14 +667,14 @@ const Op_Home = () => {
                 <button 
                   type="button"
                   onClick={handleCancelClick}
-                  className="bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-500 text-white font-bold py-3 px-6 rounded-lg transition duration-300 ease-in-out transform hover:scale-[1.02]"
+                  className="px-6 py-2.5 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
                 >
                   Cancel
                 </button>
                 <button 
                   type="submit"
                   onClick={handleSubmitClick}
-                  className="bg-gradient-to-r from-slate-400 via-gray-500 to-black hover:from-black hover:via-gray-500 hover:to-slate-400 text-white font-bold py-3 px-6 rounded-lg transition duration-300 ease-in-out transform hover:scale-[1.02]"
+                  className="px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                 >
                   Submit
                 </button>
@@ -692,7 +733,7 @@ const Op_Home = () => {
         </div>
       )}
 
-      <div className="bg-white rounded-lg shadow-lg overflow-x-auto">
+      <div className="bg-white rounded-lg shadow-lg overflow-x-auto mt-6"> {/* Added mt-6 here */}
         {loading ? (
           <div className="p-8 text-center text-gray-500">Loading tokens...</div>
         ) : (
