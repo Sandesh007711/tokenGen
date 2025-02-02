@@ -82,13 +82,13 @@ UserTokenSchema.pre('save', function (next) {
     next()
 })
 
-UserTokenSchema.pre(/^find/, function (next) {
-    this.find().populate('vehicleId', {_id: 0, 'vehicleType': 1}).populate('userId', {_id: 0, 'username': 1})
-    next();
-})
+// UserTokenSchema.pre(/^find/, function (next) {
+//     this.find().populate('vehicleId', {_id: 0, 'vehicleType': 1}).populate('userId', {_id: 0, 'username': 1})
+//     next();
+// })
 
 UserTokenSchema.pre(/^find/, function(next) {
-    this.find({ active: { $ne: false } });
+    this.find({ active: { $ne: false } }).select('-__v');
     next();
 });
 
