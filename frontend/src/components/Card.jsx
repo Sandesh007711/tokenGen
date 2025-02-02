@@ -12,13 +12,13 @@ const Card = ({ operator }) => {
   const [currentPage, setCurrentPage] = useState(1);
 
   // Modified fetchData function to handle the correct data format
-  const fetchData = async (page, pageSize) => {
+  const fetchData = async () => {
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
       console.log('Fetching data for operator:', operator); // Log operator info
 
-      const response = await fetch(`http://localhost:8000/api/v1/tokens?page=${page}&limit=${pageSize}&userId=${operator.id}`, {
+      const response = await fetch('http://localhost:8000/api/v1/tokens', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -31,30 +31,39 @@ const Card = ({ operator }) => {
       const json = await response.json();
       console.log('Raw API response:', json); // Log raw API response
       
-      if (!json.printTokens || !Array.isArray(json.printTokens)) {
+      if (!json.data || !Array.isArray(json.data)) {
         console.error('Invalid response format:', json);
         throw new Error('Invalid data format received from server');
       }
 
-      console.log('Print Tokens array:', json.printTokens); // Log tokens array
+      console.log('Print Tokens array:', json.data); // Log tokens array
 
-      const formattedData = json.printTokens.map(item => ({
+      // Filter tokens for this specific operator
+      const operatorTokens = json.data.filter(token => 
+        token.userId?.username === operator.username
+      );
+
+      const formattedData = operatorTokens.map(item => ({
         tokenNo: item.tokenNo,
         date: new Date(item.createdAt).toLocaleString(),
         driver: item.driverName,
         mobileNo: item.driverMobileNo, // Already a number
         vehicleNo: item.vehicleNo,
-        vehicleType: item.vehicleId.vehicleType,
+        vehicleType: item.vehicleId?.vehicleType || 'N/A',
+        vehicleRate: item.vehicleRate || 'N/A',
         quantity: item.quantity, // Already a number
-        route: item.route,
+        route: item.route || '-',
         place: item.place || '-',
-        challanPin: item.challanPin || '-'
+        challanPin: item.challanPin || '-',
+        isLoaded: item.isLoaded ? 'Yes' : 'No',
+        updatedBy: item.updatedBy || '-',
+        updatedAt: item.updatedAt ? new Date(item.updatedAt).toLocaleString() : '-'
       }));
 
       console.log('Formatted data:', formattedData); // Log formatted data
 
       setData(formattedData);
-      setTotalRows(json.printTokens.length); // Use the actual array length for total
+      setTotalRows(formattedData.length); // Use the actual array length for total
     } catch (error) {
       console.error('Error fetching data:', error);
       setData([]);
@@ -67,19 +76,19 @@ const Card = ({ operator }) => {
   // Pagination handlers
   const handlePageChange = page => {
     setCurrentPage(page);
-    fetchData(page, perPage);
   };
 
   const handlePerRowsChange = async (newPerPage, page) => {
     setPerPage(newPerPage);
     setCurrentPage(page);
-    fetchData(page, newPerPage);
   };
 
   // Load initial data when operator changes
   useEffect(() => {
-    fetchData(currentPage, perPage);
-  }, [operator]);
+    if (operator?.username) {
+      fetchData();
+    }
+  }, [operator?.username]);
 
   // Generate QR code for row data
   const generateQR = async (data) => {
@@ -276,6 +285,11 @@ const Card = ({ operator }) => {
       sortable: true,
     },
     {
+      name: 'Vehicle Rate',
+      selector: row => row.vehicleRate,
+      sortable: true,
+    },
+    {
       name: 'Quantity',
       selector: row => row.quantity,
       sortable: true,
@@ -294,6 +308,21 @@ const Card = ({ operator }) => {
     {
       name: 'Challan Pin',
       selector: row => row.challanPin,
+      sortable: true,
+    },
+    {
+      name: 'Loaded',
+      selector: row => row.isLoaded,
+      sortable: true,
+    },
+    {
+      name: 'Updated By',
+      selector: row => row.updatedBy,
+      sortable: true,
+    },
+    {
+      name: 'Last Updated',
+      selector: row => row.updatedAt,
       sortable: true,
     },
     {
@@ -366,7 +395,7 @@ const Card = ({ operator }) => {
   // Render DataTable with all configurations
   return (
     <div className="bg-white shadow-lg rounded-lg overflow-hidden p-4 mt-4 md:mt-6 lg:mt-8 xl:mt-6 sm:p-6 max-w-full">
-      <h2 className="text-2xl font-bold mb-4">Tokens for {operator.username}</h2>
+      <h2 className="text-2xl font-bold mb-4">Tokens for {operator.username} ({data.length} total)</h2>
       <DataTable
         columns={columns}
         data={data}
@@ -384,6 +413,11 @@ const Card = ({ operator }) => {
         striped
         customStyles={customStyles}
         className="rounded-lg overflow-hidden"
+        noDataComponent={
+          <div className="p-4 text-center text-gray-500">
+            No tokens found for {operator.username}
+          </div>
+        }
       />
     </div>
   );
