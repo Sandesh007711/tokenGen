@@ -259,16 +259,14 @@ const Loaded_list = () => {
                 <th className="py-3 px-4 text-left font-semibold">Place</th>
                 <th className="py-3 px-4 text-left font-semibold">Route</th>
                 <th className="py-3 px-4 text-left font-semibold">Quantity</th>
-                <th className="py-3 px-4 text-left font-semibold">Vehicle Type</th>
                 <th className="py-3 px-4 text-left font-semibold">Vehicle No</th>
-                <th className="py-3 px-4 text-left font-semibold">Created By</th>
                 <th className="py-3 px-4 text-left font-semibold">Created At</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
               {filteredData.length === 0 ? (
                 <tr>
-                  <td colSpan="11" className="py-8 text-center text-gray-500 text-lg">
+                  <td colSpan="9" className="py-8 text-center text-gray-500 text-lg">
                     No data available
                   </td>
                 </tr>
@@ -282,9 +280,7 @@ const Loaded_list = () => {
                     <td className="py-3 px-4">{item.place}</td>
                     <td className="py-3 px-4">{item.route}</td>
                     <td className="py-3 px-4">{item.quantity}</td>
-                    <td className="py-3 px-4">{item.vehicleId?.vehicleType}</td>
                     <td className="py-3 px-4">{item.vehicleNo}</td>
-                    <td className="py-3 px-4">{item.userId?.username}</td>
                     <td className="py-3 px-4">{new Date(item.createdAt).toLocaleDateString()}</td>
                   </tr>
                 ))
