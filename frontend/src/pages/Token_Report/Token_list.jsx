@@ -96,8 +96,8 @@ const Token_list = () => {
     return d1 <= d2;
   };
 
-  // Replace initialFetch with this new fetch function
-  const fetchTokens = async (page, perPage, searchParams = {}) => {
+  // Replace fetchTokens with this simplified version that fetches all data at once
+  const fetchTokens = async (searchParams = {}) => {
     setIsLoading(true);
     try {
       const token = localStorage.getItem('token');
@@ -105,13 +105,7 @@ const Token_list = () => {
         throw new Error('No authentication token found');
       }
 
-      // Remove username from query params and fetch all tokens
-      const queryParams = new URLSearchParams({
-        page: page.toString(),
-        limit: perPage.toString()
-      });
-
-      const response = await fetch(`http://localhost:8000/api/v1/tokens?${queryParams}`, {
+      const response = await fetch('http://localhost:8000/api/v1/tokens', {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -125,9 +119,10 @@ const Token_list = () => {
       const result = await response.json();
       console.log('Token API Response:', result);
 
-      if (result.status === 'success' && Array.isArray(result.printTokens)) {
+      // Check if result data exists and is an array
+      if (result.data && Array.isArray(result.data)) {
         // Sort tokens by createdAt date in descending order (newest first)
-        const sortedTokens = result.printTokens.sort((a, b) => 
+        const sortedTokens = result.data.sort((a, b) => 
           new Date(b.createdAt) - new Date(a.createdAt)
         );
 
@@ -154,17 +149,18 @@ const Token_list = () => {
           return dateMatches && usernameMatches;
         });
 
-        const startIndex = (page - 1) * perPage;
-        const endIndex = startIndex + perPage;
-        const paginatedData = filteredTokens.slice(startIndex, endIndex);
-
-        setFilteredData(paginatedData);
+        setFilteredData(filteredTokens);
         setTotalRows(filteredTokens.length);
-        showSuccess(`Found ${filteredTokens.length} matching records`);
+        if (filteredTokens.length > 0) {
+          showSuccess(`Found ${filteredTokens.length} matching records`);
+        } else {
+          showError('No matching records found for the selected criteria');
+        }
       } else {
+        console.log('Unexpected data structure:', result);
         setFilteredData([]);
         setTotalRows(0);
-        showError('No matching records found');
+        showError('No records available or invalid data structure');
       }
     } catch (error) {
       console.error('Error fetching tokens:', error);
@@ -176,32 +172,20 @@ const Token_list = () => {
     }
   };
 
-  // Replace the useEffect for initial fetch
+  // Replace initial useEffect
   useEffect(() => {
-    fetchTokens(currentPage, perPage);
-  }, []); // Initial fetch
+    fetchTokens();
+  }, []);
 
-  // Add handlePageChange function
+  // Update handlePageChange to handle client-side pagination
   const handlePageChange = (page) => {
     setCurrentPage(page);
-    const searchParams = {
-      fromDate,
-      toDate,
-      ...(selectedUser && { username: selectedUser })
-    };
-    fetchTokens(page, perPage, searchParams);
   };
 
-  // Add handlePerPageChange function
-  const handlePerPageChange = async (newPerPage, page) => {
+  // Update handlePerPageChange for client-side pagination
+  const handlePerPageChange = (newPerPage, page) => {
     setPerPage(newPerPage);
     setCurrentPage(page);
-    const searchParams = {
-      fromDate,
-      toDate,
-      ...(selectedUser && { username: selectedUser })
-    };
-    await fetchTokens(page, newPerPage, searchParams);
   };
 
   /**
@@ -241,7 +225,7 @@ const Token_list = () => {
     setShowConfirm(true);
   };
 
-  // Update handleConfirm to use pagination
+  // Update handleConfirm
   const handleConfirm = async () => {
     setShowConfirm(false);
     setCurrentPage(1); // Reset to first page
@@ -253,7 +237,7 @@ const Token_list = () => {
     };
 
     console.log('Submitting search with params:', searchParams);
-    await fetchTokens(1, perPage, searchParams);
+    await fetchTokens(searchParams);
   };
 
   /**
@@ -282,23 +266,24 @@ const Token_list = () => {
 
     worksheet.columns = [
       { header: 'Driver Name', key: 'driverName', width: 20 },
-      { header: 'Driver Mobile No.', key: 'driverMobileNo', width: 15 }, // Updated header
-      { header: 'Vehicle Type', key: 'vehicleType', width: 15 }, // Add this line
+      { header: 'Driver Mobile No.', key: 'driverMobileNo', width: 15 },
+      { header: 'Vehicle Type', key: 'vehicleType', width: 15 },
+      { header: 'Vehicle Rate', key: 'vehicleRate', width: 15 },
       { header: 'Vehicle No', key: 'vehicleNo', width: 15 },
       { header: 'Place', key: 'place', width: 20 },
       { header: 'Route', key: 'route', width: 20 },
       { header: 'Token No', key: 'tokenNo', width: 15 },
       { header: 'Challan Pin', key: 'challanPin', width: 15 },
       { header: 'Quantity', key: 'quantity', width: 10 },
-      { header: 'User', key: 'createdBy', width: 20 }, // Updated header
-      { header: 'Date', key: 'createdAt', width: 20 }
+      { header: 'User', key: 'createdBy', width: 20 },
+      { header: 'Created Date', key: 'createdAt', width: 20 }
     ];
 
     // Format the data for Excel with date and time
     const formattedData = filteredData.map(item => ({
       ...item,
-      vehicleType: item.vehicleId?.vehicleType || 'N/A', // Add this line
-      createdBy: item.userId?.username || 'N/A', // Add user info
+      vehicleType: item.vehicleId?.vehicleType || 'N/A',
+      createdBy: item.userId?.username || 'N/A',
       createdAt: formatDateTime(item.createdAt)
     }));
 
@@ -341,7 +326,9 @@ const Token_list = () => {
         driverName: updatedData.driverName || '',
         driverMobileNo: parseInt(updatedData.driverMobileNo) || 0,
         vehicleId: selectedVehicle._id, // Send the vehicle ID instead of the vehicle type object
-        vehicleNo: updatedData.vehicleNo || ''
+        vehicleNo: updatedData.vehicleNo || '',
+        isLoaded: updatedData.isLoaded || false,
+        vehicleRate: parseFloat(updatedData.vehicleRate) || 0
       };
 
       console.log('Selected Vehicle:', selectedVehicle);
@@ -436,6 +423,11 @@ const Token_list = () => {
     {
       name: 'Vehicle Type',  // Add this new column
       selector: row => row.vehicleId?.vehicleType || 'N/A',
+      sortable: true,
+    },
+    {
+      name: 'Vehicle Rate',  // New column
+      selector: row => row.vehicleRate || 'N/A',
       sortable: true,
     },
     {
@@ -719,12 +711,11 @@ const Token_list = () => {
             columns={columns}
             data={filteredData}
             pagination
-            paginationServer
+            paginationPerPage={perPage}
+            paginationRowsPerPageOptions={[10, 25, 50, 100]}
             paginationTotalRows={totalRows}
             onChangePage={handlePageChange}
             onChangeRowsPerPage={handlePerPageChange}
-            paginationPerPage={perPage}
-            paginationRowsPerPageOptions={[10, 25, 50, 100]}
             progressPending={isLoading}
             progressComponent={
               <div className="py-8 text-center text-gray-500">
