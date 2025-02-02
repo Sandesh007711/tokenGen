@@ -88,27 +88,33 @@ const Op_Home = () => {
     const setLoggedInUserData = () => {
       try {
         const userStr = localStorage.getItem('user');
-        if (userStr) {
-          const userData = JSON.parse(userStr);
-          const currentUser = userData.user;
+        if (!userStr) {
+          console.error('No user data in localStorage');
+          return;
+        }
 
-          console.log('Current user data:', currentUser);
+        const userData = JSON.parse(userStr);
+        console.log('Raw user data:', userData);
 
-          if (currentUser) {
-            setFormData(prev => ({
-              ...prev,
-              userId: currentUser._id,
-              username: currentUser.username,
-              route: currentUser.route
-            }));
+        // Handle the case where user data is nested in data property
+        const currentUser = userData.data || userData.user || userData;
+        console.log('Processed user data:', currentUser);
 
-            // Update users state with current user data
-            setUsers([{
-              id: currentUser._id,
-              name: currentUser.username,
-              route: currentUser.route
-            }]);
-          }
+        if (currentUser) {
+          setFormData(prev => ({
+            ...prev,
+            userId: currentUser._id || '',
+            username: currentUser.username || '',
+            route: currentUser.route || ''
+          }));
+
+          setUsers([{
+            id: currentUser._id || '',
+            name: currentUser.username || '',
+            route: currentUser.route || ''
+          }]);
+        } else {
+          showError('Invalid user data structure');
         }
       } catch (error) {
         console.error('Error setting user data:', error);
@@ -163,11 +169,22 @@ const Op_Home = () => {
       setLoading(true);
       try {
         const userStr = localStorage.getItem('user');
-        if (!userStr) return;
+        if (!userStr) {
+          showError('User not authenticated');
+          return;
+        }
 
         const userData = JSON.parse(userStr);
         const authToken = userData.token;
-        const currentUser = userData.user;
+        const currentUser = userData.data || userData.user || userData;
+
+        if (!currentUser) {
+          console.error('Invalid user data structure:', userData);
+          showError('Invalid user data structure');
+          return;
+        }
+
+        console.log('Current user for token fetch:', currentUser);
 
         const response = await axios.get('http://localhost:8000/api/v1/tokens', {
           headers: {
@@ -178,14 +195,15 @@ const Op_Home = () => {
 
         console.log('Tokens Response:', response.data);
 
-        if (response.data?.status === 'success' && Array.isArray(response.data.printTokens)) {
-          // Filter tokens for current user
-          const userTokens = response.data.printTokens.filter(token => 
-            token.userId?.username === currentUser.username
-          );
-          console.log('User tokens:', userTokens);
+        if (response.data?.status === 'success' && Array.isArray(response.data.data)) {
+          // Filter tokens for current user, accounting for nested userId structure
+          const userTokens = response.data.data.filter(token => {
+            return token.userId?.username === currentUser.username;
+          });
+
+          console.log('Filtered user tokens:', userTokens);
           setApiTokens(userTokens);
-          setEntries(userTokens); // Update entries with API data
+          setEntries(userTokens);
         }
       } catch (error) {
         console.error('Error fetching tokens:', error);
@@ -320,10 +338,20 @@ const Op_Home = () => {
   const confirmSubmit = async () => {
     try {
       const userStr = localStorage.getItem('user');
+      if (!userStr) {
+        showError('User not authenticated');
+        return;
+      }
+
       const userData = JSON.parse(userStr);
-      const currentUser = userData.user;
+      const currentUser = userData.data || userData.user || userData;
       const authToken = userData.token;
-  
+
+      if (!currentUser || !currentUser._id) {
+        showError('Invalid user data');
+        return;
+      }
+
       const tokenData = {
         userId: currentUser._id,
         route: currentUser.route,
@@ -362,8 +390,8 @@ const Op_Home = () => {
           }
         });
 
-        if (updatedTokensResponse.data?.status === 'success') {
-          const userTokens = updatedTokensResponse.data.printTokens.filter(token => 
+        if (updatedTokensResponse.data?.status === 'success' && Array.isArray(updatedTokensResponse.data.data)) {
+          const userTokens = updatedTokensResponse.data.data.filter(token => 
             token.userId?.username === currentUser.username
           );
           setApiTokens(userTokens);
@@ -409,15 +437,16 @@ const Op_Home = () => {
         <h2 style="text-align: center;">Token Details</h2>
         <hr style="margin: 20px 0;"/>
         <div style="margin: 10px 0;"><strong>Token No:</strong> ${entry.tokenNo}</div>
-        <div style="margin: 10px 0;"><strong>Date/Time:</strong> ${entry.dateTime}</div>
+        <div style="margin: 10px 0;"><strong>Date/Time:</strong> ${formatDateTime(entry.createdAt)}</div>
         <div style="margin: 10px 0;"><strong>Driver Name:</strong> ${entry.driverName}</div>
-        <div style="margin: 10px 0;"><strong>Driver Mobile:</strong> ${entry.driverMobile}</div>
+        <div style="margin: 10px 0;"><strong>Driver Mobile:</strong> ${entry.driverMobileNo}</div>
         <div style="margin: 10px 0;"><strong>Vehicle No:</strong> ${entry.vehicleNo}</div>
-        <div style="margin: 10px 0;"><strong>Vehicle Type:</strong> ${entry.vehicleType}</div>
+        <div style="margin: 10px 0;"><strong>Vehicle Type:</strong> ${entry.vehicleId?.vehicleType || 'N/A'}</div>
         <div style="margin: 10px 0;"><strong>Vehicle Rate:</strong> ${entry.vehicleRate}</div>
+        <div style="margin: 10px 0;"><strong>Route:</strong> ${entry.route || 'N/A'}</div>
         <div style="margin: 10px 0;"><strong>Quantity:</strong> ${entry.quantity}</div>
         <div style="margin: 10px 0;"><strong>Place:</strong> ${entry.place}</div>
-        <div style="margin: 10px 0;"><strong>Chalaan Pin:</strong> ${entry.chalaanPin}</div>
+        <div style="margin: 10px 0;"><strong>Challan Pin:</strong> ${entry.challanPin || 'N/A'}</div>
       </div>
     `;
 
@@ -441,6 +470,23 @@ const Op_Home = () => {
   const sortedEntries = entries.sort((a, b) => {
     return new Date(b.createdAt) - new Date(a.createdAt);
   });
+
+  // Add formatDateTime function if not already present
+const formatDateTime = (dateString) => {
+  try {
+    return new Date(dateString).toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    });
+  } catch (error) {
+    console.error('Date formatting error:', error);
+    return 'Invalid Date';
+  }
+};
 
   return (
     <div className="p-7 max-w-7xl mx-auto">
@@ -744,19 +790,22 @@ const Op_Home = () => {
                 <th className="py-3 px-4 text-left font-semibold">Token No.</th>
                 <th className="py-3 px-4 text-left font-semibold">Date/Time</th>
                 <th className="py-3 px-4 text-left font-semibold">Driver Name</th>
-                <th className="py-3 px-4 text-left font-semibold">Vehicle No</th>
+                <th className="py-3 px-4 text-left font-semibold">Driver Mobile</th>
                 <th className="py-3 px-4 text-left font-semibold">Vehicle Type</th>
+                <th className="py-3 px-4 text-left font-semibold">Vehicle Rate</th>
+                <th className="py-3 px-4 text-left font-semibold">Vehicle No</th>
                 <th className="py-3 px-4 text-left font-semibold">Place</th>
+                <th className="py-3 px-4 text-left font-semibold">Route</th>
+                <th className="py-3 px-4 text-left font-semibold">Challan Pin</th>
                 <th className="py-3 px-4 text-left font-semibold">Quantity</th>
-                <th className="py-3 px-4 text-left font-semibold">Rate</th>
-                <th className="py-3 px-4 text-left font-semibold">Chalaan Pin</th>
+                <th className="py-3 px-4 text-left font-semibold">Status</th>
                 <th className="py-3 px-4 text-left font-semibold">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
               {entries.length === 0 ? (
                 <tr>
-                  <td colSpan="11" className="py-8 text-center text-gray-500">
+                  <td colSpan="14" className="py-8 text-center text-gray-500">
                     No tokens found
                   </td>
                 </tr>
@@ -765,18 +814,27 @@ const Op_Home = () => {
                   <tr key={entry._id || index} className="hover:bg-gray-50 transition duration-200">
                     <td className="py-3 px-4 whitespace-nowrap">{index + 1}</td>
                     <td className="py-3 px-4 whitespace-nowrap font-medium text-blue-600">
-                      {entry.tokenNo}
+                      {entry.tokenNo || 'N/A'}
                     </td>
                     <td className="py-3 px-4 whitespace-nowrap">
-                      {new Date(entry.createdAt).toLocaleString()}
+                      {formatDateTime(entry.createdAt)}
                     </td>
                     <td className="py-3 px-4 whitespace-nowrap">{entry.driverName}</td>
-                    <td className="py-3 px-4 whitespace-nowrap">{entry.vehicleNo}</td>
-                    <td className="py-3 px-4 whitespace-nowrap">{entry.vehicleType}</td>
-                    <td className="py-3 px-4 whitespace-nowrap">{entry.place}</td>
-                    <td className="py-3 px-4 whitespace-nowrap">{entry.quantity}</td>
+                    <td className="py-3 px-4 whitespace-nowrap">{entry.driverMobileNo}</td>
+                    <td className="py-3 px-4 whitespace-nowrap">{entry.vehicleId?.vehicleType || 'N/A'}</td>
                     <td className="py-3 px-4 whitespace-nowrap">{entry.vehicleRate}</td>
-                    <td className="py-3 px-4 whitespace-nowrap">{entry.challanPin}</td>
+                    <td className="py-3 px-4 whitespace-nowrap">{entry.vehicleNo}</td>
+                    <td className="py-3 px-4 whitespace-nowrap">{entry.place || 'N/A'}</td>
+                    <td className="py-3 px-4 whitespace-nowrap">{entry.route || 'N/A'}</td>
+                    <td className="py-3 px-4 whitespace-nowrap">{entry.challanPin || 'N/A'}</td>
+                    <td className="py-3 px-4 whitespace-nowrap">{entry.quantity}</td>
+                    <td className="py-3 px-4 whitespace-nowrap">
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        entry.isLoaded ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                      }`}>
+                        {entry.isLoaded ? 'Loaded' : 'Pending'}
+                      </span>
+                    </td>
                     <td className="py-3 px-4">
                       <button
                         onClick={() => handlePrint(entry)}
