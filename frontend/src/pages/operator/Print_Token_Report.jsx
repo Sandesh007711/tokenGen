@@ -23,13 +23,13 @@ const Token_list = () => {
   const [loading, setLoading] = useState(false);
   const [tokens, setTokens] = useState([]);
 
-  // Modified getCurrentUser to extract username correctly
+  // Update the getCurrentUser function to match Op_Home.jsx
   const getCurrentUser = () => {
     try {
       const userStr = localStorage.getItem('user');
       if (userStr) {
         const userData = JSON.parse(userStr);
-        return userData.user; // Extract the nested user object
+        return userData.data || userData.user || userData; // Handle nested user data
       }
       return null;
     } catch (error) {
@@ -42,25 +42,32 @@ const Token_list = () => {
     const fetchTokens = async () => {
       setLoading(true);
       try {
-        const token = localStorage.getItem('token');
-        const user = getCurrentUser();
-        setCurrentUser(user);
+        const userStr = localStorage.getItem('user');
+        if (!userStr) {
+          showError('User not authenticated');
+          return;
+        }
 
-        console.log('Current username:', user?.username); // Debug log
+        const userData = JSON.parse(userStr);
+        const authToken = userData.token;
+        const currentUser = userData.data || userData.user || userData;
+
+        setCurrentUser(currentUser);
+        console.log('Current user:', currentUser); // Debug log
 
         const response = await axios.get('http://localhost:8000/api/v1/tokens', {
           headers: {
-            'Authorization': `Bearer ${token}`,
+            'Authorization': `Bearer ${authToken}`,
             'Content-Type': 'application/json'
           }
         });
 
         console.log('API Response:', response.data);
 
-        if (response.data?.status === 'success' && Array.isArray(response.data.printTokens)) {
+        if (response.data?.status === 'success' && Array.isArray(response.data.data)) {
           // Filter tokens for current user based on username
-          const userTokens = response.data.printTokens.filter(token => 
-            token.userId?.username === user?.username
+          const userTokens = response.data.data.filter(token => 
+            token.userId?.username === currentUser.username
           );
           
           console.log('Filtered tokens for user:', userTokens); // Debug log
@@ -146,7 +153,7 @@ const Token_list = () => {
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet('Token Report');
 
-    // Updated headers to match JSON structure
+    // Updated headers and data mapping to match the new structure
     worksheet.columns = [
       { header: 'Token No', key: 'tokenNo', width: 15 },
       { header: 'Driver Name', key: 'driverName', width: 20 },
@@ -160,16 +167,23 @@ const Token_list = () => {
       { header: 'Created At', key: 'createdAt', width: 20 }
     ];
 
-    // Transform data to include nested vehicleType
+    // Transform data for Excel export
     const excelData = filteredData.map(item => ({
-      ...item,
-      vehicleType: item.vehicleId?.vehicleType || ''
+      tokenNo: item.tokenNo,
+      driverName: item.driverName,
+      driverMobileNo: item.driverMobileNo,
+      vehicleNo: item.vehicleNo,
+      vehicleType: item.vehicleId?.vehicleType || '',
+      route: item.route,
+      quantity: item.quantity,
+      place: item.place,
+      challanPin: item.challanPin,
+      createdAt: new Date(item.createdAt).toLocaleString()
     }));
 
     worksheet.addRows(excelData);
     worksheet.getRow(1).font = { bold: true };
 
-    // Generate Excel file
     const buffer = await workbook.xlsx.writeBuffer();
     const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
     saveAs(blob, `Token_Report_${new Date().toLocaleDateString()}.xlsx`);
