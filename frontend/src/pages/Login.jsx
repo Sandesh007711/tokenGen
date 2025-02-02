@@ -76,18 +76,27 @@ const Login = () => {
           return;
         }
 
-        login({
-          user: response.data.user,
+        // Properly structure the user data for login
+        const userData = {
+          ...response.data.user,
           token: response.token
-        });
+        };
 
-        if (response.data.user.role === 'admin') {
-          navigate('/otp-verification');
-        } else if (response.data.user.role === 'operator') {
-          navigate('/operator');
-        }
+        login(userData);
+
+        // Add a small delay to ensure the auth context is updated
+        setTimeout(() => {
+          if (response.data.user.role === 'admin') {
+            navigate('/', { replace: true });
+          } else if (response.data.user.role === 'operator') {
+            navigate('/operator', { replace: true });
+          }
+        }, 100);
+      } else {
+        setError('Login failed. Please check your credentials.');
       }
     } catch (err) {
+      console.error('Login error:', err);
       setError(err.message || 'Login failed. Please check your credentials.');
     } finally {
       setIsLoading(false);

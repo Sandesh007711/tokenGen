@@ -18,12 +18,19 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const login = (userData) => {
-    setUser(userData);
-    setIsAuthenticated(true);
-    localStorage.setItem('user', JSON.stringify({
+    if (!userData || !userData.role) {
+      console.error('Invalid user data:', userData);
+      return;
+    }
+
+    const userToStore = {
       ...userData,
-      isOtpVerified: userData.isOtpVerified || false
-    }));
+      isAuthenticated: true
+    };
+
+    setUser(userToStore);
+    setIsAuthenticated(true);
+    localStorage.setItem('user', JSON.stringify(userToStore));
     localStorage.setItem('token', userData.token);
   };
 

@@ -1,12 +1,11 @@
 import React from "react";
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route } from "react-router-dom";
 import ProtectedRoute from "../components/ProtectedRoute";
 import Content from "../pages/Content";
 import CreateUser from "../pages/CreateUser";
 import TokenReport from "../pages/TokenReport";
 import ManageVehicle from "../pages/Vehicle_rate/Manage_vehicle";
 import Loaded from "../pages/Loaded";
-import OtpVerification from "../pages/OtpVerification";
 import ManageRate from "../pages/Vehicle_rate/Manage_rate";
 import Token_list from "../pages/Token_Report/Token_list";
 import Update_Token_list from "../pages/Token_Report/Update_Token_list";
@@ -38,7 +37,6 @@ const I_Routes = () => {
           }
         />
       ))}
-      <Route path="/otp-verification" element={<OtpVerification />} />
     </Routes>
   );
 };
