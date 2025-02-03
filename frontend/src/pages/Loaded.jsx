@@ -1,10 +1,20 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 const Loaded = () => {
   const [tokenInput, setTokenInput] = useState('');
   const [tokenData, setTokenData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [successMessage, setSuccessMessage] = useState(null);
+
+  useEffect(() => {
+    if (successMessage) {
+      const timer = setTimeout(() => {
+        setSuccessMessage(null);
+      }, 3000); // Hide after 3 seconds
+      return () => clearTimeout(timer);
+    }
+  }, [successMessage]);
 
   const handleSearch = async () => {
     try {
@@ -18,7 +28,7 @@ const Loaded = () => {
         return;
       }
 
-      const response = await fetch('http://localhost:8000/api/v1/tokens/updated', {
+      const response = await fetch('http://localhost:8000/api/v1/tokens', {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -30,31 +40,31 @@ const Loaded = () => {
       }
 
       const data = await response.json();
-      console.log('API Response:', data); // Debug log
+      console.log('API Response:', data);
 
-      // Handle different possible response structures
-      let tokensArray;
-      if (data.data && Array.isArray(data.data)) {
-        tokensArray = data.data;
-      } else if (data.tokens && Array.isArray(data.tokens)) {
-        tokensArray = data.tokens;
-      } else if (Array.isArray(data)) {
-        tokensArray = data;
-      } else {
-        console.log('Unexpected data structure:', data);
-        throw new Error('Invalid data structure received from server');
-      }
+      // Simplify the data handling
+      let tokensArray = Array.isArray(data) ? data : 
+                       (data.data && Array.isArray(data.data)) ? data.data :
+                       (data.tokens && Array.isArray(data.tokens)) ? data.tokens : [];
 
-      console.log('Tokens Array:', tokensArray); // Debug log
-      console.log('Searching for token:', tokenInput); // Debug log
+      console.log('Tokens Array:', tokensArray);
+      console.log('Searching for token:', tokenInput);
 
-      const foundToken = tokensArray.find(t => t.tokenNo === tokenInput);
-      console.log('Found Token:', foundToken); // Debug log
-
-      setTokenData(foundToken || null);
+      // Case-insensitive token search
+      const foundToken = tokensArray.find(t => 
+        String(t.tokenNo).toLowerCase() === tokenInput.toLowerCase()
+      );
       
-      if (!foundToken) {
-        setError('Token not found');
+      console.log('Found Token:', foundToken);
+
+      if (foundToken && foundToken.isLoaded) {
+        setError('This token has already been loaded');
+        setTokenData(null);
+      } else {
+        setTokenData(foundToken || null);
+        if (!foundToken) {
+          setError('Token not found');
+        }
       }
     } catch (err) {
       console.error('Error details:', err);
@@ -65,16 +75,44 @@ const Loaded = () => {
   };
 
   const getButtonText = () => {
-    if (loading) return 'Searching...';
-    if (tokenData) return 'Load';
+    if (loading) return tokenData ? 'Loading...' : 'Searching...';
+    if (tokenData) return 'Load Token';
     return 'Search';
   };
 
-  const handleClick = () => {
+  const handleClick = async () => {
     if (tokenData) {
-      // Handle load functionality here
-      console.log('Loading token:', tokenData);
-      // Add your load logic here
+      try {
+        setLoading(true);
+        const token = localStorage.getItem('token');
+        
+        const response = await fetch('http://localhost:8000/api/v1/tokens/loaded', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            tokenNo: tokenData.tokenNo,
+            isLoaded: true
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to load token');
+        }
+
+        const result = await response.json();
+        console.log('Token loaded successfully:', result);
+        setTokenInput('');
+        setTokenData(null);
+        setSuccessMessage('Token loaded successfully! 🎉');
+      } catch (err) {
+        console.error('Error loading token:', err);
+        setError(err.message || 'Failed to load token');
+      } finally {
+        setLoading(false);
+      }
     } else {
       handleSearch();
     }
@@ -105,7 +143,13 @@ const Loaded = () => {
         <div className="text-red-500 text-center my-4">{error}</div>
       )}
 
-      {tokenData && (
+      {successMessage && (
+        <div className="text-green-500 text-center my-4 p-3 bg-green-100 rounded-lg border border-green-200">
+          {successMessage}
+        </div>
+      )}
+
+      {tokenData && !tokenData.isLoaded && (
         <div className="bg-gradient-to-b from-gray-800 to-gray-900 rounded-2xl shadow-2xl p-4 sm:p-6">
           <table className="w-full text-gray-300">
             <thead>

@@ -23,8 +23,14 @@ exports.createToken = catchAsync(async (req, res, next) => {
         const loggedUser = user._id.toString().trim();
         if (!user) return next(new AppError(`User not found.`, 400));
 
-        const vehicle = await Vehicle.findById(vehicleId).session(session);
+        const vehicle = await Vehicle.findById(vehicleId).select('vehicleType').session(session);
         if (!vehicle) return next(new AppError('Vehicle not found!', 400));
+
+        const rate = await Rate.findOne({ vehicleId }).select('vehicleRate').session(session);
+        if (!rate) return next(new AppError(`Rate not found for ${vehicle.vehicleType} !`, 400));
+
+        // console.log(vehicle, rate);
+        // return
 
         // Get today's date in 'YYYY-MM-DD' format
         const today = new Date().toISOString().split("T")[0];
@@ -52,7 +58,9 @@ exports.createToken = catchAsync(async (req, res, next) => {
                 driverName: req.body.driverName,
                 driverMobileNo: req.body.driverMobileNo,
                 vehicleNo: req.body.vehicleNo,
-                vehicleId: vehicleId,
+                // vehicleId: vehicleId,
+                vehicleType: vehicle.vehicleType,
+                vehicleRate: rate.vehicleRate,
                 route: req.body.route,
                 quantity: req.body.quantity,
                 place: req.body.place,
@@ -94,18 +102,34 @@ exports.createToken = catchAsync(async (req, res, next) => {
 // get all printtokens
 exports.getAllTokens = catchAsync(async (req, res) => {
     const { role } = req.user;
+    const { updated, loaded, deleted } = req.query;
 
     let filter = {};
     if(role !== 'admin') {
-        filter = {userId: req.user.id} 
+        filter.userId =  req.user.id
     }
 
-    const userTokens = await UserToken.find(filter)
-        .populate('userId', {_id: 0, 'username': 1})
-        .populate('vehicleId', 'vehicleType')
-        .lean()
+    if(role === 'admin') {
+        if(loaded) {
+            filter.isLoaded = {}
+            filter.isLoaded.$eq = true
+        }
+        if(updated) {
+            filter.updatedAt = {}
+            filter.updatedAt.$ne = null
+        }
+        if(deleted) {
+            filter.deletedAt = {}
+            filter.deletedAt.$ne = null
+        }
+    }
 
-    const vehicleIds = userTokens.map(token => token.vehicleId._id);
+    const data = await UserToken.find(filter)
+        .populate('userId', {_id: 0, 'username': 1})
+        // .populate('vehicleId', 'vehicleType')
+        // .lean()
+
+/*     const vehicleIds = userTokens.map(token => token.vehicleId._id);
 
     const rates = await Rate.find({ vehicleId: { $in: vehicleIds } }).select('vehicleId vehicleRate').lean();
 
@@ -115,7 +139,7 @@ exports.getAllTokens = catchAsync(async (req, res) => {
             ...token,
             vehicleRate: rate ? rate.vehicleRate : null
         }
-    })
+    }) */
 
     res.status(200).json({
         status: 'success',
@@ -130,16 +154,26 @@ exports.getToken = factory.getOne(UserToken);
 // update printToken
 exports.updateToken = catchAsync(async (req, res, next) => {
     const { id } = req.params;
+    const { vehicleId, updateRate } = req.body;    
+
     const token = await UserToken.findById({ _id: id })
     if(!token) {
         return next(new AppError('Print Token not found', 400))
     }
 
-    token.userId = req.body.user
+    const vehicle = await Vehicle.findById(vehicleId);
+    if (!vehicle) return next(new AppError('Vehicle not found!', 400));
+
+    const rate = await Rate.findOne({ vehicleId }).select('vehicleRate');
+    if (!rate) return next(new AppError(`Rate not found for ${vehicle.vehicleType} !`, 400));
+
+    token.userId = req.body.userId
     token.driverName = req.body.driverName ? req.body.driverName : token.driverName
     token.driverMobileNo = req.body.driverMobileNo ? req.body.driverMobileNo : token.driverMobileNo
     token.vehicleNo = req.body.vehicleNo ? req.body.vehicleNo : token.vehicleNo
-    token.vehicleId = req.body.vehicleId ? req.body.vehicleId : token.vehicleId
+    // token.vehicleId = req.body.vehicleId ? req.body.vehicleId : token.
+    token.vehicleType = vehicle.vehicleType
+    token.vehicleRate = updateRate ? rate.vehicleRate : token.vehicleRate
     token.quantity = req.body.quantity ? req.body.quantity : token.quantity
     token.place = req.body.place ? req.body.place : token.place
     token.challanPin = req.body.challanPin ? req.body.challanPin : token.challanPin
@@ -193,7 +227,15 @@ exports.deleteToken = catchAsync(async (req, res, next) => {
         );
 
         // Delete the token
-        await UserToken.findByIdAndDelete(tokenId, { session });
+        // await UserToken.findByIdAndDelete(tokenId, { session });
+        await UserToken.findByIdAndUpdate(tokenId, 
+            {
+                $set: {
+                    deletedAt: new Date()
+                }
+            },
+            { session }
+        );
 
         await session.commitTransaction();
         session.endSession();
@@ -251,6 +293,16 @@ exports.getLoadedList = catchAsync(async (req, res, next) => {
     res.status(200).json({
         status: 'success',
         message: 'Updated Tokens fetched succesfully',
+        data
+    })
+});
+
+exports.getDeletedTokens = catchAsync(async (req, res, next) => {
+    const data = await UserToken.find({ deletedAt: { $ne: null } }).populate('vehicleId', {_id: 0, 'vehicleType': 1}).populate('userId', {_id: 0, 'username': 1})
+
+    res.status(200).json({
+        status: 'success',
+        message: 'Deleted Tokens fetched succesfully',
         data
     })
 });

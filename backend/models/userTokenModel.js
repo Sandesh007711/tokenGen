@@ -18,10 +18,18 @@ const UserTokenSchema = new mongoose.Schema({
         type: String,
         required: [true, 'Please provide vehicle number.']
     },
-    vehicleId:{
-        type: mongoose.Schema.ObjectId,
-        ref: 'Vehicle',
+    // vehicleId:{
+    //     type: mongoose.Schema.ObjectId,
+    //     ref: 'Vehicle',
+    //     required: [true, 'A token must have a vehicle type.']
+    // },
+    vehicleType: {
+        type: String,
         required: [true, 'A token must have a vehicle type.']
+    },
+    vehicleRate: {
+        type: Number,
+        // required: [true, 'A token must have a vehicle type.']
     },
     route: {
         type: String, 
@@ -67,12 +75,13 @@ const UserTokenSchema = new mongoose.Schema({
         type: Date,
         default: null
     },
-    deleteBy: {
+    deletedBy: {
         type: String,
     }
 }, { timestamps: {
     createdAt: true,
-    updatedAt: false
+    updatedAt: false,
+    deletedAt: false,
 } });
 
 UserTokenSchema.pre('save', function (next) {
@@ -88,7 +97,7 @@ UserTokenSchema.pre('save', function (next) {
 // })
 
 UserTokenSchema.pre(/^find/, function(next) {
-    this.find({ active: { $ne: false } }).select('-__v');
+    this.find({ active: { $ne: false }, deletedAt: { $eq: null } }).select('-__v');
     next();
 });
 
