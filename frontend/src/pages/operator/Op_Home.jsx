@@ -231,11 +231,12 @@ const Op_Home = () => {
     if (name === 'vehicleType') {
       const selectedVehicle = vehicleRates.find(v => v.vehicleType === value);
       if (selectedVehicle) {
+        console.log('Selected vehicle data:', selectedVehicle); // Debug log
         setFormData(prev => ({
           ...prev,
           vehicleType: selectedVehicle.vehicleType,
-          vehicleId: selectedVehicle._id,
-          vehicleRate: selectedVehicle.rate.toString()
+          vehicleId: selectedVehicle.vehicleId, // Use vehicleId from the response
+          vehicleRate: selectedVehicle.rate.toString() // Use rate instead of vehicleRate
         }));
       } else {
         showError('Invalid vehicle selection');
@@ -283,43 +284,50 @@ const Op_Home = () => {
 
   const handleSubmitClick = (e) => {
     e.preventDefault();
-
-    // Updated validation checks
+  
+    // Basic validation
     if (!formData.driverName.trim()) {
       showError('Driver Name is required');
       return;
     }
-    if (!formData.driverMobile.trim()) {
-      showError('Driver Mobile is required');
-      return;
+  
+    try {
+      // Find the selected vehicle data from vehicleRates
+      const selectedVehicle = vehicleRates.find(
+        vehicle => vehicle.vehicleType === formData.vehicleType
+      );
+  
+      if (!selectedVehicle) {
+        throw new Error('Please select a valid vehicle type');
+      }
+  
+      // Format the data according to API requirements
+      const submitData = {
+        userId: formData.userId,
+        vehicleId: selectedVehicle.vehicleId, // Use vehicleId
+        driverName: formData.driverName.trim(),
+        driverMobileNo: parseInt(formData.driverMobile),
+        vehicleNo: formData.vehicleNo.trim(),
+        quantity: parseInt(formData.quantity),
+        place: formData.place.trim() || undefined,
+        challanPin: formData.chalaanPin ? parseInt(formData.chalaanPin) : undefined,
+        route: formData.route
+      };
+  
+      // Debug logging
+      console.log('Selected Vehicle:', selectedVehicle);
+      console.log('Submit Data1:', submitData);
+  
+      // Set temporary form data and show confirmation
+      setTempFormData(submitData);
+      setShowSubmitConfirm(true);
+  
+    } catch (error) {
+      console.error('Form validation error:', error);
+      showError(error.message);
     }
-    if (formData.driverMobile.length !== 10) {
-      showError('Mobile number must be 10 digits');
-      return;
-    }
-    if (!formData.vehicleNo.trim()) {
-      showError('Vehicle Number is required');
-      return;
-    }
-    if (!formData.vehicleType || formData.vehicleType === 'Select Vehicle Type') {
-      showError('Please select a Vehicle Type');
-      return;
-    }
-    if (!formData.vehicleRate || formData.vehicleRate === 'Select Rate') {
-      showError('Please select a Vehicle Rate');
-      return;
-    }
-    // Update quantity validation to allow '0'
-    if (formData.quantity === 'Select Quantity') {
-      showError('Please select a Quantity');
-      return;
-    }
-    // Note: Removed the check for !formData.quantity since '0' is falsy
-
-    setTempFormData({...formData});
-    setShowSubmitConfirm(true);
   };
-
+  
   const showSuccess = (message) => {
     setSuccessPopup({ show: true, message });
     setTimeout(() => {
@@ -338,45 +346,42 @@ const Op_Home = () => {
     try {
       const userStr = localStorage.getItem('user');
       if (!userStr) {
-        showError('User not authenticated');
-        return;
+        throw new Error('No authentication token found');
       }
-
+  
       const userData = JSON.parse(userStr);
-      const currentUser = userData.data || userData.user || userData;
       const authToken = userData.token;
-
-      if (!currentUser || !currentUser._id) {
-        showError('Invalid user data');
-        return;
-      }
-
-      // Find selected vehicle type from vehicleRates array
-      const selectedVehicle = vehicleRates.find(type => type.vehicleType === tempFormData.vehicleType);
-      
+  
+      // Get selected vehicle data from formData, not tempFormData
+      const selectedVehicle = vehicleRates.find(
+        vehicle => vehicle.vehicleType === formData.vehicleType
+      );
+  
       if (!selectedVehicle) {
         throw new Error('Please select a valid vehicle type');
       }
-
-      const tokenData = {
-        userId: currentUser._id,
-        route: currentUser.route,
-        driverName: tempFormData.driverName,
-        driverMobileNo: tempFormData.driverMobile,
-        vehicleNo: tempFormData.vehicleNo,
-        vehicleId: selectedVehicle._id, // Send vehicleId instead of vehicleType
-        vehicleType: selectedVehicle.vehicleType,
-        vehicleRate: tempFormData.vehicleRate,
-        quantity: tempFormData.quantity,
-        place: tempFormData.place,
-        challanPin: tempFormData.chalaanPin
+  
+      // Format the data according to API requirements
+      const submitData = {
+        userId: formData.userId,
+        vehicleId: selectedVehicle.vehicleId, // Use vehicleId
+        driverName: formData.driverName.trim(),
+        driverMobileNo: parseInt(formData.driverMobile),
+        vehicleNo: formData.vehicleNo.trim(),
+        quantity: parseInt(formData.quantity),
+        place: formData.place.trim() || undefined,
+        challanPin: formData.chalaanPin ? parseInt(formData.chalaanPin) : undefined,
+        route: formData.route
       };
   
-      console.log('Sending token data:', tokenData);
+  
+      // Debug log
+      console.log('Vehicle Data:', selectedVehicle);
+      console.log('Submit Data:', submitData);
   
       const response = await axios.post(
         'http://localhost:8000/api/v1/tokens',
-        tokenData,
+        submitData,
         {
           headers: {
             'Authorization': `Bearer ${authToken}`,
@@ -385,25 +390,23 @@ const Op_Home = () => {
         }
       );
   
-      console.log('API Response:', response.data);
-  
-      if (response.data && response.data.status === 'success') {
-        // Fetch updated tokens after creation
+      if (response.data?.status === 'success') {
+        // Fetch updated tokens
         const updatedTokensResponse = await axios.get('http://localhost:8000/api/v1/tokens', {
           headers: {
             'Authorization': `Bearer ${authToken}`,
             'Content-Type': 'application/json'
           }
         });
-
-        if (updatedTokensResponse.data?.status === 'success' && Array.isArray(updatedTokensResponse.data.data)) {
+  
+        if (updatedTokensResponse.data?.status === 'success') {
           const userTokens = updatedTokensResponse.data.data.filter(token => 
-            token.userId?.username === currentUser.username
+            token.userId?.username === userData.username
           );
           setApiTokens(userTokens);
           setEntries(userTokens);
         }
-
+  
         setIsModalOpen(false);
         setFormData({
           userId: '',
@@ -420,11 +423,11 @@ const Op_Home = () => {
         setShowSubmitConfirm(false);
         showSuccess('Token generated successfully!');
       } else {
-        showError(response.data?.message || 'Error creating token');
+        throw new Error(response.data?.message || 'Failed to generate token');
       }
     } catch (error) {
       console.error('Error submitting token:', error);
-      showError(error.response?.data?.message || 'Error creating token');
+      showError(error.response?.data?.message || error.message);
     }
   };
   
