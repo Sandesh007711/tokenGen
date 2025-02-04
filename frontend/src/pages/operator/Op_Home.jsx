@@ -196,12 +196,16 @@ const Op_Home = () => {
         console.log('Tokens Response:', response.data);
 
         if (response.data?.status === 'success' && Array.isArray(response.data.data)) {
-          // Filter tokens for current user, accounting for nested userId structure
-          const userTokens = response.data.data.filter(token => {
-            return token.userId?.username === currentUser.username;
-          });
+          // Filter and process tokens for current user
+          const userTokens = response.data.data
+            .filter(token => token.userId?.username === currentUser.username)
+            .map(token => ({
+              ...token,
+              displayVehicleType: token.vehicleId?.vehicleType || token.vehicleType || 'N/A',
+              displayVehicleRate: token.vehicleRate || 'N/A'
+            }));
 
-          console.log('Filtered user tokens:', userTokens);
+          console.log('Processed user tokens:', userTokens);
           setApiTokens(userTokens);
           setEntries(userTokens);
         }
@@ -225,17 +229,12 @@ const Op_Home = () => {
     }
 
     if (name === 'vehicleType') {
-      console.log('Selected vehicle type:', value);
-      console.log('Available rates:', vehicleRates);
-      
       const selectedVehicle = vehicleRates.find(v => v.vehicleType === value);
-      console.log('Selected vehicle data:', selectedVehicle);
-      
       if (selectedVehicle) {
         setFormData(prev => ({
           ...prev,
-          vehicleType: value,
-          vehicleId: selectedVehicle.vehicleId,
+          vehicleType: selectedVehicle.vehicleType,
+          vehicleId: selectedVehicle._id,
           vehicleRate: selectedVehicle.rate.toString()
         }));
       } else {
@@ -352,14 +351,21 @@ const Op_Home = () => {
         return;
       }
 
+      // Find selected vehicle type from vehicleRates array
+      const selectedVehicle = vehicleRates.find(type => type.vehicleType === tempFormData.vehicleType);
+      
+      if (!selectedVehicle) {
+        throw new Error('Please select a valid vehicle type');
+      }
+
       const tokenData = {
         userId: currentUser._id,
         route: currentUser.route,
         driverName: tempFormData.driverName,
         driverMobileNo: tempFormData.driverMobile,
         vehicleNo: tempFormData.vehicleNo,
-        vehicleId: tempFormData.vehicleId, // From vehicle selection
-        vehicleType: tempFormData.vehicleType,
+        vehicleId: selectedVehicle._id, // Send vehicleId instead of vehicleType
+        vehicleType: selectedVehicle.vehicleType,
         vehicleRate: tempFormData.vehicleRate,
         quantity: tempFormData.quantity,
         place: tempFormData.place,
@@ -441,8 +447,8 @@ const Op_Home = () => {
         <div style="margin: 10px 0;"><strong>Driver Name:</strong> ${entry.driverName}</div>
         <div style="margin: 10px 0;"><strong>Driver Mobile:</strong> ${entry.driverMobileNo}</div>
         <div style="margin: 10px 0;"><strong>Vehicle No:</strong> ${entry.vehicleNo}</div>
-        <div style="margin: 10px 0;"><strong>Vehicle Type:</strong> ${entry.vehicleId?.vehicleType || 'N/A'}</div>
-        <div style="margin: 10px 0;"><strong>Vehicle Rate:</strong> ${entry.vehicleRate}</div>
+        <div style="margin: 10px 0;"><strong>Vehicle Type:</strong> ${entry.displayVehicleType}</div>
+        <div style="margin: 10px 0;"><strong>Vehicle Rate:</strong> ${entry.displayVehicleRate}</div>
         <div style="margin: 10px 0;"><strong>Route:</strong> ${entry.route || 'N/A'}</div>
         <div style="margin: 10px 0;"><strong>Quantity:</strong> ${entry.quantity}</div>
         <div style="margin: 10px 0;"><strong>Place:</strong> ${entry.place}</div>
@@ -821,8 +827,8 @@ const formatDateTime = (dateString) => {
                     </td>
                     <td className="py-3 px-4 whitespace-nowrap">{entry.driverName}</td>
                     <td className="py-3 px-4 whitespace-nowrap">{entry.driverMobileNo}</td>
-                    <td className="py-3 px-4 whitespace-nowrap">{entry.vehicleId?.vehicleType || 'N/A'}</td>
-                    <td className="py-3 px-4 whitespace-nowrap">{entry.vehicleRate}</td>
+                    <td className="py-3 px-4 whitespace-nowrap">{entry.displayVehicleType}</td>
+                    <td className="py-3 px-4 whitespace-nowrap">{entry.displayVehicleRate}</td>
                     <td className="py-3 px-4 whitespace-nowrap">{entry.vehicleNo}</td>
                     <td className="py-3 px-4 whitespace-nowrap">{entry.place || 'N/A'}</td>
                     <td className="py-3 px-4 whitespace-nowrap">{entry.route || 'N/A'}</td>

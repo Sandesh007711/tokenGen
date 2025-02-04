@@ -11,7 +11,7 @@ const Card = ({ operator }) => {
   const [perPage, setPerPage] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
 
-  // Modified fetchData function to handle the correct data format
+  // Modified fetchData function to handle vehicle data correctly
   const fetchData = async () => {
     setLoading(true);
     try {
@@ -49,7 +49,8 @@ const Card = ({ operator }) => {
         driver: item.driverName,
         mobileNo: item.driverMobileNo, // Already a number
         vehicleNo: item.vehicleNo,
-        vehicleType: item.vehicleId?.vehicleType || 'N/A',
+        // Update vehicle type handling to match Token_list
+        vehicleType: item.vehicleType || item.vehicleId?.vehicleType || 'N/A',
         vehicleRate: item.vehicleRate || 'N/A',
         quantity: item.quantity, // Already a number
         route: item.route || '-',
