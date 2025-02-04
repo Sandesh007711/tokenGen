@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import DatePicker from 'react-datepicker';
 import { FaTimes } from 'react-icons/fa';
 import "react-datepicker/dist/react-datepicker.css";
@@ -17,13 +17,49 @@ const Delete_Token_list = () => {
   const [selectedUser, setSelectedUser] = useState('');
   const [filteredData, setFilteredData] = useState([]);
   const [errorPopup, setErrorPopup] = useState({ show: false, message: '' });
+  const [users, setUsers] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
 
-  // Sample data
-  const sampleUsers = [
-    { id: 1, name: 'John Doe' },
-    { id: 2, name: 'Jane Smith' },
-    { id: 3, name: 'Mike Johnson' }
-  ];
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          throw new Error('No authentication token found');
+        }
+
+        const response = await fetch('http://localhost:8000/api/v1/users', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (response.status === 401) {
+          throw new Error('Unauthorized access');
+        }
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch users');
+        }
+
+        const result = await response.json();
+        console.log('API Response:', result);
+
+        // Access the users array from the response structure
+        const usersList = result.data.users || [];
+        console.log('Processed users:', usersList);
+        
+        setUsers(usersList);
+      } catch (error) {
+        console.error('Fetch error:', error);
+        showError(error.message);
+      }
+    };
+
+    fetchUsers();
+  }, []);
 
   const sampleTableData = [
     {
@@ -60,9 +96,81 @@ const Delete_Token_list = () => {
     setShowConfirm(true);
   };
 
-  // Add handleConfirm function
-  const handleConfirm = () => {
-    setFilteredData(sampleTableData.filter(item => item.name === selectedUser));
+  // Add helper function to format date and time
+  const formatDateTime = (date) => {
+    return new Date(date).toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    });
+  };
+
+  // Add fetchDeletedTokens function
+  const fetchDeletedTokens = async (searchParams = {}) => {
+    setIsLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+
+      // Build query parameters
+      const queryParams = new URLSearchParams({
+        deleted: true,
+        ...(searchParams.username && { username: searchParams.username }),
+        ...(searchParams.fromDate && { fromDate: searchParams.fromDate.toISOString() }),
+        ...(searchParams.toDate && { toDate: searchParams.toDate.toISOString() })
+      });
+
+      const response = await fetch(`http://localhost:8000/api/v1/tokens?${queryParams}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch deleted tokens');
+      }
+
+      const result = await response.json();
+      const tokenData = result.data?.tokens || [];
+      
+      if (tokenData.length > 0) {
+        const processedData = tokenData.map(token => ({
+          name: token.driverName,
+          email: token.userId?.email || 'N/A',
+          phone: token.driverMobileNo,
+          token: token.tokenNo,
+          date: formatDateTime(token.createdAt),
+          vehicleType: token.vehicleType || token.vehicleId?.vehicleType || 'N/A',
+          vehicleNo: token.vehicleNo || 'N/A',
+          place: token.place || 'N/A'
+        }));
+        setFilteredData(processedData);
+      } else {
+        setFilteredData([]);
+      }
+    } catch (error) {
+      console.error('Error fetching deleted tokens:', error);
+      showError(error.message);
+      setFilteredData([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Update handleConfirm function
+  const handleConfirm = async () => {
+    const searchParams = {
+      fromDate,
+      toDate,
+      ...(selectedUser && { username: selectedUser })
+    };
+    await fetchDeletedTokens(searchParams);
     setShowConfirm(false);
   };
 
@@ -129,8 +237,10 @@ const Delete_Token_list = () => {
             className="px-4 py-3 bg-gray-900 text-gray-300 rounded-lg border border-gray-700 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 transition-all duration-300 min-w-[200px]"
           >
             <option value="">Select User</option>
-            {sampleUsers.map((user) => (
-              <option key={user.id} value={user.name}>{user.name}</option>
+            {Array.isArray(users) && users.map((user) => (
+              <option key={user._id} value={user.username}>
+                {user.username}
+              </option>
             ))}
           </select>
 
@@ -148,17 +258,26 @@ const Delete_Token_list = () => {
         <table className="w-full">
           <thead className="bg-gradient-to-r from-slate-400 via-slate-300 to-slate-200">
             <tr>
-              <th className="py-3 px-4 text-left font-semibold">Name</th>
+              <th className="py-3 px-4 text-left font-semibold">Driver Name</th>
               <th className="py-3 px-4 text-left font-semibold">Email</th>
-              <th className="py-3 px-4 text-left font-semibold">Phone</th>
-              <th className="py-3 px-4 text-left font-semibold">Token</th>
+              <th className="py-3 px-4 text-left font-semibold">Mobile No</th>
+              <th className="py-3 px-4 text-left font-semibold">Vehicle Type</th>
+              <th className="py-3 px-4 text-left font-semibold">Vehicle No</th>
+              <th className="py-3 px-4 text-left font-semibold">Place</th>
+              <th className="py-3 px-4 text-left font-semibold">Token No</th>
               <th className="py-3 px-4 text-left font-semibold">Date</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
-            {filteredData.length === 0 ? (
+            {isLoading ? (
               <tr>
-                <td colSpan="5" className="py-8 text-center text-gray-500 text-lg">
+                <td colSpan="8" className="py-8 text-center text-gray-500 text-lg">
+                  Loading...
+                </td>
+              </tr>
+            ) : filteredData.length === 0 ? (
+              <tr>
+                <td colSpan="8" className="py-8 text-center text-gray-500 text-lg">
                   No data available
                 </td>
               </tr>
@@ -168,6 +287,9 @@ const Delete_Token_list = () => {
                   <td className="py-3 px-4">{item.name}</td>
                   <td className="py-3 px-4">{item.email}</td>
                   <td className="py-3 px-4">{item.phone}</td>
+                  <td className="py-3 px-4">{item.vehicleType}</td>
+                  <td className="py-3 px-4">{item.vehicleNo}</td>
+                  <td className="py-3 px-4">{item.place}</td>
                   <td className="py-3 px-4">{item.token}</td>
                   <td className="py-3 px-4">{item.date}</td>
                 </tr>

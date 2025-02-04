@@ -25,7 +25,7 @@ const UserTokenSchema = new mongoose.Schema({
     // },
     vehicleType: {
         type: String,
-        required: [true, 'A token must have a vehicle type.']
+        //required: [true, 'A token must have a vehicle type.']
     },
     vehicleRate: {
         type: Number,
@@ -97,7 +97,7 @@ UserTokenSchema.pre('save', function (next) {
 // })
 
 UserTokenSchema.pre(/^find/, function(next) {
-    this.find({ active: { $ne: false }, deletedAt: { $eq: null } }).select('-__v');
+    this.find({ active: { $ne: false }}).select('-__v');
     next();
 });
 

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import DatePicker from 'react-datepicker';
-import { FaTimes } from 'react-icons/fa';
+import { FaTimes, FaSpinner, FaExpandAlt, FaCompressAlt } from 'react-icons/fa';
+import DataTable from 'react-data-table-component';
 import "react-datepicker/dist/react-datepicker.css";
 
 /**
@@ -16,8 +17,8 @@ const Loaded_list = () => {
   const [filteredData, setFilteredData] = useState([]);
   const [errorPopup, setErrorPopup] = useState({ show: false, message: '' });
   const [showConfirm, setShowConfirm] = useState(false);
-  const [loading, setLoading] = useState(false);
   const [users, setUsers] = useState([]);
+  const [successPopup, setSuccessPopup] = useState({ show: false, message: '' });
 
   const getAuthHeaders = () => {
     const token = localStorage.getItem('token'); // Changed from 'authToken' to 'token'
@@ -92,7 +93,6 @@ const Loaded_list = () => {
 
   // Modified fetchTokenData function
   const fetchTokenData = async () => {
-    setLoading(true);
     try {
       const headers = getAuthHeaders();
       const response = await fetch('http://localhost:8000/api/v1/tokens/loaded', {
@@ -126,12 +126,11 @@ const Loaded_list = () => {
         }
 
         setFilteredData(tokens);
+        showSuccess(`Found ${tokens.length} matching records`);
       }
     } catch (error) {
       console.error('Error in fetchTokenData:', error);
       showError(error.message);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -149,6 +148,13 @@ const Loaded_list = () => {
     }, 3000);
   };
 
+  const showSuccess = (message) => {
+    setSuccessPopup({ show: true, message });
+    setTimeout(() => {
+      setSuccessPopup({ show: false, message: '' });
+    }, 3000);
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!selectedUser) {
@@ -161,6 +167,99 @@ const Loaded_list = () => {
   const handleConfirm = () => {
     fetchTokenData();
     setShowConfirm(false);
+  };
+
+  // Add these new states for pagination
+  const [perPage, setPerPage] = useState(10);
+  const [totalRows, setTotalRows] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [isFullScreen, setIsFullScreen] = useState(false);
+
+  // Add these new functions
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+  };
+
+  const handlePerPageChange = (newPerPage, page) => {
+    setPerPage(newPerPage);
+    setCurrentPage(page);
+  };
+
+  const toggleFullScreen = () => {
+    setIsFullScreen(!isFullScreen);
+  };
+
+  // Define columns for DataTable
+  const columns = [
+    {
+      name: 'Driver Name',
+      selector: row => row.driverName,
+      sortable: true,
+    },
+    {
+      name: 'Mobile No',
+      selector: row => row.driverMobileNo,
+      sortable: true,
+    },
+    {
+      name: 'Token No',
+      selector: row => row.tokenNo,
+      sortable: true,
+    },
+    {
+      name: 'Challan Pin',
+      selector: row => row.challanPin,
+      sortable: true,
+    },
+    {
+      name: 'Place',
+      selector: row => row.place,
+      sortable: true,
+    },
+    {
+      name: 'Route',
+      selector: row => row.route,
+      sortable: true,
+    },
+    {
+      name: 'Quantity',
+      selector: row => row.quantity,
+      sortable: true,
+    },
+    {
+      name: 'Vehicle No',
+      selector: row => row.vehicleNo,
+      sortable: true,
+    },
+    {
+      name: 'Created At',
+      selector: row => new Date(row.createdAt).toLocaleString(),
+      sortable: true,
+    },
+  ];
+
+  // Define custom styles for DataTable
+  const customStyles = {
+    headRow: {
+      style: {
+        background: 'linear-gradient(to right, #94a3b8, #cbd5e1, #e2e8f0)',
+        fontWeight: 'bold',
+      },
+    },
+    rows: {
+      style: {
+        minHeight: '60px',
+        '&:hover': {
+          backgroundColor: '#f8fafc',
+        },
+      },
+    },
+    pagination: {
+      style: {
+        border: 'none',
+        backgroundColor: '#f8fafc',
+      },
+    },
   };
 
   return (
@@ -195,6 +294,19 @@ const Loaded_list = () => {
           <span>{errorPopup.message}</span>
           <button
             onClick={() => setErrorPopup({ show: false, message: '' })}
+            className="text-white hover:text-gray-200 transition-colors"
+          >
+            <FaTimes />
+          </button>
+        </div>
+      )}
+
+      {/* Success Popup */}
+      {successPopup.show && (
+        <div className="fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-2 animate-slide-in-top z-50">
+          <span>{successPopup.message}</span>
+          <button
+            onClick={() => setSuccessPopup({ show: false, message: '' })}
             className="text-white hover:text-gray-200 transition-colors"
           >
             <FaTimes />
@@ -242,52 +354,47 @@ const Loaded_list = () => {
         </form>
       </div>
 
-      {/* Table Section */}
-      <div className="bg-white rounded-lg shadow-lg overflow-hidden">
-        {loading ? (
-          <div className="py-8 text-center text-gray-500 text-lg">
-            Loading data...
-          </div>
-        ) : (
-          <table className="w-full">
-            <thead className="bg-gradient-to-r from-slate-400 via-slate-300 to-slate-200">
-              <tr>
-                <th className="py-3 px-4 text-left font-semibold">Driver Name</th>
-                <th className="py-3 px-4 text-left font-semibold">Mobile No</th>
-                <th className="py-3 px-4 text-left font-semibold">Token No</th>
-                <th className="py-3 px-4 text-left font-semibold">Challan Pin</th>
-                <th className="py-3 px-4 text-left font-semibold">Place</th>
-                <th className="py-3 px-4 text-left font-semibold">Route</th>
-                <th className="py-3 px-4 text-left font-semibold">Quantity</th>
-                <th className="py-3 px-4 text-left font-semibold">Vehicle No</th>
-                <th className="py-3 px-4 text-left font-semibold">Created At</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {filteredData.length === 0 ? (
-                <tr>
-                  <td colSpan="9" className="py-8 text-center text-gray-500 text-lg">
-                    No data available
-                  </td>
-                </tr>
-              ) : (
-                filteredData.map((item) => (
-                  <tr key={item._id} className="hover:bg-gray-50 transition duration-200">
-                    <td className="py-3 px-4">{item.driverName}</td>
-                    <td className="py-3 px-4">{item.driverMobileNo}</td>
-                    <td className="py-3 px-4">{item.tokenNo}</td>
-                    <td className="py-3 px-4">{item.challanPin}</td>
-                    <td className="py-3 px-4">{item.place}</td>
-                    <td className="py-3 px-4">{item.route}</td>
-                    <td className="py-3 px-4">{item.quantity}</td>
-                    <td className="py-3 px-4">{item.vehicleNo}</td>
-                    <td className="py-3 px-4">{new Date(item.createdAt).toLocaleDateString()}</td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        )}
+      {/* Replace the existing table section with DataTable */}
+      <div className={`bg-white rounded-lg shadow-lg overflow-hidden transition-all duration-300 ${
+        isFullScreen ? 'fixed inset-0 z-50' : ''
+      }`}>
+        <div className="p-4 bg-gray-50 border-b flex justify-between items-center">
+          <button
+            onClick={toggleFullScreen}
+            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition duration-300"
+          >
+            {isFullScreen ? <FaCompressAlt /> : <FaExpandAlt />}
+            {isFullScreen ? 'Exit Full Screen' : 'Full Screen'}
+          </button>
+        </div>
+        
+        <div className={`${isFullScreen ? 'h-[calc(100vh-80px)] overflow-auto' : ''}`}>
+          <DataTable
+            columns={columns}
+            data={filteredData}
+            pagination
+            paginationPerPage={perPage}
+            paginationRowsPerPageOptions={[10, 25, 50, 100]}
+            paginationTotalRows={totalRows}
+            onChangePage={handlePageChange}
+            onChangeRowsPerPage={handlePerPageChange}
+            noDataComponent={
+              <div className="py-8 text-center text-gray-500 text-lg">
+                <div className="flex flex-col items-center justify-center">
+                  <span className="font-medium">No data available</span>
+                  <span className="text-sm text-gray-400 mt-1">Select date range to view records</span>
+                </div>
+              </div>
+            }
+            customStyles={customStyles}
+            sortIcon={<span className="ml-2">↕</span>}
+            responsive
+            highlightOnHover
+            pointerOnHover
+            striped
+            className={isFullScreen ? 'h-full' : ''}
+          />
+        </div>
       </div>
     </div>
   );

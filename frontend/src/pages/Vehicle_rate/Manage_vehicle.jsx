@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { FaEdit, FaTrash, FaSort, FaTimes, FaCheckCircle, FaSpinner } from 'react-icons/fa';
 
@@ -8,6 +8,8 @@ import { FaEdit, FaTrash, FaSort, FaTimes, FaCheckCircle, FaSpinner } from 'reac
  * Features: Add, Edit, Delete, Sort vehicle types with responsive design
  */
 const VehicleRate = () => {
+  // Add ref for input field
+  const inputRef = useRef(null);
   // State for managing input field value
   const [vehicleType, setVehicleType] = useState('');
   // State for storing list of vehicle types
@@ -170,6 +172,12 @@ const VehicleRate = () => {
   const handleEditVehicle = (index) => {
     setVehicleType(vehicleList[index].vehicleType);
     setEditIndex(index);
+    // Scroll to top smoothly
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    // Focus the input field after a small delay to ensure scroll completed
+    setTimeout(() => {
+      inputRef.current?.focus();
+    }, 300);
   };
 
   /**
@@ -340,6 +348,7 @@ const VehicleRate = () => {
         <h1 className="text-2xl font-bold text-gray-300 mb-4">Manage Vehicle Type</h1>
         <div className="flex flex-wrap items-center gap-4">
           <input
+            ref={inputRef}
             type="text"
             value={vehicleType}
             onChange={(e) => setVehicleType(e.target.value)}

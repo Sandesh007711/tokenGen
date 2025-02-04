@@ -41,7 +41,7 @@ const Update_Token_list = () => {
           return;
         }
 
-        const response = await fetch('http://localhost:8000/api/v1/tokens/updated', {
+        const response = await fetch('http://localhost:8000/api/v1/tokens?updated=true', {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
