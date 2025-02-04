@@ -53,7 +53,7 @@ const Token_list = () => {
         const currentUser = userData.data || userData.user || userData;
 
         setCurrentUser(currentUser);
-        console.log('Current user:', currentUser); // Debug log
+        console.log('Current user:', currentUser);
 
         const response = await axios.get('http://localhost:8000/api/v1/tokens', {
           headers: {
@@ -65,13 +65,16 @@ const Token_list = () => {
         console.log('API Response:', response.data);
 
         if (response.data?.status === 'success' && Array.isArray(response.data.data)) {
-          // Filter tokens for current user based on username
-          const userTokens = response.data.data.filter(token => 
-            token.userId?.username === currentUser.username
-          );
+          // Filter and process tokens for current user
+          const userTokens = response.data.data
+            .filter(token => token.userId?.username === currentUser.username)
+            .map(token => ({
+              ...token,
+              displayVehicleType: token.vehicleId?.vehicleType || token.vehicleType || 'N/A',
+              displayVehicleRate: token.vehicleRate || 'N/A'
+            }));
           
-          console.log('Filtered tokens for user:', userTokens); // Debug log
-          
+          console.log('Processed user tokens:', userTokens);
           setTokens(userTokens);
           setFilteredData(userTokens);
           
@@ -126,9 +129,6 @@ const Token_list = () => {
    */
   const handleConfirm = () => {
     try {
-      console.log('Filtering tokens between:', fromDate, toDate); // Debug log
-      console.log('Available tokens:', tokens); // Debug log
-
       const filtered = tokens.filter(token => {
         const tokenDate = new Date(token.createdAt);
         const from = new Date(fromDate.setHours(0, 0, 0, 0));
@@ -137,11 +137,11 @@ const Token_list = () => {
         return tokenDate >= from && tokenDate <= to;
       });
       
-      console.log('Filtered tokens:', filtered); // Debug log
+      console.log('Filtered tokens:', filtered);
       setFilteredData(filtered);
       setShowConfirm(false);
     } catch (error) {
-      console.error('Error during filtering:', error); // Debug log
+      console.error('Error during filtering:', error);
       showError('Error filtering data');
     }
   };
@@ -160,6 +160,7 @@ const Token_list = () => {
       { header: 'Mobile No', key: 'driverMobileNo', width: 15 },
       { header: 'Vehicle No', key: 'vehicleNo', width: 15 },
       { header: 'Vehicle Type', key: 'vehicleType', width: 15 },
+      { header: 'Vehicle Rate', key: 'vehicleRate', width: 15 },
       { header: 'Route', key: 'route', width: 15 },
       { header: 'Quantity', key: 'quantity', width: 12 },
       { header: 'Place', key: 'place', width: 15 },
@@ -169,15 +170,16 @@ const Token_list = () => {
 
     // Transform data for Excel export
     const excelData = filteredData.map(item => ({
-      tokenNo: item.tokenNo,
-      driverName: item.driverName,
-      driverMobileNo: item.driverMobileNo,
-      vehicleNo: item.vehicleNo,
-      vehicleType: item.vehicleId?.vehicleType || '',
-      route: item.route,
-      quantity: item.quantity,
-      place: item.place,
-      challanPin: item.challanPin,
+      tokenNo: item.tokenNo || 'N/A',
+      driverName: item.driverName || 'N/A',
+      driverMobileNo: item.driverMobileNo || 'N/A',
+      vehicleNo: item.vehicleNo || 'N/A',
+      vehicleType: item.displayVehicleType,
+      vehicleRate: item.displayVehicleRate,
+      route: item.route || 'N/A',
+      quantity: item.quantity || 'N/A',
+      place: item.place || 'N/A',
+      challanPin: item.challanPin || 'N/A',
       createdAt: new Date(item.createdAt).toLocaleString()
     }));
 
@@ -286,6 +288,7 @@ const Token_list = () => {
                   <th className="py-3 px-4 text-left font-semibold">Mobile No</th>
                   <th className="py-3 px-4 text-left font-semibold">Vehicle No</th>
                   <th className="py-3 px-4 text-left font-semibold">Vehicle Type</th>
+                  <th className="py-3 px-4 text-left font-semibold">Vehicle Rate</th>
                   <th className="py-3 px-4 text-left font-semibold">Route</th>
                   <th className="py-3 px-4 text-left font-semibold">Quantity</th>
                   <th className="py-3 px-4 text-left font-semibold">Place</th>
@@ -313,7 +316,8 @@ const Token_list = () => {
                       <td className="py-3 px-4">{item.driverName}</td>
                       <td className="py-3 px-4">{item.driverMobileNo}</td>
                       <td className="py-3 px-4">{item.vehicleNo}</td>
-                      <td className="py-3 px-4">{item.vehicleId?.vehicleType}</td>
+                      <td className="py-3 px-4">{item.displayVehicleType}</td>
+                      <td className="py-3 px-4">{item.displayVehicleRate}</td>
                       <td className="py-3 px-4">{item.route}</td>
                       <td className="py-3 px-4">{item.quantity}</td>
                       <td className="py-3 px-4">{item.place}</td>

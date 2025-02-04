@@ -96,7 +96,7 @@ const Token_list = () => {
     return d1 <= d2;
   };
 
-  // Replace fetchTokens with this simplified version that fetches all data at once
+  // Update fetchTokens function
   const fetchTokens = async (searchParams = {}) => {
     setIsLoading(true);
     try {
@@ -117,18 +117,16 @@ const Token_list = () => {
       }
 
       const result = await response.json();
-      console.log('Token API Response:', result);
-
-      // Check if result data exists and is an array
-      if (result.data && Array.isArray(result.data)) {
-        // Sort tokens by createdAt date in descending order (newest first)
-        const sortedTokens = result.data.sort((a, b) => 
+      
+      // Check if result is an array or has data property
+      const tokenData = Array.isArray(result) ? result : (result.data || []);
+      
+      if (tokenData.length > 0) {
+        const sortedTokens = tokenData.sort((a, b) => 
           new Date(b.createdAt) - new Date(a.createdAt)
         );
 
-        // Then apply filters
         const filteredTokens = sortedTokens.filter(token => {
-          // Date filtering
           const dateMatches = (() => {
             if (!searchParams.fromDate || !searchParams.toDate) return true;
             
@@ -140,7 +138,6 @@ const Token_list = () => {
                    isSameOrBeforeDate(tokenDate, toDateTime);
           })();
 
-          // Username filtering
           const usernameMatches = (() => {
             if (!searchParams.username) return true;
             return token.userId?.username === searchParams.username;
@@ -149,18 +146,25 @@ const Token_list = () => {
           return dateMatches && usernameMatches;
         });
 
-        setFilteredData(filteredTokens);
-        setTotalRows(filteredTokens.length);
-        if (filteredTokens.length > 0) {
-          showSuccess(`Found ${filteredTokens.length} matching records`);
+        // Process the data to match the table structure
+        const processedTokens = filteredTokens.map(token => ({
+          ...token,
+          vehicleType: token.vehicleType || token.vehicleId?.vehicleType || 'N/A',
+          vehicleRate: token.vehicleRate || 'N/A',
+        }));
+
+        setFilteredData(processedTokens);
+        setTotalRows(processedTokens.length);
+        
+        if (processedTokens.length > 0) {
+          showSuccess(`Found ${processedTokens.length} matching records`);
         } else {
           showError('No matching records found for the selected criteria');
         }
       } else {
-        console.log('Unexpected data structure:', result);
         setFilteredData([]);
         setTotalRows(0);
-        showError('No records available or invalid data structure');
+        showError('No records available');
       }
     } catch (error) {
       console.error('Error fetching tokens:', error);
@@ -281,8 +285,16 @@ const Token_list = () => {
 
     // Format the data for Excel with date and time
     const formattedData = filteredData.map(item => ({
-      ...item,
-      vehicleType: item.vehicleId?.vehicleType || 'N/A',
+      driverName: item.driverName || 'N/A',
+      driverMobileNo: item.driverMobileNo || 'N/A',
+      vehicleType: item.vehicleType || 'N/A',
+      vehicleRate: item.vehicleRate || 'N/A',
+      vehicleNo: item.vehicleNo || 'N/A',
+      place: item.place || 'N/A',
+      route: item.route || 'N/A',
+      tokenNo: item.tokenNo || 'N/A',
+      challanPin: item.challanPin || 'N/A',
+      quantity: item.quantity || 'N/A',
       createdBy: item.userId?.username || 'N/A',
       createdAt: formatDateTime(item.createdAt)
     }));
@@ -310,28 +322,28 @@ const Token_list = () => {
     try {
       const authToken = localStorage.getItem('token');
       
-      // Find the selected vehicle data from vehicleTypes array
-      const selectedVehicle = vehicleTypes.find(type => type.vehicleType === updatedData.vehicleId?.vehicleType);
-      
+      // Find selected vehicle type from vehicleTypes array
+      const selectedVehicle = vehicleTypes.find(type => 
+        type.vehicleType === (updatedData.vehicleType || updatedData.vehicleId?.vehicleType)
+      );
+
       if (!selectedVehicle) {
-        throw new Error('Selected vehicle type not found');
+        throw new Error('Please select a valid vehicle type');
       }
 
-      // Format the payload with the correct vehicleId structure
       const updatePayload = {
+        vehicleId: selectedVehicle._id,  // Send vehicleId instead of vehicleType
+        userId: updatedData.userId?._id || updatedData.userId, // Add userId to payload
+        driverName: updatedData.driverName,
+        driverMobileNo: parseInt(updatedData.driverMobileNo) || 0,
+        vehicleNo: updatedData.vehicleNo,
         route: updatedData.route || '',
         quantity: parseInt(updatedData.quantity) || 0,
         place: updatedData.place || '',
         challanPin: updatedData.challanPin || '',
-        driverName: updatedData.driverName || '',
-        driverMobileNo: parseInt(updatedData.driverMobileNo) || 0,
-        vehicleId: selectedVehicle._id, // Send the vehicle ID instead of the vehicle type object
-        vehicleNo: updatedData.vehicleNo || '',
-        isLoaded: updatedData.isLoaded || false,
-        vehicleRate: parseFloat(updatedData.vehicleRate) || 0
+        updateRate: true // Add this to update vehicle rate
       };
 
-      console.log('Selected Vehicle:', selectedVehicle);
       console.log('Sending update payload:', updatePayload);
 
       const response = await fetch(`http://localhost:8000/api/v1/tokens/${updatedData._id}`, {
@@ -348,29 +360,10 @@ const Token_list = () => {
         throw new Error(errorData.message || 'Failed to update token');
       }
 
-      const result = await response.json();
-      
-      // Update the local state with the new data
-      setFilteredData(prevData =>
-        prevData.map(token =>
-          token._id === updatedData._id 
-            ? {
-                ...token,
-                ...result.data,
-                vehicleId: {
-                  _id: selectedVehicle._id,
-                  vehicleType: selectedVehicle.vehicleType
-                }
-              }
-            : token
-        )
-      );
-
-      // Refresh the data to ensure everything is in sync
-      await fetchTokens(currentPage, perPage);
-
+      await fetchTokens(); // Refresh the data after update
       setShowUpdateForm(false);
       showSuccess('Token updated successfully');
+
     } catch (error) {
       console.error('Update error:', error);
       showError(error.message);
@@ -422,12 +415,12 @@ const Token_list = () => {
     },
     {
       name: 'Vehicle Type',  // Add this new column
-      selector: row => row.vehicleId?.vehicleType || 'N/A',
+      selector: row => row.vehicleType || 'N/A',  // Updated to use direct vehicleType
       sortable: true,
     },
     {
       name: 'Vehicle Rate',  // New column
-      selector: row => row.vehicleRate || 'N/A',
+      selector: row => row.vehicleRate || 'N/A',  // Updated to use direct vehicleRate
       sortable: true,
     },
     {
@@ -783,16 +776,22 @@ const Token_list = () => {
                 <div className="relative">
                   <label className="block text-gray-300 text-sm font-bold mb-2">Vehicle Type</label>
                   <select
-                    value={updateFormData.vehicleId?.vehicleType || ''}
-                    onChange={(e) => setUpdateFormData({
-                      ...updateFormData,
-                      vehicleId: { ...updateFormData.vehicleId, vehicleType: e.target.value }
-                    })}
+                    value={updateFormData.vehicleType || updateFormData.vehicleId?.vehicleType || ''}
+                    onChange={(e) => {
+                      const selectedVehicle = vehicleTypes.find(type => type.vehicleType === e.target.value);
+                      setUpdateFormData({
+                        ...updateFormData,
+                        vehicleType: e.target.value,
+                        vehicleId: selectedVehicle
+                      });
+                    }}
                     className="px-4 py-3 w-full bg-gray-900 text-gray-300 rounded-lg border border-gray-700 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 transition-all duration-300"
                   >
                     <option value="">Select Vehicle Type</option>
                     {vehicleTypes.map((type) => (
-                      <option key={type.vehicleType} value={type.vehicleType}>{type.vehicleType}</option>
+                      <option key={type._id} value={type.vehicleType}>
+                        {type.vehicleType}
+                      </option>
                     ))}
                   </select>
                 </div>
