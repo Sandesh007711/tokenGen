@@ -23,6 +23,10 @@ const ManageRate = () => {
   const [isAddingRate, setIsAddingRate] = useState(false);
   const [isDeletingRate, setIsDeletingRate] = useState(false);
 
+  // Add these refs after other state declarations
+  const rateInputRef = React.useRef(null);
+  const formRef = React.useRef(null);
+
   // Fetch vehicles when component mounts
   useEffect(() => {
     const fetchVehicles = async () => {
@@ -223,6 +227,19 @@ const ManageRate = () => {
     setSelectedVehicle(item.vehicleType);
     setRate(item.rate.toString());
     setEditingId(item.id);
+    
+    // Smooth scroll to top of the page
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    });
+
+    // Focus the rate input after a short delay to ensure the scroll is complete
+    setTimeout(() => {
+      if (rateInputRef.current) {
+        rateInputRef.current.focus();
+      }
+    }, 500);
   };
 
   /**
@@ -410,6 +427,7 @@ const ManageRate = () => {
           
           {/* Rate Input Field */}
           <input
+            ref={rateInputRef}
             type="text"
             value={rate}
             onChange={handleRateChange}

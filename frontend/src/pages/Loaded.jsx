@@ -2,10 +2,84 @@ import React, { useState, useEffect } from 'react';
 
 const Loaded = () => {
   const [tokenInput, setTokenInput] = useState('');
-  const [tokenData, setTokenData] = useState(null);
+  const [tokenData, setTokenData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [successMessage, setSuccessMessage] = useState(null);
+  const [tokenMap, setTokenMap] = useState(new Map()); // Token index map
+
+  // Initialize token index
+  useEffect(() => {
+    const initializeTokenIndex = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+
+        const response = await fetch('http://localhost:8000/api/v1/tokens', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (!response.ok) throw new Error('Failed to fetch tokens');
+
+        const data = await response.json();
+        const tokens = Array.isArray(data) ? data : 
+                      (data.data && Array.isArray(data.data)) ? data.data :
+                      (data.tokens && Array.isArray(data.tokens)) ? data.tokens : [];
+
+        // Create index map for O(1) lookup
+        const map = new Map();
+        tokens.forEach(token => {
+          const key = token.tokenNo.toLowerCase();
+          if (!map.has(key)) {
+            map.set(key, []);
+          }
+          map.get(key).push(token);
+        });
+
+        setTokenMap(map);
+      } catch (err) {
+        console.error('Error initializing token index:', err);
+      }
+    };
+
+    initializeTokenIndex();
+  }, []);
+
+  const handleInputChange = (e) => {
+    const value = e.target.value.replace(/\s/g, '');
+    setTokenInput(value);
+  };
+
+  const handleSearch = () => {
+    if (!tokenInput) {
+      setError('Please enter a token number');
+      return;
+    }
+    setLoading(true);
+    
+    const key = tokenInput.toLowerCase();
+    const matchingTokens = tokenMap.get(key) || [];
+    
+    // Filter unloaded tokens and sort by date
+    const unloadedTokens = matchingTokens
+      .filter(t => !t.isLoaded)
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    if (matchingTokens.length > 0 && unloadedTokens.length === 0) {
+      setError('All tokens with this number have already been loaded');
+      setTokenData([]);
+    } else if (unloadedTokens.length === 0) {
+      setError('Token not found');
+      setTokenData([]);
+    } else {
+      setTokenData(unloadedTokens);
+      setError(null);
+    }
+    setLoading(false);
+  };
 
   useEffect(() => {
     if (successMessage) {
@@ -16,105 +90,45 @@ const Loaded = () => {
     }
   }, [successMessage]);
 
-  const handleSearch = async () => {
+  const handleClick = async (selectedToken) => {
+    if (!selectedToken) {
+      handleSearch();
+      return;
+    }
+
     try {
       setLoading(true);
-      setError(null);
       const token = localStorage.getItem('token');
       
-      if (!token) {
-        setError('Authentication token not found');
-        setLoading(false);
-        return;
-      }
-
-      const response = await fetch('http://localhost:8000/api/v1/tokens', {
+      const response = await fetch('http://localhost:8000/api/v1/tokens/loaded', {
+        method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
-        }
+        },
+        body: JSON.stringify({
+          tokenNo: selectedToken.tokenNo,
+          isLoaded: true
+        })
       });
 
-      if (!response.ok) {
-        throw new Error('Authentication failed');
-      }
+      if (!response.ok) throw new Error('Failed to load token');
 
-      const data = await response.json();
-      console.log('API Response:', data);
-
-      // Simplify the data handling
-      let tokensArray = Array.isArray(data) ? data : 
-                       (data.data && Array.isArray(data.data)) ? data.data :
-                       (data.tokens && Array.isArray(data.tokens)) ? data.tokens : [];
-
-      console.log('Tokens Array:', tokensArray);
-      console.log('Searching for token:', tokenInput);
-
-      // Case-insensitive token search
-      const foundToken = tokensArray.find(t => 
-        String(t.tokenNo).toLowerCase() === tokenInput.toLowerCase()
+      // Update local token map
+      const tokens = tokenMap.get(selectedToken.tokenNo.toLowerCase()) || [];
+      const updatedTokens = tokens.map(t => 
+        t._id === selectedToken._id ? { ...t, isLoaded: true } : t
       );
-      
-      console.log('Found Token:', foundToken);
+      tokenMap.set(selectedToken.tokenNo.toLowerCase(), updatedTokens);
 
-      if (foundToken && foundToken.isLoaded) {
-        setError('This token has already been loaded');
-        setTokenData(null);
-      } else {
-        setTokenData(foundToken || null);
-        if (!foundToken) {
-          setError('Token not found');
-        }
-      }
+      setTokenInput('');
+      setTokenData([]);
+      setSuccessMessage('Token loaded successfully! 🎉');
     } catch (err) {
-      console.error('Error details:', err);
-      setError(err.message || 'Failed to fetch token data');
+      console.error('Error loading token:', err);
+      setError(err.message || 'Failed to load token');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const getButtonText = () => {
-    if (loading) return tokenData ? 'Loading...' : 'Searching...';
-    if (tokenData) return 'Load Token';
-    return 'Search';
-  };
-
-  const handleClick = async () => {
-    if (tokenData) {
-      try {
-        setLoading(true);
-        const token = localStorage.getItem('token');
-        
-        const response = await fetch('http://localhost:8000/api/v1/tokens/loaded', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            tokenNo: tokenData.tokenNo,
-            isLoaded: true
-          })
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to load token');
-        }
-
-        const result = await response.json();
-        console.log('Token loaded successfully:', result);
-        setTokenInput('');
-        setTokenData(null);
-        setSuccessMessage('Token loaded successfully! 🎉');
-      } catch (err) {
-        console.error('Error loading token:', err);
-        setError(err.message || 'Failed to load token');
-      } finally {
-        setLoading(false);
-      }
-    } else {
-      handleSearch();
     }
   };
 
@@ -125,16 +139,16 @@ const Loaded = () => {
           <input
             type="text"
             value={tokenInput}
-            onChange={(e) => setTokenInput(e.target.value)}
+            onChange={handleInputChange}
             placeholder="Enter token"
             className="w-full sm:w-auto px-4 py-3 bg-gray-900 text-gray-300 rounded-lg border border-gray-700 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 transition-all duration-300"
           />
           <button
-            onClick={handleClick}
+            onClick={() => handleClick(null)}
             disabled={loading}
             className="px-8 py-2 rounded-md bg-gray-500 text-white font-bold transition duration-200 hover:bg-white hover:text-black border-2 border-transparent hover:border-teal-500 flex items-center justify-center"
           >
-            {getButtonText()}
+            {loading ? 'Searching...' : 'Search'}
           </button>
         </div>
       </div>
@@ -149,8 +163,8 @@ const Loaded = () => {
         </div>
       )}
 
-      {tokenData && !tokenData.isLoaded && (
-        <div className="bg-gradient-to-b from-gray-800 to-gray-900 rounded-2xl shadow-2xl p-4 sm:p-6">
+      {tokenData.map((token, index) => (
+        <div key={token._id} className="bg-gradient-to-b from-gray-800 to-gray-900 rounded-2xl shadow-2xl p-4 sm:p-6 mb-4">
           <table className="w-full text-gray-300">
             <thead>
               <tr className="border-b border-gray-700">
@@ -159,42 +173,96 @@ const Loaded = () => {
               </tr>
             </thead>
             <tbody>
+              <tr className="border-b border-gray-700 bg-gray-700 bg-opacity-40">
+                <td className="p-2 font-semibold">Created Date</td>
+                <td className="p-2 text-teal-300">
+                  {new Date(token.createdAt).toLocaleDateString('en-IN', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric'
+                  })}
+                </td>
+              </tr>
+              <tr className="border-b border-gray-700 bg-gray-700 bg-opacity-40">
+                <td className="p-2 font-semibold">Created Time</td>
+                <td className="p-2 text-teal-300">
+                  {new Date(token.createdAt).toLocaleTimeString('en-IN', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: true
+                  })}
+                </td>
+              </tr>
               <tr className="border-b border-gray-700">
                 <td className="p-2">Driver Name</td>
-                <td className="p-2">{tokenData.driverName}</td>
+                <td className="p-2">{token.driverName}</td>
               </tr>
               <tr className="border-b border-gray-700">
                 <td className="p-2">Driver Mobile</td>
-                <td className="p-2">{tokenData.driverMobileNo}</td>
+                <td className="p-2">{token.driverMobileNo}</td>
               </tr>
               <tr className="border-b border-gray-700">
                 <td className="p-2">Vehicle No</td>
-                <td className="p-2">{tokenData.vehicleNo}</td>
+                <td className="p-2">{token.vehicleNo}</td>
               </tr>
               <tr className="border-b border-gray-700">
                 <td className="p-2">Vehicle Type</td>
-                <td className="p-2">{tokenData.vehicleId?.vehicleType}</td>
+                <td className="p-2">{token.vehicleType || 'N/A'}</td>
+              </tr>
+              <tr className="border-b border-gray-700">
+                <td className="p-2">Vehicle Rate</td>
+                <td className="p-2">₹{token.vehicleRate || 'N/A'}</td>
               </tr>
               <tr className="border-b border-gray-700">
                 <td className="p-2">Route</td>
-                <td className="p-2">{tokenData.route}</td>
+                <td className="p-2">{token.route}</td>
               </tr>
               <tr className="border-b border-gray-700">
                 <td className="p-2">Quantity</td>
-                <td className="p-2">{tokenData.quantity}</td>
+                <td className="p-2">{token.quantity}</td>
               </tr>
               <tr className="border-b border-gray-700">
                 <td className="p-2">Place</td>
-                <td className="p-2">{tokenData.place}</td>
+                <td className="p-2">{token.place}</td>
               </tr>
               <tr className="border-b border-gray-700">
                 <td className="p-2">Token No</td>
-                <td className="p-2">{tokenData.tokenNo}</td>
+                <td className="p-2">{token.tokenNo}</td>
+              </tr>
+              <tr className="border-b border-gray-700">
+                <td className="p-2">Status</td>
+                <td className="p-2">
+                  <div className="flex items-center gap-2">
+                    <span className={`px-2 py-1 rounded-full text-xs ${
+                      token.isLoaded 
+                        ? 'bg-green-200 text-green-800' 
+                        : 'bg-yellow-200 text-yellow-800'
+                    }`}>
+                      {token.isLoaded ? 'Loaded' : 'Pending'}
+                    </span>
+                    {token.pendency && (
+                      <span className="bg-red-200 text-red-800 px-2 py-1 rounded-full text-xs">
+                        Pendency: {token.pendency}
+                      </span>
+                    )}
+                  </div>
+                </td>
+              </tr>
+              <tr className="border-b border-gray-700">
+                <td className="p-2" colSpan="2">
+                  <button
+                    onClick={() => handleClick(token)}
+                    disabled={loading}
+                    className="w-full px-4 py-2 rounded-md bg-gray-500 text-white font-bold transition duration-200 hover:bg-white hover:text-black border-2 border-transparent hover:border-teal-500"
+                  >
+                    {loading ? 'Loading...' : 'Load Token'}
+                  </button>
+                </td>
               </tr>
             </tbody>
           </table>
         </div>
-      )}
+      ))}
     </div>
   );
 };

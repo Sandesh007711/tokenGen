@@ -4,6 +4,9 @@ import { faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
 import { FaEdit, FaTrash, FaTimes, FaCheckCircle, FaSpinner } from 'react-icons/fa';
 
 const CreateUser = () => {
+  // Add new ref for the form container
+  const formRef = useRef(null);
+  
   const [users, setUsers] = useState([]);
   const [formData, setFormData] = useState({
     userName: '',
@@ -15,6 +18,9 @@ const CreateUser = () => {
   const [isEditMode, setIsEditMode] = useState(false);
   const [editIndex, setEditIndex] = useState(null);
   const passwordRef = useRef(null);
+
+  // Add new ref for username input
+  const userNameInputRef = useRef(null);
 
   // Add new state for popups
   const [errorPopup, setErrorPopup] = useState({ show: false, message: '' });
@@ -234,6 +240,17 @@ const CreateUser = () => {
     });
     setIsEditMode(true);
     setEditIndex(index);
+
+    // Scroll to top of the page smoothly
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    });
+
+    // Focus on username input after a short delay to ensure scroll is complete
+    setTimeout(() => {
+      userNameInputRef.current?.focus();
+    }, 500);
   };
 
   const handleCancelEdit = () => {
@@ -350,7 +367,7 @@ const CreateUser = () => {
       )}
 
       {/* Form Container */}
-      <div className="bg-gradient-to-b from-gray-800 to-gray-900 rounded-2xl shadow-2xl p-6 mb-6">
+      <div ref={formRef} className="bg-gradient-to-b from-gray-800 to-gray-900 rounded-2xl shadow-2xl p-6 mb-6">
         <h2 className="text-2xl font-bold text-gray-300 mb-4">{isEditMode ? 'Edit User' : 'Create User'}</h2>
         <div className="flex flex-wrap items-center gap-4">
           <form onSubmit={handleSubmit} className="w-full space-y-4">
@@ -361,6 +378,7 @@ const CreateUser = () => {
                 </label>
                 <div className="inline-block relative">
                   <input
+                    ref={userNameInputRef}
                     type="text"
                     name="userName"
                     value={formData.userName}

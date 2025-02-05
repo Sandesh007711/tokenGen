@@ -34,6 +34,7 @@ const Token_list = () => {
   const [vehicleTypes, setVehicleTypes] = useState([]);
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false); // Add this new state with other states
+  const [isFiltered, setIsFiltered] = useState(false); // Add this new state
 
   // Helper function to sort tokens by date (newest first)
   const sortTokensByDate = (tokens) => {
@@ -233,6 +234,7 @@ const Token_list = () => {
   const handleConfirm = async () => {
     setShowConfirm(false);
     setCurrentPage(1); // Reset to first page
+    setIsFiltered(true); // Set to true when filters are applied
 
     const searchParams = {
       fromDate: fromDate,
@@ -547,6 +549,15 @@ const Token_list = () => {
     setIsFullScreen(!isFullScreen);
   };
 
+  // Add this function to handle showing all data
+  const handleShowFullData = () => {
+    setFromDate(null);
+    setToDate(null);
+    setSelectedUser('');
+    setIsFiltered(false); // Set to false when showing full data
+    fetchTokens();
+  };
+
   return (
     <div className="p-7 max-w-7xl mx-auto">
       {/* Confirmation Popup */}
@@ -666,12 +677,24 @@ const Token_list = () => {
 
           <div className="flex flex-col">
             <label className="text-transparent mb-1">Submit</label>
-            <button
-              type="submit"
-              className="px-8 py-2 rounded-md bg-gray-500 text-white font-bold transition duration-200 hover:bg-white hover:text-black border-2 border-transparent hover:border-teal-500 flex items-center justify-center"
-            >
-              Submit
-            </button>
+            <div className="flex gap-2">
+              <button
+                type="submit"
+                className="px-8 py-2 rounded-md bg-gray-500 text-white font-bold transition duration-200 hover:bg-white hover:text-black border-2 border-transparent hover:border-teal-500 flex items-center justify-center"
+              >
+                Submit
+              </button>
+              
+              {filteredData.length > 0 && isFiltered && (
+                <button
+                  type="button"
+                  onClick={handleShowFullData}
+                  className="px-8 py-2 rounded-md bg-gray-500 text-white font-bold transition duration-200 hover:bg-white hover:text-black border-2 border-transparent hover:border-teal-500 flex items-center justify-center"
+                >
+                  Show Full Data
+                </button>
+              )}
+            </div>
           </div>
         </form>
       </div>
