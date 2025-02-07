@@ -61,6 +61,12 @@ const Delete_Token_list = () => {
     fetchUsers();
   }, []);
 
+  // Add initial data fetch
+  useEffect(() => {
+    // Fetch initial data when component mounts
+    fetchDeletedTokens();
+  }, []);
+
   const sampleTableData = [
     {
       name: 'John Doe',
@@ -89,10 +95,6 @@ const Delete_Token_list = () => {
   // Update handleSubmit to show confirmation
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!selectedUser) {
-      showError('Please select a user');
-      return;
-    }
     setShowConfirm(true);
   };
 
@@ -108,7 +110,7 @@ const Delete_Token_list = () => {
     });
   };
 
-  // Add fetchDeletedTokens function
+  // Update fetchDeletedTokens function
   const fetchDeletedTokens = async (searchParams = {}) => {
     setIsLoading(true);
     try {
@@ -117,15 +119,16 @@ const Delete_Token_list = () => {
         throw new Error('No authentication token found');
       }
 
-      // Build query parameters
-      const queryParams = new URLSearchParams({
-        deleted: true,
-        ...(searchParams.username && { username: searchParams.username }),
-        ...(searchParams.fromDate && { fromDate: searchParams.fromDate.toISOString() }),
-        ...(searchParams.toDate && { toDate: searchParams.toDate.toISOString() })
-      });
+      // Build query string manually to ensure proper formatting
+      let queryString = 'deleted=true';
+      if (searchParams.fromDate) queryString += `&fromDate=${searchParams.fromDate.toISOString()}`;
+      if (searchParams.toDate) queryString += `&toDate=${searchParams.toDate.toISOString()}`;
+      if (searchParams.username) queryString += `&username=${searchParams.username}`;
 
-      const response = await fetch(`http://localhost:8000/api/v1/tokens?${queryParams}`, {
+      console.log('Query string:', queryString);
+
+      const response = await fetch(`http://localhost:8000/api/v1/tokens?${queryString}`, {
+        method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -133,27 +136,34 @@ const Delete_Token_list = () => {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to fetch deleted tokens');
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to fetch deleted tokens');
       }
 
       const result = await response.json();
-      const tokenData = result.data?.tokens || [];
+      console.log('API Response:', result);
+
+      // The response is already an array of tokens
+      const tokens = result.data || [];
       
-      if (tokenData.length > 0) {
-        const processedData = tokenData.map((token, index) => ({
-          serialNo: index + 1,
-          updatedDate: formatDateTime(token.updatedAt || token.createdAt),
-          tokenNo: token.tokenNo,
-          driverName: token.driverName,
-          vehicleNo: token.vehicleNo || 'N/A',
-          vehicleType: token.vehicleType || token.vehicleId?.vehicleType || 'N/A',
-          rate: token.rate || 'N/A',
-          quantity: token.quantity || 'N/A',
+      // Filter only deleted tokens
+      const deletedTokens = tokens.filter(token => token.deletedAt);
+      console.log('Filtered deleted tokens:', deletedTokens);
+      
+      if (deletedTokens.length > 0) {
+        const processedData = deletedTokens.map(token => ({
+          name: token.driverName || 'N/A',
+          mobileNo: token.driverMobileNo || 'N/A',
           place: token.place || 'N/A',
+          quantity: token.quantity || 'N/A',
           route: token.route || 'N/A',
-          operator: token.operator || 'N/A',
-          chalan: token.chalanNo || 'N/A',
-          deletedBy: token.deletedBy?.username || 'N/A'
+          tokenNo: token.tokenNo || 'N/A',
+          vehicleNo: token.vehicleNo || 'N/A',
+          challanPin: token.challanPin || 'N/A',
+          username: token.userId?.username || 'N/A',
+          createdAt: formatDateTime(token.createdAt),
+          deletedAt: formatDateTime(token.deletedAt),
+          updatedBy: token.updatedBy || 'N/A'
         }));
         setFilteredData(processedData);
       } else {
@@ -171,9 +181,9 @@ const Delete_Token_list = () => {
   // Update handleConfirm function
   const handleConfirm = async () => {
     const searchParams = {
-      fromDate,
-      toDate,
-      ...(selectedUser && { username: selectedUser })
+      fromDate: fromDate,
+      toDate: toDate,
+      username: selectedUser || undefined // Only include if selected
     };
     await fetchDeletedTokens(searchParams);
     setShowConfirm(false);
@@ -263,50 +273,40 @@ const Delete_Token_list = () => {
         <table className="w-full">
           <thead className="bg-gradient-to-r from-slate-400 via-slate-300 to-slate-200">
             <tr>
-              <th className="py-3 px-4 text-left font-semibold">S.N.</th>
-              <th className="py-3 px-4 text-left font-semibold">Updated Date</th>
-              <th className="py-3 px-4 text-left font-semibold">Token No</th>
-              <th className="py-3 px-4 text-left font-semibold">Driver</th>
-              <th className="py-3 px-4 text-left font-semibold">Vehicle No</th>
+              <th className="py-3 px-4 text-left font-semibold">Driver Name</th>
+              <th className="py-3 px-4 text-left font-semibold">Email</th>
+              <th className="py-3 px-4 text-left font-semibold">Mobile No</th>
               <th className="py-3 px-4 text-left font-semibold">Vehicle Type</th>
-              <th className="py-3 px-4 text-left font-semibold">Rate</th>
-              <th className="py-3 px-4 text-left font-semibold">Quantity</th>
+              <th className="py-3 px-4 text-left font-semibold">Vehicle No</th>
               <th className="py-3 px-4 text-left font-semibold">Place</th>
-              <th className="py-3 px-4 text-left font-semibold">Route</th>
-              <th className="py-3 px-4 text-left font-semibold">Operator</th>
-              <th className="py-3 px-4 text-left font-semibold">Chalan</th>
-              <th className="py-3 px-4 text-left font-semibold">Deleted By</th>
+              <th className="py-3 px-4 text-left font-semibold">Token No</th>
+              <th className="py-3 px-4 text-left font-semibold">Date</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
             {isLoading ? (
               <tr>
-                <td colSpan="13" className="py-8 text-center text-gray-500 text-lg">
+                <td colSpan="8" className="py-8 text-center text-gray-500 text-lg">
                   Loading...
                 </td>
               </tr>
             ) : filteredData.length === 0 ? (
               <tr>
-                <td colSpan="13" className="py-8 text-center text-gray-500 text-lg">
+                <td colSpan="8" className="py-8 text-center text-gray-500 text-lg">
                   No data available
                 </td>
               </tr>
             ) : (
-              filteredData.map((item) => (
-                <tr key={item.serialNo} className="hover:bg-gray-50 transition duration-200">
-                  <td className="py-3 px-4">{item.serialNo}</td>
-                  <td className="py-3 px-4">{item.updatedDate}</td>
-                  <td className="py-3 px-4">{item.tokenNo}</td>
-                  <td className="py-3 px-4">{item.driverName}</td>
-                  <td className="py-3 px-4">{item.vehicleNo}</td>
+              filteredData.map((item, index) => (
+                <tr key={index} className="hover:bg-gray-50 transition duration-200">
+                  <td className="py-3 px-4">{item.name}</td>
+                  <td className="py-3 px-4">{item.email}</td>
+                  <td className="py-3 px-4">{item.phone}</td>
                   <td className="py-3 px-4">{item.vehicleType}</td>
-                  <td className="py-3 px-4">{item.rate}</td>
-                  <td className="py-3 px-4">{item.quantity}</td>
+                  <td className="py-3 px-4">{item.vehicleNo}</td>
                   <td className="py-3 px-4">{item.place}</td>
-                  <td className="py-3 px-4">{item.route}</td>
-                  <td className="py-3 px-4">{item.operator}</td>
-                  <td className="py-3 px-4">{item.chalan}</td>
-                  <td className="py-3 px-4">{item.deletedBy}</td>
+                  <td className="py-3 px-4">{item.token}</td>
+                  <td className="py-3 px-4">{item.date}</td>
                 </tr>
               ))
             )}
