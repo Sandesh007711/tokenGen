@@ -260,20 +260,15 @@ const Card = ({ operator }) => {
       sortable: true,
     },
     {
-      name: 'Date',
-      selector: row => row.date,
-      sortable: true,
-    },
-    {
       name: 'Driver',
       selector: row => row.driver,
       sortable: true,
     },
     {
-      name: 'Mobile',
+      name: 'Driver No',
       selector: row => row.mobileNo,
       sortable: true,
-      format: row => row.mobileNo.toString(), // Convert number to string for display
+      format: row => row.mobileNo.toString(),
     },
     {
       name: 'Vehicle No',
@@ -286,7 +281,7 @@ const Card = ({ operator }) => {
       sortable: true,
     },
     {
-      name: 'Vehicle Rate',
+      name: 'Rate',
       selector: row => row.vehicleRate,
       sortable: true,
     },
@@ -294,12 +289,7 @@ const Card = ({ operator }) => {
       name: 'Quantity',
       selector: row => row.quantity,
       sortable: true,
-      format: row => row.quantity.toString(), // Convert number to string for display
-    },
-    {
-      name: 'Route',
-      selector: row => row.route,
-      sortable: true,
+      format: row => row.quantity.toString(),
     },
     {
       name: 'Place',
@@ -307,23 +297,18 @@ const Card = ({ operator }) => {
       sortable: true,
     },
     {
-      name: 'Challan Pin',
-      selector: row => row.challanPin,
+      name: 'Route',
+      selector: row => row.route,
       sortable: true,
     },
     {
-      name: 'Loaded',
-      selector: row => row.isLoaded,
-      sortable: true,
-    },
-    {
-      name: 'Updated By',
+      name: 'Operator',
       selector: row => row.updatedBy,
       sortable: true,
     },
     {
-      name: 'Last Updated',
-      selector: row => row.updatedAt,
+      name: 'Challan',
+      selector: row => row.challanPin,
       sortable: true,
     },
     {

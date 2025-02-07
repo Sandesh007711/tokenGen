@@ -406,28 +406,44 @@ const Token_list = () => {
   // Define the columns for DataTable
   const columns = [
     {
-      name: 'Driver Name',
+      name: '#',
+      selector: (row, index) => ((currentPage - 1) * perPage) + index + 1,
+      sortable: false,
+      width: '60px',
+    },
+    {
+      name: 'Date',
+      selector: row => formatDateTime(row.createdAt),
+      sortable: true,
+    },
+    {
+      name: 'Token No',
+      selector: row => row.tokenNo,
+      sortable: true,
+    },
+    {
+      name: 'Driver',
       selector: row => row.driverName,
-      sortable: true,
-    },
-    {
-      name: 'Driver Mobile No.',
-      selector: row => row.driverMobileNo,
-      sortable: true,
-    },
-    {
-      name: 'Vehicle Type',  // Add this new column
-      selector: row => row.vehicleType || 'N/A',  // Updated to use direct vehicleType
-      sortable: true,
-    },
-    {
-      name: 'Vehicle Rate',  // New column
-      selector: row => row.vehicleRate || 'N/A',  // Updated to use direct vehicleRate
       sortable: true,
     },
     {
       name: 'Vehicle No',
       selector: row => row.vehicleNo,
+      sortable: true,
+    },
+    {
+      name: 'Vehicle Type',
+      selector: row => row.vehicleType || 'N/A',
+      sortable: true,
+    },
+    {
+      name: 'Rate',
+      selector: row => row.vehicleRate || 'N/A',
+      sortable: true,
+    },
+    {
+      name: 'Quantity',
+      selector: row => row.quantity,
       sortable: true,
     },
     {
@@ -441,28 +457,13 @@ const Token_list = () => {
       sortable: true,
     },
     {
-      name: 'Token No',
-      selector: row => row.tokenNo,
+      name: 'Operator',
+      selector: row => row.userId?.username || 'N/A',
       sortable: true,
     },
     {
       name: 'Challan Pin',
       selector: row => row.challanPin || 'N/A',
-      sortable: true,
-    },
-    {
-      name: 'Quantity',
-      selector: row => row.quantity,
-      sortable: true,
-    },
-    {
-      name: 'User',
-      selector: row => row.userId?.username || 'N/A',
-      sortable: true,
-    },
-    {
-      name: 'Date',
-      selector: row => formatDateTime(row.createdAt),
       sortable: true,
     },
     {
@@ -489,7 +490,6 @@ const Token_list = () => {
         </div>
       ),
       ignoreRowClick: true,
-      // Removed allowOverflow property as it's not needed
     },
   ];
 

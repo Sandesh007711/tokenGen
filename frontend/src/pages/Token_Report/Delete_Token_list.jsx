@@ -140,15 +140,20 @@ const Delete_Token_list = () => {
       const tokenData = result.data?.tokens || [];
       
       if (tokenData.length > 0) {
-        const processedData = tokenData.map(token => ({
-          name: token.driverName,
-          email: token.userId?.email || 'N/A',
-          phone: token.driverMobileNo,
-          token: token.tokenNo,
-          date: formatDateTime(token.createdAt),
-          vehicleType: token.vehicleType || token.vehicleId?.vehicleType || 'N/A',
+        const processedData = tokenData.map((token, index) => ({
+          serialNo: index + 1,
+          updatedDate: formatDateTime(token.updatedAt || token.createdAt),
+          tokenNo: token.tokenNo,
+          driverName: token.driverName,
           vehicleNo: token.vehicleNo || 'N/A',
-          place: token.place || 'N/A'
+          vehicleType: token.vehicleType || token.vehicleId?.vehicleType || 'N/A',
+          rate: token.rate || 'N/A',
+          quantity: token.quantity || 'N/A',
+          place: token.place || 'N/A',
+          route: token.route || 'N/A',
+          operator: token.operator || 'N/A',
+          chalan: token.chalanNo || 'N/A',
+          deletedBy: token.deletedBy?.username || 'N/A'
         }));
         setFilteredData(processedData);
       } else {
@@ -258,40 +263,50 @@ const Delete_Token_list = () => {
         <table className="w-full">
           <thead className="bg-gradient-to-r from-slate-400 via-slate-300 to-slate-200">
             <tr>
-              <th className="py-3 px-4 text-left font-semibold">Driver Name</th>
-              <th className="py-3 px-4 text-left font-semibold">Email</th>
-              <th className="py-3 px-4 text-left font-semibold">Mobile No</th>
-              <th className="py-3 px-4 text-left font-semibold">Vehicle Type</th>
-              <th className="py-3 px-4 text-left font-semibold">Vehicle No</th>
-              <th className="py-3 px-4 text-left font-semibold">Place</th>
+              <th className="py-3 px-4 text-left font-semibold">S.N.</th>
+              <th className="py-3 px-4 text-left font-semibold">Updated Date</th>
               <th className="py-3 px-4 text-left font-semibold">Token No</th>
-              <th className="py-3 px-4 text-left font-semibold">Date</th>
+              <th className="py-3 px-4 text-left font-semibold">Driver</th>
+              <th className="py-3 px-4 text-left font-semibold">Vehicle No</th>
+              <th className="py-3 px-4 text-left font-semibold">Vehicle Type</th>
+              <th className="py-3 px-4 text-left font-semibold">Rate</th>
+              <th className="py-3 px-4 text-left font-semibold">Quantity</th>
+              <th className="py-3 px-4 text-left font-semibold">Place</th>
+              <th className="py-3 px-4 text-left font-semibold">Route</th>
+              <th className="py-3 px-4 text-left font-semibold">Operator</th>
+              <th className="py-3 px-4 text-left font-semibold">Chalan</th>
+              <th className="py-3 px-4 text-left font-semibold">Deleted By</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
             {isLoading ? (
               <tr>
-                <td colSpan="8" className="py-8 text-center text-gray-500 text-lg">
+                <td colSpan="13" className="py-8 text-center text-gray-500 text-lg">
                   Loading...
                 </td>
               </tr>
             ) : filteredData.length === 0 ? (
               <tr>
-                <td colSpan="8" className="py-8 text-center text-gray-500 text-lg">
+                <td colSpan="13" className="py-8 text-center text-gray-500 text-lg">
                   No data available
                 </td>
               </tr>
             ) : (
-              filteredData.map((item, index) => (
-                <tr key={index} className="hover:bg-gray-50 transition duration-200">
-                  <td className="py-3 px-4">{item.name}</td>
-                  <td className="py-3 px-4">{item.email}</td>
-                  <td className="py-3 px-4">{item.phone}</td>
-                  <td className="py-3 px-4">{item.vehicleType}</td>
+              filteredData.map((item) => (
+                <tr key={item.serialNo} className="hover:bg-gray-50 transition duration-200">
+                  <td className="py-3 px-4">{item.serialNo}</td>
+                  <td className="py-3 px-4">{item.updatedDate}</td>
+                  <td className="py-3 px-4">{item.tokenNo}</td>
+                  <td className="py-3 px-4">{item.driverName}</td>
                   <td className="py-3 px-4">{item.vehicleNo}</td>
+                  <td className="py-3 px-4">{item.vehicleType}</td>
+                  <td className="py-3 px-4">{item.rate}</td>
+                  <td className="py-3 px-4">{item.quantity}</td>
                   <td className="py-3 px-4">{item.place}</td>
-                  <td className="py-3 px-4">{item.token}</td>
-                  <td className="py-3 px-4">{item.date}</td>
+                  <td className="py-3 px-4">{item.route}</td>
+                  <td className="py-3 px-4">{item.operator}</td>
+                  <td className="py-3 px-4">{item.chalan}</td>
+                  <td className="py-3 px-4">{item.deletedBy}</td>
                 </tr>
               ))
             )}

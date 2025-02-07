@@ -192,13 +192,14 @@ const Loaded_list = () => {
   // Define columns for DataTable
   const columns = [
     {
-      name: 'Driver Name',
-      selector: row => row.driverName,
+      name: 'S.N.',
+      cell: (row, index) => index + 1,
       sortable: true,
+      width: '70px',
     },
     {
-      name: 'Mobile No',
-      selector: row => row.driverMobileNo,
+      name: 'Loaded Time',
+      selector: row => new Date(row.createdAt).toLocaleString(),
       sortable: true,
     },
     {
@@ -207,8 +208,28 @@ const Loaded_list = () => {
       sortable: true,
     },
     {
-      name: 'Challan Pin',
-      selector: row => row.challanPin,
+      name: 'Driver',
+      selector: row => row.driverName,
+      sortable: true,
+    },
+    {
+      name: 'Vehicle No',
+      selector: row => row.vehicleNo,
+      sortable: true,
+    },
+    {
+      name: 'Vehicle Type',
+      selector: row => row.vehicleType,
+      sortable: true,
+    },
+    {
+      name: 'Rate',
+      selector: row => row.rate,
+      sortable: true,
+    },
+    {
+      name: 'Quantity',
+      selector: row => row.quantity,
       sortable: true,
     },
     {
@@ -222,18 +243,13 @@ const Loaded_list = () => {
       sortable: true,
     },
     {
-      name: 'Quantity',
-      selector: row => row.quantity,
+      name: 'Operator',
+      selector: row => row.operator,
       sortable: true,
     },
     {
-      name: 'Vehicle No',
-      selector: row => row.vehicleNo,
-      sortable: true,
-    },
-    {
-      name: 'Created At',
-      selector: row => new Date(row.createdAt).toLocaleString(),
+      name: 'Challan',
+      selector: row => row.challanPin,
       sortable: true,
     },
   ];
