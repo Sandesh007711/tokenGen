@@ -35,6 +35,7 @@ const Token_list = () => {
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false); // Add this new state with other states
   const [isFiltered, setIsFiltered] = useState(false); // Add this new state
+  const [isDeleting, setIsDeleting] = useState(false); // Add new state for delete loading
 
   // Helper function to sort tokens by date (newest first)
   const sortTokensByDate = (tokens) => {
@@ -97,7 +98,7 @@ const Token_list = () => {
     return d1 <= d2;
   };
 
-  // Update fetchTokens function
+  // Update fetchTokens function to filter out deleted items
   const fetchTokens = async (searchParams = {}) => {
     setIsLoading(true);
     try {
@@ -123,7 +124,10 @@ const Token_list = () => {
       const tokenData = Array.isArray(result) ? result : (result.data || []);
       
       if (tokenData.length > 0) {
-        const sortedTokens = tokenData.sort((a, b) => 
+        // First filter out deleted items
+        const activeTokens = tokenData.filter(token => token.deletedAt === null);
+        
+        const sortedTokens = activeTokens.sort((a, b) => 
           new Date(b.createdAt) - new Date(a.createdAt)
         );
 
@@ -375,8 +379,9 @@ const Token_list = () => {
   };
 
   const handleDelete = async () => {
-    if (!selectedToken) return;
+    if (!selectedToken || !selectedToken._id) return;
 
+    setIsDeleting(true);
     try {
       const token = localStorage.getItem('token');
       const response = await fetch(`http://localhost:8000/api/v1/tokens/${selectedToken._id}`, {
@@ -391,13 +396,18 @@ const Token_list = () => {
         throw new Error('Failed to delete token');
       }
 
-      // Remove the deleted token from the state
-      setTokens(prevTokens => prevTokens.filter(t => t._id !== selectedToken._id));
+      // Remove the deleted token from both states
       setFilteredData(prevData => prevData.filter(t => t._id !== selectedToken._id));
+      setTotalRows(prev => prev - 1);
       showSuccess('Token deleted successfully');
+      
+      // Refresh the token list after deletion
+      await fetchTokens();
     } catch (error) {
-      showError(error.message);
+      console.error('Delete error:', error);
+      showError(error.message || 'Failed to delete token');
     } finally {
+      setIsDeleting(false);
       setShowDeleteConfirm(false);
       setSelectedToken(null);
     }
@@ -478,7 +488,7 @@ const Token_list = () => {
           </button>
           <button
             onClick={() => {
-              setSelectedToken(row);
+              setSelectedToken({ _id: row._id }); // Ensure we capture the _id
               setShowDeleteConfirm(true);
             }}
             className="p-2 text-red-600 hover:text-red-800 transition-colors"
@@ -594,14 +604,23 @@ const Token_list = () => {
               <button
                 onClick={() => setShowDeleteConfirm(false)}
                 className="px-4 py-2 text-gray-600 hover:text-gray-800"
+                disabled={isDeleting}
               >
                 Cancel
               </button>
               <button
                 onClick={handleDelete}
-                className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
+                disabled={isDeleting}
+                className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 flex items-center gap-2"
               >
-                Delete
+                {isDeleting ? (
+                  <>
+                    <FaSpinner className="animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  'Delete'
+                )}
               </button>
             </div>
           </div>
