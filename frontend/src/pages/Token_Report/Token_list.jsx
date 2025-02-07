@@ -328,6 +328,9 @@ const Token_list = () => {
     try {
       const authToken = localStorage.getItem('token');
       
+      // Log the entire updatedData for debugging
+      console.log('Updated Data:', updatedData);
+
       // Find selected vehicle type from vehicleTypes array
       const selectedVehicle = vehicleTypes.find(type => 
         type.vehicleType === (updatedData.vehicleType || updatedData.vehicleId?.vehicleType)
@@ -337,9 +340,29 @@ const Token_list = () => {
         throw new Error('Please select a valid vehicle type');
       }
 
+      // Extract userId more carefully
+      let userId;
+      if (updatedData.userId) {
+        if (typeof updatedData.userId === 'object') {
+          userId = updatedData.userId._id;
+        } else if (typeof updatedData.userId === 'string') {
+          userId = updatedData.userId;
+        }
+      }
+
+      // If still no valid userId, try to get it from localStorage
+      if (!userId) {
+        const currentUser = JSON.parse(localStorage.getItem('user'));
+        userId = currentUser?._id;
+      }
+
+      if (!userId) {
+        throw new Error('Could not determine user ID');
+      }
+
       const updatePayload = {
-        vehicleId: selectedVehicle._id,  // Send vehicleId instead of vehicleType
-        userId: updatedData.userId?._id || updatedData.userId, // Add userId to payload
+        vehicleId: selectedVehicle._id,
+        userId: userId,
         driverName: updatedData.driverName,
         driverMobileNo: parseInt(updatedData.driverMobileNo) || 0,
         vehicleNo: updatedData.vehicleNo,
@@ -347,9 +370,10 @@ const Token_list = () => {
         quantity: parseInt(updatedData.quantity) || 0,
         place: updatedData.place || '',
         challanPin: updatedData.challanPin || '',
-        updateRate: true // Add this to update vehicle rate
+        updateRate: true
       };
 
+      // Log the final payload for debugging
       console.log('Sending update payload:', updatePayload);
 
       const response = await fetch(`http://localhost:8000/api/v1/tokens/${updatedData._id}`, {
@@ -365,6 +389,9 @@ const Token_list = () => {
         const errorData = await response.json();
         throw new Error(errorData.message || 'Failed to update token');
       }
+
+      const responseData = await response.json();
+      console.log('Update response:', responseData);
 
       await fetchTokens(); // Refresh the data after update
       setShowUpdateForm(false);
@@ -543,8 +570,9 @@ const Token_list = () => {
         }
 
         const result = await response.json();
+        console.log('Vehicle rates API response:', result); // Log the API response
         if (result.data && result.data.rates) {
-          setVehicleTypes(result.data.rates); // Store complete vehicle data
+          setVehicleTypes(result.data.rates);
         }
       } catch (error) {
         console.error('Error fetching vehicle types:', error);
@@ -566,6 +594,22 @@ const Token_list = () => {
     setSelectedUser('');
     setIsFiltered(false); // Set to false when showing full data
     fetchTokens();
+  };
+
+  // Add this new function to handle vehicle type change
+  const handleVehicleTypeChange = (e) => {
+    const selectedVehicleType = e.target.value;
+    const selectedVehicle = vehicleTypes.find(type => type.vehicleType === selectedVehicleType);
+    console.log('Selected vehicle:', selectedVehicle); // Log selected vehicle data
+
+    if (selectedVehicle) {
+      setUpdateFormData({
+        ...updateFormData,
+        vehicleType: selectedVehicleType,
+        vehicleRate: selectedVehicle.rate, // Automatically set the rate
+        vehicleId: selectedVehicle
+      });
+    }
   };
 
   return (
@@ -819,14 +863,7 @@ const Token_list = () => {
                   <label className="block text-gray-300 text-sm font-bold mb-2">Vehicle Type</label>
                   <select
                     value={updateFormData.vehicleType || updateFormData.vehicleId?.vehicleType || ''}
-                    onChange={(e) => {
-                      const selectedVehicle = vehicleTypes.find(type => type.vehicleType === e.target.value);
-                      setUpdateFormData({
-                        ...updateFormData,
-                        vehicleType: e.target.value,
-                        vehicleId: selectedVehicle
-                      });
-                    }}
+                    onChange={handleVehicleTypeChange}
                     className="px-4 py-3 w-full bg-gray-900 text-gray-300 rounded-lg border border-gray-700 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 transition-all duration-300"
                   >
                     <option value="">Select Vehicle Type</option>
@@ -836,6 +873,15 @@ const Token_list = () => {
                       </option>
                     ))}
                   </select>
+                </div>
+                <div className="relative">
+                  <label className="block text-gray-300 text-sm font-bold mb-2">Vehicle Rate</label>
+                  <input
+                    type="text"
+                    value={updateFormData.vehicleRate || ''}
+                    readOnly
+                    className="px-4 py-3 w-full bg-gray-900 text-gray-300 rounded-lg border border-gray-700 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 transition-all duration-300"
+                  />
                 </div>
                 <div className="relative">
                   <label className="block text-gray-300 text-sm font-bold mb-2">Vehicle No</label>
