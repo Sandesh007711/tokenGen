@@ -63,12 +63,22 @@ const Loaded = () => {
     const key = tokenInput.toLowerCase();
     const matchingTokens = tokenMap.get(key) || [];
     
-    // Filter unloaded tokens and sort by date
-    const unloadedTokens = matchingTokens
+    // Check if token is deleted
+    const activeTokens = matchingTokens.filter(t => t.deletedAt === null);
+    
+    if (matchingTokens.length > 0 && activeTokens.length === 0) {
+      setError('This token has been deleted');
+      setTokenData([]);
+      setLoading(false);
+      return;
+    }
+    
+    // Filter unloaded and active tokens and sort by date
+    const unloadedTokens = activeTokens
       .filter(t => !t.isLoaded)
       .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
-    if (matchingTokens.length > 0 && unloadedTokens.length === 0) {
+    if (activeTokens.length > 0 && unloadedTokens.length === 0) {
       setError('All tokens with this number have already been loaded');
       setTokenData([]);
     } else if (unloadedTokens.length === 0) {
