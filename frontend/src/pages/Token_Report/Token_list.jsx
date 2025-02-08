@@ -748,7 +748,7 @@ const Token_list = () => {
                 Submit
               </button>
               
-              {filteredData.length > 0 && isFiltered && (
+              {isFiltered && (
                 <button
                   type="button"
                   onClick={handleShowFullData}
