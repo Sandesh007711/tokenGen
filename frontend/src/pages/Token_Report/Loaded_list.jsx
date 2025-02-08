@@ -10,15 +10,21 @@ import "react-datepicker/dist/react-datepicker.css";
  * Features: Date range selection, user filtering, and tabular display of loaded token data
  */
 const Loaded_list = () => {
+  // Add new state for filtering status
+  const [isFiltered, setIsFiltered] = useState(false);
   // State Management
   const [fromDate, setFromDate] = useState(new Date());
   const [toDate, setToDate] = useState(new Date());
-  const [selectedUser, setSelectedUser] = useState('');
   const [filteredData, setFilteredData] = useState([]);
   const [errorPopup, setErrorPopup] = useState({ show: false, message: '' });
   const [showConfirm, setShowConfirm] = useState(false);
-  const [users, setUsers] = useState([]);
   const [successPopup, setSuccessPopup] = useState({ show: false, message: '' });
+  const [routes, setRoutes] = useState(['dks']);
+  const [selectedRoute, setSelectedRoute] = useState('');
+  const [perPage, setPerPage] = useState(10);
+  const [totalRows, setTotalRows] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [isFullScreen, setIsFullScreen] = useState(false);
 
   const getAuthHeaders = () => {
     const token = localStorage.getItem('token'); // Changed from 'authToken' to 'token'
@@ -46,15 +52,13 @@ const Loaded_list = () => {
       const data = await response.json();
       console.log('Raw API response:', data);
 
-      // Handle the correct API response structure
       if (data.status === 'success' && data.data && data.data.users) {
         const usersArray = data.data.users;
-        const uniqueUsers = usersArray.map(user => ({
-          id: user._id,
-          name: user.username
-        }));
-        console.log('Processed users for dropdown:', uniqueUsers);
-        setUsers(uniqueUsers);
+        
+        // Only extract and set routes
+        const uniqueRoutes = [...new Set(usersArray.map(user => user.route).filter(Boolean))];
+        setRoutes(uniqueRoutes);
+        console.log('Processed routes:', uniqueRoutes);
       } else {
         console.error('Invalid users data structure:', data);
         showError('Invalid users data format');
@@ -107,9 +111,9 @@ const Loaded_list = () => {
       if (data.status === 'success' && Array.isArray(data.data)) {
         let tokens = data.data;
 
-        // Apply user filter if selected
-        if (selectedUser && selectedUser !== '') {
-          tokens = tokens.filter(token => token.driverName === selectedUser);
+        // Add route filter
+        if (selectedRoute && selectedRoute !== '') {
+          tokens = tokens.filter(token => token.route === selectedRoute);
         }
 
         // Apply date filter if dates are valid
@@ -155,25 +159,27 @@ const Loaded_list = () => {
     }, 3000);
   };
 
+  // Modified handleSubmit - removed user check
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!selectedUser) {
-      showError('Please select a user');
-      return;
-    }
     setShowConfirm(true);
   };
 
+  // Add handleShowFullData function
+  const handleShowFullData = () => {
+    setFromDate(null);
+    setToDate(null);
+    setSelectedRoute('');
+    setIsFiltered(false);
+    loadInitialData();
+  };
+
+  // Modify handleConfirm to set isFiltered
   const handleConfirm = () => {
+    setIsFiltered(true);
     fetchTokenData();
     setShowConfirm(false);
   };
-
-  // Add these new states for pagination
-  const [perPage, setPerPage] = useState(10);
-  const [totalRows, setTotalRows] = useState(0);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [isFullScreen, setIsFullScreen] = useState(false);
 
   // Add these new functions
   const handlePageChange = (page) => {
@@ -331,26 +337,38 @@ const Loaded_list = () => {
             className="px-4 py-3 bg-gray-900 text-gray-300 rounded-lg border border-gray-700 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 transition-all duration-300"
             placeholderText="To Date"
           />
-          
+
           <select
-            value={selectedUser}
-            onChange={(e) => setSelectedUser(e.target.value)}
+            value={selectedRoute}
+            onChange={(e) => setSelectedRoute(e.target.value)}
             className="px-4 py-3 bg-gray-900 text-gray-300 rounded-lg border border-gray-700 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 transition-all duration-300 min-w-[200px]"
           >
-            <option key="default" value="">Select User</option>
-            {users.map((user) => (
-              <option key={`user-${user.id}`} value={user.name}>
-                {user.name}
+            <option value="">Select Route</option>
+            {routes.map((route) => (
+              <option key={route} value={route}>
+                {route}
               </option>
             ))}
           </select>
 
-          <button
-            type="submit"
-            className="px-8 py-2 rounded-md bg-gray-500 text-white font-bold transition duration-200 hover:bg-white hover:text-black border-2 border-transparent hover:border-teal-500 flex items-center justify-center"
-          >
-            Submit
-          </button>
+          <div className="flex gap-2">
+            <button
+              type="submit"
+              className="px-8 py-2 rounded-md bg-gray-500 text-white font-bold transition duration-200 hover:bg-white hover:text-black border-2 border-transparent hover:border-teal-500 flex items-center justify-center"
+            >
+              Submit
+            </button>
+            
+            {isFiltered && (
+              <button
+                type="button"
+                onClick={handleShowFullData}
+                className="px-8 py-2 rounded-md bg-gray-500 text-white font-bold transition duration-200 hover:bg-white hover:text-black border-2 border-transparent hover:border-teal-500 flex items-center justify-center"
+              >
+                Show Full Data
+              </button>
+            )}
+          </div>
         </form>
       </div>
 

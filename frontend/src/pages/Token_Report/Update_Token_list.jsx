@@ -56,9 +56,9 @@ const Update_Token_list = () => {
         console.log('Raw API Response:', result);
 
         if (result.status === 'success' && Array.isArray(result.data)) {
-          const filteredTokens = result.data.filter(token => token.updatedBy === "dks");
-          setTokens(filteredTokens);
-          setFilteredData(filteredTokens);
+          // Show all tokens without filtering
+          setTokens(result.data);
+          setFilteredData(result.data);
         } else {
           showError('Invalid data format received');
         }

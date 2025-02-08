@@ -29,6 +29,7 @@ const Content = () => {
   const [tempFormData, setTempFormData] = useState(null);
   const [successPopup, setSuccessPopup] = useState({ show: false, message: '' });
   const [errorPopup, setErrorPopup] = useState({ show: false, message: '' });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Add form-related constants
   const [vehicleTypes, setVehicleTypes] = useState([]);
@@ -113,6 +114,7 @@ const Content = () => {
       return;
     }
 
+    setIsSubmitting(true);
     try {
       const token = localStorage.getItem('token');
       if (!token) {
@@ -197,6 +199,8 @@ const Content = () => {
     } catch (error) {
       console.error('Error submitting token:', error);
       showError(error.message);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -550,9 +554,14 @@ const Content = () => {
                 </button>
                 <button 
                   type="submit"
-                  className="px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  disabled={isSubmitting}
+                  className="px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center min-w-[100px]"
                 >
-                  Submit
+                  {isSubmitting ? (
+                    <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white"></div>
+                  ) : (
+                    'Submit'
+                  )}
                 </button>
               </div>
             </form>
