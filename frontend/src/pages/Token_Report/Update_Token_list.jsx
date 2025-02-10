@@ -344,7 +344,7 @@ const Update_Token_list = () => {
                   <td className="py-3 px-4">{item.driverName}</td>
                   <td className="py-3 px-4">{item.driverMobileNo}</td>
                   <td className="py-3 px-4">{item.vehicleNo}</td>
-                  <td className="py-3 px-4">{item.vehicleId?.vehicleType}</td>
+                  <td className="py-3 px-4">{item.vehicleType}</td>
                   <td className="py-3 px-4">{item.place}</td>
                   <td className="py-3 px-4">{item.quantity}</td>
                   <td className="py-3 px-4">{item.route}</td>
