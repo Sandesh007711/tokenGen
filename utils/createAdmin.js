@@ -30,6 +30,7 @@ const importAdmin = async() => {
             password: 'Router@123',
             phone: 9334466191,
             role: 'admin',
+            route: 'Sadmin'
         }
 
         await User.create(admin)
