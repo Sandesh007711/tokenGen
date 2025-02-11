@@ -1,7 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import styled from 'styled-components';
 import logo from "../assets/logo.png";
+import { FaUser, FaRoute } from 'react-icons/fa'; // Add FaRoute import
 
 const StyledWrapper = styled.div`
   .Btn {
@@ -73,7 +74,23 @@ const StyledWrapper = styled.div`
 
 const Nav = () => {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [username, setUsername] = useState('');
+  const [route, setRoute] = useState(''); // Add this state
   const navigate = useNavigate();
+
+  useEffect(() => {
+    try {
+      const userStr = localStorage.getItem('user');
+      if (userStr) {
+        const userData = JSON.parse(userStr);
+        const currentUser = userData.data || userData.user || userData;
+        setUsername(currentUser.username || '');
+        setRoute(currentUser.route || ''); // Set the route from user data
+      }
+    } catch (error) {
+      console.error('Error loading user data:', error);
+    }
+  }, []);
 
   const handleLogoutClick = () => {
     setShowLogoutConfirm(true);
@@ -109,6 +126,20 @@ const Nav = () => {
 
           {/* Menu Items */}
           <div className="flex items-center gap-2 sm:gap-3 md:gap-4 lg:gap-6">
+            {/* User Icon and Name */}
+            <div className="flex items-center gap-2">
+              <FaUser className="text-lg sm:text-xl text-white" />
+              <span className="text-sm sm:text-base md:text-lg lg:text-xl font-semibold text-white">
+                {username}
+              </span>
+              <div className="flex items-center gap-2">
+                <FaRoute className="text-lg sm:text-xl text-black" />
+                <span className="text-sm sm:text-base md:text-lg lg:text-xl font-semibold text-black">
+                  {route || 'N/A'}
+                </span>
+              </div>
+            </div>
+            
             <StyledWrapper>
               <button className="Btn" onClick={handleLogoutClick}>
                 <div className="sign">
