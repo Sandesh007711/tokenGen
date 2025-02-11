@@ -5,6 +5,7 @@ const AppError = require('./../utils/appError')
 const Vehicle = require('./../models/vehicleModel')
 const factory = require('./handlerFactory');
 const Rate = require('../models/rateModel');
+const APIfeatures = require('../utils/apiFeatures');
 
 // create vehicle
 exports.createVehicle = catchAsync(async (req, res, next) => {
@@ -25,14 +26,18 @@ exports.createVehicle = catchAsync(async (req, res, next) => {
 
 // get all vehicles
 exports.getAllVehicles = catchAsync(async (req, res) => {
-    const vehicles = await Vehicle.find()
+    const totalCount = await Vehicle.countDocuments();
+    const features = new APIfeatures(Vehicle.find(), req.query)
+                    .sort()
+                    .paginate()
+
+    const data = await features.query
 
     res.status(200).json({
         status: 'success',
         message: 'Vehicles fetched successfully.',
-        data: {
-            vehicles
-        }
+        data,
+        totalCount
     })
 });
 
