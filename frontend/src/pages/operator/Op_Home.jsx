@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { FaCheckCircle, FaTimes } from 'react-icons/fa';
+import { QRCodeSVG } from 'qrcode.react';
+import ReactDOMServer from 'react-dom/server';
 import axios from 'axios';
 
 const Op_Home = () => {
@@ -25,6 +27,7 @@ const Op_Home = () => {
   const [vehicleRates, setVehicleRates] = useState([]);
   const [apiTokens, setApiTokens] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const generateRandomToken = () => {
     return Math.floor(100000 + Math.random() * 900000).toString();
@@ -342,7 +345,49 @@ const Op_Home = () => {
     }, 3000);
   };
 
+  // Add refreshTable function
+  const refreshTable = async () => {
+    setLoading(true);
+    try {
+      const userStr = localStorage.getItem('user');
+      if (!userStr) {
+        throw new Error('User not authenticated');
+      }
+
+      const userData = JSON.parse(userStr);
+      const authToken = userData.token;
+      const currentUser = userData.data || userData.user || userData;
+
+      const response = await axios.get('http://localhost:8000/api/v1/tokens', {
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.data?.status === 'success' && Array.isArray(response.data.data)) {
+        const userTokens = response.data.data
+          .filter(token => token.userId?.username === currentUser.username)
+          .map(token => ({
+            ...token,
+            displayVehicleType: token.vehicleId?.vehicleType || token.vehicleType || 'N/A',
+            displayVehicleRate: token.vehicleRate || 'N/A'
+          }));
+
+        setApiTokens(userTokens);
+        setEntries(userTokens);
+      }
+    } catch (error) {
+      console.error('Error refreshing tokens:', error);
+      showError(error.response?.data?.message || 'Error refreshing table');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Modify confirmSubmit to use refreshTable
   const confirmSubmit = async () => {
+    setIsSubmitting(true);
     try {
       const userStr = localStorage.getItem('user');
       if (!userStr) {
@@ -391,22 +436,9 @@ const Op_Home = () => {
       );
   
       if (response.data?.status === 'success') {
-        // Fetch updated tokens
-        const updatedTokensResponse = await axios.get('http://localhost:8000/api/v1/tokens', {
-          headers: {
-            'Authorization': `Bearer ${authToken}`,
-            'Content-Type': 'application/json'
-          }
-        });
-  
-        if (updatedTokensResponse.data?.status === 'success') {
-          const userTokens = updatedTokensResponse.data.data.filter(token => 
-            token.userId?.username === userData.username
-          );
-          setApiTokens(userTokens);
-          setEntries(userTokens);
-        }
-  
+        // Instead of fetching tokens here, use the refreshTable function
+        await refreshTable();
+        
         setIsModalOpen(false);
         setFormData({
           userId: '',
@@ -428,9 +460,10 @@ const Op_Home = () => {
     } catch (error) {
       console.error('Error submitting token:', error);
       showError(error.response?.data?.message || error.message);
+    } finally {
+      setIsSubmitting(false);
     }
   };
-  
 
   const handleCancelClick = () => {
     if (Object.values(formData).some(value => value !== '')) {
@@ -441,29 +474,350 @@ const Op_Home = () => {
   };
 
   const handlePrint = (entry) => {
+    const createQRData = (entry) => {
+      return JSON.stringify({
+        date: formatDateTime(entry.createdAt),
+        token: entry.tokenNo,
+        query: entry.route,
+        cluster: '6',
+        driver: entry.driverName,
+        vehicle: entry.displayVehicleType,
+        quantity: entry.quantity,
+        mobile: entry.driverMobileNo,
+        operator: entry.userId?.username,
+        destination: entry.place,
+        challan: entry.challanPin
+      });
+    };
+
+    const QRCodeComponent = ({ data }) => (
+      <QRCodeSVG 
+        value={data}
+        size={50}
+        level="M"
+        includeMargin={true}
+      />
+    );
+
+    const createCopy = (title) => {
+      const qrData = createQRData(entry);
+      const qrCodeSvg = ReactDOMServer.renderToString(
+        <QRCodeComponent data={qrData} />
+      );
+
+      return `
+        <div class="token-section">
+          <div class="header">
+            <div class="company-name">RAMJEE SINGH & COMPANY</div>
+            <div class="copy-type">${title}</div>
+          </div>
+          <div class="content">
+            <table class="info-table">
+              <tr><td>Date/Time:</td><td>${formatDateTime(entry.createdAt)}</td></tr>
+              <tr><td>Token No.:</td><td>${entry.tokenNo || 'N/A'}</td></tr>
+              <tr><td>Query Name:</td><td>${entry.route || 'N/A'}</td></tr>
+              <tr><td>Cluster:</td><td>6</td></tr>
+              <tr><td>Driver Name:</td><td>${entry.driverName}</td></tr>
+              <tr><td>Vehicle Type:</td><td>${entry.displayVehicleType}</td></tr>
+              <tr><td>Quantity:</td><td>${entry.quantity}</td></tr>
+              <tr><td>Driver Mobile:</td><td>${entry.driverMobileNo}</td></tr>
+              <tr><td>Operator:</td><td>${entry.userId?.username || 'N/A'}</td></tr>
+              <tr><td>Destination:</td><td>${entry.place}</td></tr>
+              <tr><td>Challan Pin:</td><td>${entry.challanPin}</td></tr>
+            </table>
+            <div class="qr-code">
+              ${qrCodeSvg}
+            </div>
+          </div>
+        </div>
+      `;
+    };
+
     const printContent = `
-      <div style="padding: 20px; font-family: Arial;">
-        <h2 style="text-align: center;">Token Details</h2>
-        <hr style="margin: 20px 0;"/>
-        <div style="margin: 10px 0;"><strong>Token No:</strong> ${entry.tokenNo}</div>
-        <div style="margin: 10px 0;"><strong>Date/Time:</strong> ${formatDateTime(entry.createdAt)}</div>
-        <div style="margin: 10px 0;"><strong>Driver Name:</strong> ${entry.driverName}</div>
-        <div style="margin: 10px 0;"><strong>Driver Mobile:</strong> ${entry.driverMobileNo}</div>
-        <div style="margin: 10px 0;"><strong>Vehicle No:</strong> ${entry.vehicleNo}</div>
-        <div style="margin: 10px 0;"><strong>Vehicle Type:</strong> ${entry.displayVehicleType}</div>
-        <div style="margin: 10px 0;"><strong>Vehicle Rate:</strong> ${entry.displayVehicleRate}</div>
-        <div style="margin: 10px 0;"><strong>Route:</strong> ${entry.route || 'N/A'}</div>
-        <div style="margin: 10px 0;"><strong>Quantity:</strong> ${entry.quantity}</div>
-        <div style="margin: 10px 0;"><strong>Place:</strong> ${entry.place}</div>
-        <div style="margin: 10px 0;"><strong>Challan Pin:</strong> ${entry.challanPin || 'N/A'}</div>
-      </div>
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Token Details</title>
+          <style>
+            @page {
+              size: A4;
+              margin: 10mm;
+            }
+            body {
+              font-family: Arial, sans-serif;
+              margin: 0;
+              padding: 0;
+              font-size: 8pt;
+              line-height: 1.1;
+            }
+            .token-section {
+              padding: 3mm;
+              height: 85mm;
+              position: relative;
+            }
+            .header {
+              text-align: left;
+              margin-bottom: 2mm;
+            }
+            .company-name {
+              font-size: 10pt;
+              font-weight: bold;
+            }
+            .copy-type {
+              font-size: 8pt;
+              font-weight: bold;
+            }
+            .content {
+              position: relative;
+            }
+            .info-table {
+              width: 100%;
+              margin-bottom: 4mm;
+            }
+            .info-table td {
+              padding: 0.5mm 2mm 0.5mm 0;
+              vertical-align: top;
+            }
+            .info-table td:first-child {
+              white-space: nowrap;
+              font-weight: bold;
+              width: 25%;
+            }
+            .qr-code {
+              position: relative;
+              left: 1;
+              width: 90px;
+              height: 90px;
+              margin-top: auto;
+
+            }
+            .qr-code svg {
+              width: 100%;
+              height: 100%;
+            }
+          </style>
+        </head>
+        <body>
+          ${createCopy("OFFICE COPY")}
+          ${createCopy("OPERATOR COPY")}
+          ${createCopy("DRIVER COPY")}
+        </body>
+      </html>
     `;
 
     const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      showError('Popup was blocked. Please allow popups and try again.');
+      return;
+    }
+
     printWindow.document.write(printContent);
     printWindow.document.close();
-    printWindow.print();
+
+    printWindow.onafterprint = () => {
+      printWindow.close();
+      window.focus(); // Return focus to the main window
+    };
+
+    printWindow.onerror = () => {
+      showError('Error occurred while printing');
+      printWindow.close();
+      window.focus();
+    };
+
+    setTimeout(() => {
+      try {
+        printWindow.print();
+      } catch (error) {
+        console.error('Print error:', error);
+        showError('Failed to print. Please try again.');
+        printWindow.close();
+        window.focus();
+      }
+    }, 500);
   };
+
+  const handleReceiptPrint = (entry) => {
+    const createQRData = (entry) => {
+      return JSON.stringify({
+        date: formatDateTime(entry.createdAt),
+        token: entry.tokenNo,
+        query: entry.route,
+        cluster: '6',
+        driver: entry.driverName,
+        vehicle: entry.displayVehicleType,
+        quantity: entry.quantity,
+        mobile: entry.driverMobileNo,
+        operator: entry.userId?.username,
+        destination: entry.place,
+        challan: entry.challanPin
+      });
+    };
+  
+    const QRCodeComponent = ({ data }) => (
+      <QRCodeSVG 
+        value={data}
+        size={100}  // Increased QR code size
+        level="M"
+        includeMargin={true}
+      />
+    );
+  
+    const createCopy = (title) => {
+      const qrData = createQRData(entry);
+      const qrCodeSvg = ReactDOMServer.renderToString(
+        <QRCodeComponent data={qrData} />
+      );
+  
+      return `
+        <div class="receipt">
+          <div class="header">
+            <div class="company-name">RAMJEE SINGH & COMPANY</div>
+            <div class="divider">================================</div>
+            <div class="copy-label">${title}</div>
+            <div class="token-number">Token No: ${entry.tokenNo || 'N/A'}</div>
+            <div class="divider">================================</div>
+          </div>
+          <div class="content">
+            <div>Date/Time: ${formatDateTime(entry.createdAt)}</div>
+            <div>Query Name: ${entry.route || 'N/A'}</div>
+            <div>Cluster: 6</div>
+            <div>Driver Name: ${entry.driverName}</div>
+            <div>Vehicle Type: ${entry.displayVehicleType}</div>
+            <div>Quantity: ${entry.quantity}</div>
+            <div>Driver Mobile: ${entry.driverMobileNo}</div>
+            <div>Operator: ${entry.userId?.username || 'N/A'}</div>
+            <div>Destination: ${entry.place || 'N/A'}</div>
+            <div>Challan Pin: ${entry.challanPin || 'N/A'}</div>
+            <div class="divider">================================</div>
+          </div>
+          <div class="qr-section">
+            ${qrCodeSvg}
+          </div>
+        </div>
+      `;
+    };
+  
+    const printContent = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Token Receipt</title>
+          <style>
+            @page {
+              size: 80mm auto;
+              margin: 0;
+              padding: 0;
+            }
+            body {
+              font-family: 'Courier New', Courier, monospace;
+              width: 80mm;
+              margin: 0;
+              padding: 8px;
+              font-size: 12pt;
+              line-height: 1.2;
+              text-transform: uppercase;
+            }
+            .receipt {
+              width: 100%;
+              text-align: center;
+              margin-bottom: 20px;
+              page-break-after: always;
+            }
+            .receipt:last-child {
+              page-break-after: avoid;
+            }
+            .header {
+              margin-bottom: 10px;
+            }
+            .company-name {
+              font-size: 14pt;
+              font-weight: bold;
+              margin-bottom: 5px;
+            }
+            .copy-label {
+              font-size: 14pt;
+              font-weight: bold;
+              margin: 5px 0;
+              text-decoration: underline;
+            }
+            .token-number {
+              font-size: 24pt;  /* Even larger font for token number */
+              font-weight: bold;
+              margin: 10px 0;
+              letter-spacing: 2px;
+            }
+            .divider {
+              margin: 5px 0;
+            }
+            .content {
+              text-align: left;
+              margin-bottom: 10px;
+              font-size: 12pt;
+            }
+            .content div {
+              margin: 3px 0;
+              white-space: nowrap;
+              overflow: hidden;
+              text-overflow: ellipsis;
+            }
+            .qr-section {
+              text-align: center;
+              margin: 10px 0;
+            }
+            .qr-section svg {
+              width: 100px;
+              height: 100px;
+            }
+            @media print {
+              body {
+                width: 80mm;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          ${createCopy("OFFICE COPY")}
+          ${createCopy("OPERATOR COPY")}
+          ${createCopy("DRIVER COPY")}
+        </body>
+      </html>
+    `;
+  
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      showError('Popup was blocked. Please allow popups and try again.');
+      return;
+    }
+
+    printWindow.document.write(printContent);
+    printWindow.document.close();
+
+    printWindow.onafterprint = () => {
+      printWindow.close();
+      window.focus(); // Return focus to the main window
+    };
+
+    printWindow.onerror = () => {
+      showError('Error occurred while printing');
+      printWindow.close();
+      window.focus();
+    };
+
+    setTimeout(() => {
+      try {
+        printWindow.print();
+      } catch (error) {
+        console.error('Print error:', error);
+        showError('Failed to print. Please try again.');
+        printWindow.close();
+        window.focus();
+      }
+    }, 500);
+  };
+  
 
   const [users, setUsers] = useState([]);
 
@@ -643,7 +997,7 @@ const formatDateTime = (dateString) => {
                     </select>
                     <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-400">
                       <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-                        <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/>
+                        <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a 1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/>
                       </svg>
                     </div>
                   </div>
@@ -748,14 +1102,20 @@ const formatDateTime = (dateString) => {
               <button
                 onClick={() => setShowSubmitConfirm(false)}
                 className="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 transition-colors"
+                disabled={isSubmitting}
               >
                 Cancel
               </button>
               <button
                 onClick={confirmSubmit}
-                className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+                disabled={isSubmitting}
+                className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors flex items-center justify-center min-w-[80px]"
               >
-                Submit
+                {isSubmitting ? (
+                  <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white"></div>
+                ) : (
+                  'Submit'
+                )}
               </button>
             </div>
           </div>
@@ -788,9 +1148,12 @@ const formatDateTime = (dateString) => {
         </div>
       )}
 
-      <div className="bg-white rounded-lg shadow-lg overflow-x-auto mt-6"> {/* Added mt-6 here */}
+      <div className="bg-white rounded-lg shadow-lg overflow-x-auto mt-6">
         {loading ? (
-          <div className="p-8 text-center text-gray-500">Loading tokens...</div>
+          <div className="flex justify-center items-center p-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+            <span className="ml-3 text-gray-500">Loading tokens...</span>
+          </div>
         ) : (
           <table className="w-full min-w-[640px]">
             <thead className="bg-gradient-to-r from-slate-400 via-slate-300 to-slate-200">
@@ -844,13 +1207,21 @@ const formatDateTime = (dateString) => {
                         {entry.isLoaded ? 'Loaded' : 'Pending'}
                       </span>
                     </td>
-                    <td className="py-3 px-4">
-                      <button
-                        onClick={() => handlePrint(entry)}
-                        className="bg-gradient-to-r from-green-400 to-green-600 hover:from-green-600 hover:to-green-400 text-white px-3 py-1 rounded-full flex items-center justify-center transition duration-300 transform hover:scale-105"
-                      >
-                        Print
-                      </button>
+                    <td className="py-3 px-4 whitespace-nowrap">
+                      <div className="flex space-x-2">
+                        <button
+                          onClick={() => handlePrint(entry)}
+                          className="bg-gradient-to-r from-green-400 to-green-600 hover:from-green-600 hover:to-green-400 text-white px-3 py-1 rounded-full flex items-center justify-center transition duration-300 transform hover:scale-105"
+                        >
+                          A4 Print
+                        </button>
+                        <button
+                          onClick={() => handleReceiptPrint(entry)}
+                          className="bg-gradient-to-r from-blue-400 to-blue-600 hover:from-blue-600 hover:to-blue-400 text-white px-3 py-1 rounded-full flex items-center justify-center transition duration-300 transform hover:scale-105"
+                        >
+                          Receipt
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))

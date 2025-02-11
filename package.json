@@ -5,10 +5,11 @@
   "scripts": {
     "start": "concurrently \"npm run server\" \"npm run client\"",
     "server": "cd backend && npm run start:dev",
-    "build":"npm install && npm install --prefix frontend && npm install --prefix backend && npm run build ",
+    "build": "npm install && npm install --prefix frontend && npm install --prefix backend && npm run build ",
     "client": "cd frontend && npm run dev"
   },
   "dependencies": {
+    "qrcode.react": "^4.2.0",
     "styled-components": "^6.1.14"
   }
 }
