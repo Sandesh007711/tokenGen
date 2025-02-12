@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import DatePicker from 'react-datepicker';
 import { FaTimes, FaSpinner } from 'react-icons/fa';
+import DataTable from 'react-data-table-component';
 import "react-datepicker/dist/react-datepicker.css";
 
 /**
@@ -90,26 +91,15 @@ const Update_Token_list = () => {
         });
 
         const result = await response.json();
-        console.log('Users API Response:', result); // Debug log
 
         if (!response.ok) {
           throw new Error(result.message || 'Failed to fetch users');
         }
 
-        // Check the actual structure of your API response
-        if (result.data) {
-          console.log('Users data:', result.data); // Debug log
-          // Assuming the API returns an array of users directly or nested
-          const userData = Array.isArray(result.data) ? result.data : result.data.users;
-          if (Array.isArray(userData)) {
-            setUsers(userData);
-          } else {
-            console.error('Unexpected users data structure:', userData);
-            showError('Invalid user data structure');
-          }
+        if (result.status === 'success' && Array.isArray(result.data)) {
+          setUsers(result.data);
         } else {
-          console.error('No data in response:', result);
-          showError('No user data received');
+          throw new Error('Invalid data format received');
         }
       } catch (error) {
         console.error('Fetch users error:', error);
@@ -186,6 +176,94 @@ const Update_Token_list = () => {
   const isDataFiltered = () => {
     return filteredData.length !== tokens.length || 
            JSON.stringify(filteredData) !== JSON.stringify(tokens);
+  };
+
+  // Add this after your existing state declarations
+  const columns = [
+    {
+      name: 'Token No',
+      selector: row => row.tokenNo,
+      sortable: true,
+    },
+    {
+      name: 'Driver Name',
+      selector: row => row.driverName,
+      sortable: true,
+    },
+    {
+      name: 'Mobile No',
+      selector: row => row.driverMobileNo,
+      sortable: true,
+    },
+    {
+      name: 'Vehicle No',
+      selector: row => row.vehicleNo,
+      sortable: true,
+    },
+    {
+      name: 'Vehicle Type',
+      selector: row => row.vehicleType,
+      sortable: true,
+    },
+    {
+      name: 'Place',
+      selector: row => row.place,
+      sortable: true,
+    },
+    {
+      name: 'Quantity',
+      selector: row => row.quantity,
+      sortable: true,
+    },
+    {
+      name: 'Route',
+      selector: row => row.route,
+      sortable: true,
+    },
+    {
+      name: 'Challan Pin',
+      selector: row => row.challanPin,
+      sortable: true,
+    },
+    {
+      name: 'Username',
+      selector: row => row.userId?.username,
+      sortable: true,
+    },
+    {
+      name: 'Created At',
+      selector: row => new Date(row.createdAt).toLocaleString('en-US', {
+        dateStyle: 'medium',
+        timeStyle: 'medium'
+      }),
+      sortable: true,
+    },
+  ];
+
+  // Add custom styles for DataTable
+  const customStyles = {
+    headRow: {
+      style: {
+        backgroundColor: '#f1f5f9',
+        borderRadius: '0.5rem 0.5rem 0 0',
+      },
+    },
+    headCells: {
+      style: {
+        fontSize: '0.95rem',
+        fontWeight: '600',
+        padding: '1rem',
+      },
+    },
+    rows: {
+      style: {
+        fontSize: '0.875rem',
+        padding: '0.5rem 1rem',
+        '&:hover': {
+          backgroundColor: '#f8fafc',
+        },
+      },
+    },
   };
 
   return (
@@ -276,7 +354,7 @@ const Update_Token_list = () => {
             {users && users.length > 0 ? (
               users.map((user) => (
                 <option key={user._id} value={user.username}>
-                  {user.username || user.name || 'Unnamed User'}
+                  {user.username} ({user.route})
                 </option>
               ))
             ) : (
@@ -304,63 +382,28 @@ const Update_Token_list = () => {
       </div>
 
       {/* Updated Table Section */}
-      <div className="bg-white rounded-lg shadow-lg overflow-x-auto">
-        <table className="w-full">
-          <thead className="bg-gradient-to-r from-slate-400 via-slate-300 to-slate-200">
-            <tr>
-              <th className="py-3 px-4 text-left font-semibold">Token No</th>
-              <th className="py-3 px-4 text-left font-semibold">Driver Name</th>
-              <th className="py-3 px-4 text-left font-semibold">Mobile No</th>
-              <th className="py-3 px-4 text-left font-semibold">Vehicle No</th>
-              <th className="py-3 px-4 text-left font-semibold">Vehicle Type</th>
-              <th className="py-3 px-4 text-left font-semibold">Place</th>
-              <th className="py-3 px-4 text-left font-semibold">Quantity</th>
-              <th className="py-3 px-4 text-left font-semibold">Route</th>
-              <th className="py-3 px-4 text-left font-semibold">Challan Pin</th>
-              <th className="py-3 px-4 text-left font-semibold">Username</th>
-              <th className="py-3 px-4 text-left font-semibold">Created At</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200">
-            {loading ? (
-              <tr>
-                <td colSpan="11" className="py-8 text-center text-gray-500 text-lg">
-                  <div className="flex items-center justify-center gap-2">
-                    <FaSpinner className="animate-spin text-2xl" />
-                    Loading data...
-                  </div>
-                </td>
-              </tr>
-            ) : filteredData.length === 0 ? (
-              <tr>
-                <td colSpan="11" className="py-8 text-center text-gray-500 text-lg">
-                  No data available
-                </td>
-              </tr>
-            ) : (
-              filteredData.map((item) => (
-                <tr key={item._id} className="hover:bg-gray-50 transition duration-200">
-                  <td className="py-3 px-4">{item.tokenNo}</td>
-                  <td className="py-3 px-4">{item.driverName}</td>
-                  <td className="py-3 px-4">{item.driverMobileNo}</td>
-                  <td className="py-3 px-4">{item.vehicleNo}</td>
-                  <td className="py-3 px-4">{item.vehicleType}</td>
-                  <td className="py-3 px-4">{item.place}</td>
-                  <td className="py-3 px-4">{item.quantity}</td>
-                  <td className="py-3 px-4">{item.route}</td>
-                  <td className="py-3 px-4">{item.challanPin}</td>
-                  <td className="py-3 px-4">{item.userId?.username}</td>
-                  <td className="py-3 px-4">
-                    {new Date(item.createdAt).toLocaleString('en-US', {
-                      dateStyle: 'medium',
-                      timeStyle: 'medium'
-                    })}
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+      <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+        <DataTable
+          columns={columns}
+          data={filteredData}
+          pagination
+          progressPending={loading}
+          progressComponent={
+            <div className="flex items-center justify-center gap-2 py-8">
+              <FaSpinner className="animate-spin text-2xl" />
+              <span>Loading data...</span>
+            </div>
+          }
+          customStyles={customStyles}
+          noDataComponent={
+            <div className="py-8 text-center text-gray-500 text-lg">
+              No data available
+            </div>
+          }
+          responsive
+          highlightOnHover
+          pointerOnHover
+        />
       </div>
     </div>
   );

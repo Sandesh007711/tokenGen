@@ -7,20 +7,18 @@ const bcrypt = require('bcryptjs');
 
 // get all users
 exports.getAllUsers = catchAsync(async (req, res) => {
+    const totalCount = await User.countDocuments({role: 'operator'});
     const features = new APIfeatures(User.find({role: 'operator'}), req.query)
-    .filter()
-    .sort()
-    .limitingFields()
-    .paginate();
+                    .sort()
+                    .paginate()
 
-    const users = await features.query
+    const data = await features.query
 
     res.status(200).json({
         status: 'success',
         message: 'Users fetched succesfully',
-        data: {
-            users
-        }
+        data,
+        totalCount
     })
 });
 

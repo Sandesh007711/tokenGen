@@ -10,21 +10,20 @@ import "react-datepicker/dist/react-datepicker.css";
  * Features: Date range selection, user filtering, and tabular display of loaded token data
  */
 const Loaded_list = () => {
-  // Add new state for filtering status
+  // Remove route-related states
   const [isFiltered, setIsFiltered] = useState(false);
-  // State Management
   const [fromDate, setFromDate] = useState(new Date());
   const [toDate, setToDate] = useState(new Date());
   const [filteredData, setFilteredData] = useState([]);
   const [errorPopup, setErrorPopup] = useState({ show: false, message: '' });
   const [showConfirm, setShowConfirm] = useState(false);
   const [successPopup, setSuccessPopup] = useState({ show: false, message: '' });
-  const [routes, setRoutes] = useState(['dks']);
-  const [selectedRoute, setSelectedRoute] = useState('');
   const [perPage, setPerPage] = useState(10);
   const [totalRows, setTotalRows] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [isFullScreen, setIsFullScreen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState('');
+  const [users, setUsers] = useState([]);
 
   const getAuthHeaders = () => {
     const token = localStorage.getItem('token'); // Changed from 'authToken' to 'token'
@@ -38,6 +37,7 @@ const Loaded_list = () => {
     };
   };
 
+  // Simplify fetchUsers to only set users
   const fetchUsers = async () => {
     try {
       console.log('Fetching users...');
@@ -52,13 +52,8 @@ const Loaded_list = () => {
       const data = await response.json();
       console.log('Raw API response:', data);
 
-      if (data.status === 'success' && data.data && data.data.users) {
-        const usersArray = data.data.users;
-        
-        // Only extract and set routes
-        const uniqueRoutes = [...new Set(usersArray.map(user => user.route).filter(Boolean))];
-        setRoutes(uniqueRoutes);
-        console.log('Processed routes:', uniqueRoutes);
+      if (data.status === 'success' && Array.isArray(data.data)) {
+        setUsers(data.data);
       } else {
         console.error('Invalid users data structure:', data);
         showError('Invalid users data format');
@@ -95,7 +90,7 @@ const Loaded_list = () => {
     }
   };
 
-  // Modified fetchTokenData function
+  // Update fetchTokenData to remove route filtering
   const fetchTokenData = async () => {
     try {
       const headers = getAuthHeaders();
@@ -111,9 +106,9 @@ const Loaded_list = () => {
       if (data.status === 'success' && Array.isArray(data.data)) {
         let tokens = data.data;
 
-        // Add route filter
-        if (selectedRoute && selectedRoute !== '') {
-          tokens = tokens.filter(token => token.route === selectedRoute);
+        // Apply user filter
+        if (selectedUser) {
+          tokens = tokens.filter(token => token.userId?.username === selectedUser);
         }
 
         // Apply date filter if dates are valid
@@ -165,11 +160,11 @@ const Loaded_list = () => {
     setShowConfirm(true);
   };
 
-  // Add handleShowFullData function
+  // Update handleShowFullData to remove route reset
   const handleShowFullData = () => {
     setFromDate(null);
     setToDate(null);
-    setSelectedRoute('');
+    setSelectedUser('');
     setIsFiltered(false);
     loadInitialData();
   };
@@ -238,8 +233,8 @@ const Loaded_list = () => {
       sortable: true,
     },
     {
-      name: 'Created At',
-      selector: row => new Date(row.createdAt).toLocaleString(),
+      name: 'Loaded At',
+      selector: row => row.loadedAt ? new Date(row.loadedAt).toLocaleString() : 'Not Loaded',
       sortable: true,
     },
   ];
@@ -339,14 +334,14 @@ const Loaded_list = () => {
           />
 
           <select
-            value={selectedRoute}
-            onChange={(e) => setSelectedRoute(e.target.value)}
+            value={selectedUser}
+            onChange={(e) => setSelectedUser(e.target.value)}
             className="px-4 py-3 bg-gray-900 text-gray-300 rounded-lg border border-gray-700 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 transition-all duration-300 min-w-[200px]"
           >
-            <option value="">Select Route</option>
-            {routes.map((route) => (
-              <option key={route} value={route}>
-                {route}
+            <option value="">Select User</option>
+            {users.map((user) => (
+              <option key={user._id} value={user.username}>
+                {user.username} ({user.route})
               </option>
             ))}
           </select>

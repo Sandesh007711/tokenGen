@@ -204,7 +204,7 @@ const Content = () => {
     }
   };
 
-  // Fetch operators data when component mounts
+  // Update fetchOperators to handle the new format
   useEffect(() => {
     const fetchOperators = async () => {
       setLoading(true);
@@ -220,22 +220,26 @@ const Content = () => {
           throw new Error('Failed to fetch operators');
         }
 
-        const json = await response.json();
-        // Filter only operator users and include their _id
-        const operatorData = json.data.users.filter(user => user.role === 'operator');
-        
-        const formattedOperators = operatorData.map(op => ({
-          operator: op.username,
-          operatorId: op._id, // Add this line to store the operator's ID
-          totalEntries: op.tokenData.totalTokens,
-          dailyTokens: op.tokenData.dailyTokens.count,
-          route: op.route,
-          latestDate: new Date(op.tokenData.dailyTokens.date).toLocaleDateString()
-        }));
+        const result = await response.json();
+        if (result.status === 'success' && result.data) {
+          const operatorData = result.data.filter(user => user.role === 'operator');
+          
+          const formattedOperators = operatorData.map(op => ({
+            operator: op.username,
+            operatorId: op._id,
+            totalEntries: op.tokenData.totalTokens,
+            dailyTokens: op.tokenData.dailyTokens.count,
+            route: op.route,
+            latestDate: op.tokenData.dailyTokens.date ? 
+              new Date(op.tokenData.dailyTokens.date).toLocaleDateString() : 
+              'No activity'
+          }));
 
-        setOperators(formattedOperators);
+          setOperators(formattedOperators);
+        }
       } catch (error) {
         console.error('Error fetching operators:', error);
+        showError('Failed to fetch operators');
       } finally {
         setLoading(false);
       }
@@ -287,38 +291,32 @@ const Content = () => {
     fetchVehicleTypes();
   }, []);
 
-  // Add new useEffect for fetching routes
+  // Update fetchRoutes to handle the new format
   useEffect(() => {
     const fetchRoutes = async () => {
       try {
         const token = localStorage.getItem('token');
-        
-        if (!token) {
-          throw new Error('No authentication token found');
-        }
+        if (!token) throw new Error('No authentication token found');
 
         const response = await fetch('http://localhost:8000/api/v1/users', {
-          method: 'GET',
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
           }
         });
 
-        if (response.status === 401) {
-          throw new Error('Unauthorized access');
-        }
-
-        if (!response.ok) {
-          throw new Error('Failed to fetch routes');
-        }
+        if (!response.ok) throw new Error('Failed to fetch routes');
 
         const result = await response.json();
-        
-        if (result.status === 'success' && result.data && result.data.users) {
-          setRoutes(result.data.users);
-        } else {
-          throw new Error('Invalid response format');
+        if (result.status === 'success' && result.data) {
+          // Extract unique routes from users
+          const uniqueRoutes = [...new Set(
+            result.data
+              .filter(user => user.route && user.role === 'operator')
+              .map(user => user.route)
+          )];
+          
+          setRoutes(uniqueRoutes.map(route => ({ route })));
         }
       } catch (error) {
         console.error('Error fetching routes:', error);
@@ -329,34 +327,35 @@ const Content = () => {
     fetchRoutes();
   }, []);
 
-  // Add useEffect for fetching users
+  // Update fetchUsers to handle the new format
   useEffect(() => {
     const fetchUsers = async () => {
       try {
         const token = localStorage.getItem('token');
-        
-        if (!token) {
-          throw new Error('No authentication token found');
-        }
+        if (!token) throw new Error('No authentication token found');
 
         const response = await fetch('http://localhost:8000/api/v1/users', {
-          method: 'GET',
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
           }
         });
 
-        if (!response.ok) {
-          throw new Error('Failed to fetch users');
-        }
+        if (!response.ok) throw new Error('Failed to fetch users');
 
         const result = await response.json();
-        
-        if (result.status === 'success' && result.data && result.data.users) {
-          setUsers(result.data.users);
-        } else {
-          throw new Error('Invalid response format');
+        if (result.status === 'success' && result.data) {
+          // Map users data to required format
+          const formattedUsers = result.data
+            .filter(user => user.role === 'operator')
+            .map(user => ({
+              _id: user._id,
+              username: user.username,
+              route: user.route,
+              role: user.role
+            }));
+          
+          setUsers(formattedUsers);
         }
       } catch (error) {
         console.error('Error fetching users:', error);
@@ -421,10 +420,12 @@ const Content = () => {
                     required
                   >
                     <option value="">Select User</option>
-                    {Array.isArray(users) && users.map((user) => (
-                      <option key={user._id} value={user._id}>
-                        {user.username}
-                      </option>
+                    {Array.isArray(users) && users
+                      .filter(user => user.role === 'operator') // Only show operators in the dropdown
+                      .map((user) => (
+                        <option key={user._id} value={user._id}>
+                          {user.username} - {user.route}
+                        </option>
                     ))}
                   </select>
                 </div>

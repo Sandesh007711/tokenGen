@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import DatePicker from 'react-datepicker';
 import { FaTimes } from 'react-icons/fa';
 import "react-datepicker/dist/react-datepicker.css";
+import DataTable from 'react-data-table-component';
 
 /**
  * DeleteTokenList Component
@@ -24,6 +25,7 @@ const Delete_Token_list = () => {
     const fetchUsers = async () => {
       try {
         const token = localStorage.getItem('token');
+        
         if (!token) {
           throw new Error('No authentication token found');
         }
@@ -45,13 +47,11 @@ const Delete_Token_list = () => {
         }
 
         const result = await response.json();
-        console.log('API Response:', result);
-
-        // Access the users array from the response structure
-        const usersList = result.data.users || [];
-        console.log('Processed users:', usersList);
-        
-        setUsers(usersList);
+        if (result.status === 'success' && Array.isArray(result.data)) {
+          setUsers(result.data);
+        } else {
+          throw new Error('Invalid data format received');
+        }
       } catch (error) {
         console.error('Fetch error:', error);
         showError(error.message);
@@ -189,6 +189,97 @@ const Delete_Token_list = () => {
     setShowConfirm(false);
   };
 
+  // Add DataTable custom styles
+  const customStyles = {
+    table: {
+      style: {
+        backgroundColor: 'white',
+      },
+    },
+    headRow: {
+      style: {
+        backgroundColor: '#f1f5f9',
+        borderBottom: '2px solid #e2e8f0',
+      },
+    },
+    headCells: {
+      style: {
+        fontSize: '0.875rem',
+        fontWeight: '600',
+        padding: '1rem',
+      },
+    },
+    cells: {
+      style: {
+        padding: '1rem',
+      },
+    },
+  };
+
+  // Define columns for DataTable
+  const columns = [
+    {
+      name: 'Driver Name',
+      selector: row => row.name,
+      sortable: true,
+    },
+    {
+      name: 'Mobile No',
+      selector: row => row.mobileNo,
+      sortable: true,
+    },
+    {
+      name: 'Place',
+      selector: row => row.place,
+      sortable: true,
+    },
+    {
+      name: 'Quantity',
+      selector: row => row.quantity,
+      sortable: true,
+    },
+    {
+      name: 'Route',
+      selector: row => row.route,
+      sortable: true,
+    },
+    {
+      name: 'Token No',
+      selector: row => row.tokenNo,
+      sortable: true,
+    },
+    {
+      name: 'Vehicle No',
+      selector: row => row.vehicleNo,
+      sortable: true,
+    },
+    {
+      name: 'Challan Pin',
+      selector: row => row.challanPin,
+      sortable: true,
+    },
+    {
+      name: 'Username',
+      selector: row => row.username,
+      sortable: true,
+    },
+    {
+      name: 'Created At',
+      selector: row => row.createdAt,
+      sortable: true,
+    },
+    {
+      name: 'Deleted At',
+      selector: row => row.deletedAt,
+      sortable: true,
+    },
+    {
+      name: 'Updated By',
+      selector: row => row.updatedBy,
+      sortable: true,
+    },
+  ];
+
   return (
     <div className="p-7 max-w-7xl mx-auto">
       {/* Add Confirmation Popup */}
@@ -254,7 +345,7 @@ const Delete_Token_list = () => {
             <option value="">Select User</option>
             {Array.isArray(users) && users.map((user) => (
               <option key={user._id} value={user.username}>
-                {user.username}
+                {user.username} ({user.route})
               </option>
             ))}
           </select>
@@ -268,58 +359,28 @@ const Delete_Token_list = () => {
         </form>
       </div>
 
-      {/* Table Section */}
+      {/* Replace Table Section with DataTable */}
       <div className="bg-white rounded-lg shadow-lg overflow-hidden">
-        <table className="w-full">
-          <thead className="bg-gradient-to-r from-slate-400 via-slate-300 to-slate-200">
-            <tr>
-              <th className="py-3 px-4 text-left font-semibold">Driver Name</th>
-              <th className="py-3 px-4 text-left font-semibold">Mobile No</th>
-              <th className="py-3 px-4 text-left font-semibold">Place</th>
-              <th className="py-3 px-4 text-left font-semibold">Quantity</th>
-              <th className="py-3 px-4 text-left font-semibold">Route</th>
-              <th className="py-3 px-4 text-left font-semibold">Token No</th>
-              <th className="py-3 px-4 text-left font-semibold">Vehicle No</th>
-              <th className="py-3 px-4 text-left font-semibold">Challan Pin</th>
-              <th className="py-3 px-4 text-left font-semibold">Username</th>
-              <th className="py-3 px-4 text-left font-semibold">Created At</th>
-              <th className="py-3 px-4 text-left font-semibold">Deleted At</th>
-              <th className="py-3 px-4 text-left font-semibold">Updated By</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200">
-            {isLoading ? (
-              <tr>
-                <td colSpan="12" className="py-8 text-center text-gray-500 text-lg">
-                  Loading...
-                </td>
-              </tr>
-            ) : filteredData.length === 0 ? (
-              <tr>
-                <td colSpan="12" className="py-8 text-center text-gray-500 text-lg">
-                  No data available
-                </td>
-              </tr>
-            ) : (
-              filteredData.map((item, index) => (
-                <tr key={index} className="hover:bg-gray-50 transition duration-200">
-                  <td className="py-3 px-4">{item.name}</td>
-                  <td className="py-3 px-4">{item.mobileNo}</td>
-                  <td className="py-3 px-4">{item.place}</td>
-                  <td className="py-3 px-4">{item.quantity}</td>
-                  <td className="py-3 px-4">{item.route}</td>
-                  <td className="py-3 px-4">{item.tokenNo}</td>
-                  <td className="py-3 px-4">{item.vehicleNo}</td>
-                  <td className="py-3 px-4">{item.challanPin}</td>
-                  <td className="py-3 px-4">{item.username}</td>
-                  <td className="py-3 px-4">{item.createdAt}</td>
-                  <td className="py-3 px-4">{item.deletedAt}</td>
-                  <td className="py-3 px-4">{item.updatedBy}</td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+        <DataTable
+          columns={columns}
+          data={filteredData}
+          customStyles={customStyles}
+          pagination
+          responsive
+          highlightOnHover
+          pointerOnHover
+          progressPending={isLoading}
+          progressComponent={
+            <div className="py-8 text-center text-gray-500 text-lg">
+              Loading...
+            </div>
+          }
+          noDataComponent={
+            <div className="py-8 text-center text-gray-500 text-lg">
+              No data available
+            </div>
+          }
+        />
       </div>
     </div>
   );
