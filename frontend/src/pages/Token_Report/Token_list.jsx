@@ -71,11 +71,11 @@ const Token_list = () => {
         const result = await response.json();
         console.log('API Response:', result);
 
-        // Access the users array from the response structure
-        const usersList = result.data.users || [];
-        console.log('Processed users:', usersList);
-        
-        setUsers(usersList);
+        if (result.status === 'success' && Array.isArray(result.data)) {
+          setUsers(result.data);
+        } else {
+          throw new Error('Invalid data format received');
+        }
       } catch (error) {
         console.error('Fetch error:', error);
         showError(error.message);
@@ -733,7 +733,9 @@ const Token_list = () => {
             >
               <option value="">Select User</option>
               {users.map((user) => (
-                <option key={user._id} value={user.username}>{user.username}</option>
+                <option key={user._id} value={user.username}>
+                  {user.username} ({user.route})
+                </option>
               ))}
             </select>
           </div>

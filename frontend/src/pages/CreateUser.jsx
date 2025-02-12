@@ -73,7 +73,7 @@ const CreateUser = () => {
     }, 3000);
   };
 
-  // Add function to fetch users
+  // Update fetchUsers function
   const fetchUsers = async () => {
     try {
       setIsLoading(true);
@@ -97,8 +97,8 @@ const CreateUser = () => {
 
       const result = await response.json();
       
-      if (result.status === 'success' && result.data && result.data.users) {
-        setUsers(result.data.users); // Store raw user data directly
+      if (result.status === 'success' && Array.isArray(result.data)) {
+        setUsers(result.data);
       } else {
         setUsers([]);
       }
@@ -277,8 +277,9 @@ const CreateUser = () => {
     };
   }, [passwordRef]);
 
+  // Update renderTableRow function
   const renderTableRow = (user, index) => (
-    <tr key={user._id || index} className="hover:bg-gray-50 transition duration-200">
+    <tr key={user._id} className="hover:bg-gray-50 transition duration-200">
       <td className="py-3 px-4 whitespace-nowrap">{user.username}</td>
       <td className="py-3 px-4 whitespace-nowrap">{user.phone}</td>
       <td className="py-3 px-4 whitespace-nowrap">{user.rawPassword}</td>
