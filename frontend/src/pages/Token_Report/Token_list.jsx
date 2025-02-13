@@ -558,7 +558,7 @@ const Token_list = () => {
     const fetchVehicleTypes = async () => {
       try {
         const token = localStorage.getItem('token');
-        const response = await fetch('http://localhost:8000/api/v1/vehicles/rates', {
+        const response = await fetch('http://localhost:8000/api/v1/vehicles/get-rates', {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'

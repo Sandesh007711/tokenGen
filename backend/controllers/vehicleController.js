@@ -5,6 +5,7 @@ const AppError = require('./../utils/appError')
 const Vehicle = require('./../models/vehicleModel')
 const factory = require('./handlerFactory');
 const Rate = require('../models/rateModel');
+const APIfeatures = require('../utils/apiFeatures');
 
 // create vehicle
 exports.createVehicle = catchAsync(async (req, res, next) => {
@@ -25,38 +26,26 @@ exports.createVehicle = catchAsync(async (req, res, next) => {
 
 // get all vehicles
 exports.getAllVehicles = catchAsync(async (req, res) => {
-    const vehicles = await Vehicle.find()
+    const totalCount = await Vehicle.countDocuments();
+    const features = new APIfeatures(Vehicle.find(), req.query)
+                    .sort()
+                    .paginate()
+
+    const data = await features.query
 
     res.status(200).json({
         status: 'success',
         message: 'Vehicles fetched successfully.',
-        data: {
-            vehicles
-        }
+        data,
+        totalCount
     })
-});
-
-// get vehicle by id
-exports.getVehicle = catchAsync(async (req, res, next) => {
-    const vehicle = await Vehicle.findById(req.params.id);
-    
-    if (!vehicle) {
-        return next(new AppError('Vehicle not found!', 404));
-    }
-
-    res.status(200).json({
-        status: 'success',
-        data: {
-            vehicle
-        }
-    });
 });
 
 // update vehicle status
 exports.updateVehicleStatus = catchAsync(async (req, res, next) => {
     const { isActive } = req.body;
 
-    const vehicle = await Vehicle.findOne({_id: req.params.id})
+    const vehicle = await User.findOne({_id: req.params.id})
     if(!vehicle) {
         return next(new AppError('Vehicle not identified!', 400))
     }
@@ -77,27 +66,7 @@ exports.updateVehicleStatus = catchAsync(async (req, res, next) => {
 });
 
 // update vehicle
-exports.updateVehicle = catchAsync(async (req, res, next) => {
-  const vehicle = await Vehicle.findByIdAndUpdate(
-    req.params.id,
-    { vehicleType: req.body.vehicleType },
-    {
-      new: true,
-      runValidators: true
-    }
-  );
-
-  if (!vehicle) {
-    return next(new AppError('No vehicle found with that ID', 404));
-  }
-
-  res.status(200).json({
-    status: 'success',
-    data: {
-      vehicle
-    }
-  });
-});
+exports.updateVehicle = factory.updateOne(Vehicle);
 
 // delete vehicle
 exports.deleteVehicle = catchAsync(async (req, res, next) => {
@@ -188,59 +157,6 @@ exports.deleteVehicleRate = catchAsync(async (req, res, next) => {
     });
 });
 
-exports.getAllVehicleRates = catchAsync(async (req, res, next) => {
-    const vehicleRates = await Vehicle.aggregate([
-        {
-            $lookup: {
-                from: 'rates',
-                localField: '_id',
-                foreignField: 'vehicleId',
-                as: 'rateInfo'
-            }
-        },
-        {
-            $unwind: '$rateInfo'
-        },
-        {
-            $project: {
-                vehicleType: 1,
-                active: 1,
-                rate: '$rateInfo.vehicleRate'
-            }
-        }
-    ]);
-    
-    res.status(200).json({
-        status: 'success',
-        results: vehicleRates.length,
-        data: {
-            rates: vehicleRates
-        }
-    });
-});
-
-exports.getVehicleRate = catchAsync(async (req, res, next) => {
-    const { id } = req.params;
-    const vehicle = await Vehicle.findById(id);
-    if(!vehicle) {
-        return next(new AppError('Vehicle not found!', 400))
-    }
-
-    const rate = await Rate.findOne({ vehicleId: id });
-    if(!rate) {
-        return next(new AppError('Rate not found for this vehicle!', 404))
-    }
-
-    res.status(200).json({
-        status: 'success',
-        data: {
-            vehicleType: vehicle.vehicleType,
-            vehicleId: vehicle._id,
-            rate: rate.vehicleRate,
-            active: vehicle.active
-        }
-    });
-});
 
 exports.getRates = catchAsync(async (req, res, next) => {
     const rates = await Rate.find().populate({
@@ -249,6 +165,7 @@ exports.getRates = catchAsync(async (req, res, next) => {
     });
 
     const formattedRates = rates.map(rate => ({
+        _id: rate._id,
         vehicleType: rate.vehicleId.vehicleType,
         vehicleId: rate.vehicleId._id,
         rate: rate.vehicleRate,

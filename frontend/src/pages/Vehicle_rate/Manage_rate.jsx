@@ -45,22 +45,21 @@ const ManageRate = () => {
           }
         });
 
-        if (response.status === 401) {
-          throw new Error('Unauthorized access');
-        }
-
         if (!response.ok) {
           throw new Error('Failed to fetch vehicles');
         }
 
         const result = await response.json();
-        console.log('API Response:', result);
+        console.log('Raw vehicles data:', result); // Debug log
 
-        // Correctly access the vehicles array from the nested structure
-        const vehiclesList = result.data.vehicles || [];
-        console.log('Processed vehicles:', vehiclesList);
-        
-        setVehicles(vehiclesList);
+        // Access the vehicles array directly from result.data
+        if (result.status === 'success' && Array.isArray(result.data)) {
+          console.log('Setting vehicles:', result.data); // Debug log
+          setVehicles(result.data);
+        } else {
+          console.log('No vehicles found in response'); // Debug log
+          setVehicles([]);
+        }
         setFetchError(null);
       } catch (error) {
         console.error('Fetch error:', error);
@@ -92,7 +91,7 @@ const ManageRate = () => {
         throw new Error('No authentication token found');
       }
 
-      const response = await fetch('http://localhost:8000/api/v1/vehicles/rates', {
+      const response = await fetch('http://localhost:8000/api/v1/vehicles/get-rates', {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -116,7 +115,7 @@ const ManageRate = () => {
           id: rate._id,
           vehicleType: rate.vehicleType, // Direct access to vehicleType
           rate: rate.rate,               // Direct access to rate
-          vehicleId: rate._id
+          vehicleId: rate.vehicleId // Make sure this comes from the API response
         }));
 
         console.log('Formatted rates:', formattedRates);
@@ -182,12 +181,9 @@ const ManageRate = () => {
         throw new Error('Selected vehicle not found');
       }
 
-      // Determine if this is an update or new rate
-      const method = editingId ? 'PATCH' : 'POST';
-      
-      // Make API call with appropriate method
+      // Use the vehicle ID for the API call
       const response = await fetch(`http://localhost:8000/api/v1/vehicles/${selectedVehicleObj._id}/rate`, {
-        method,
+        method: editingId ? 'PATCH' : 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -250,10 +246,11 @@ const ManageRate = () => {
    * @param {string} item.vehicleId - The associated vehicle ID
    */
   const handleDelete = (item) => {
+    console.log('Delete item:', item); // Debug log
     setDeleteConfirm({ 
       show: true, 
       id: item.id,
-      vehicleId: item.vehicleId 
+      vehicleId: item.vehicleId || item.id // Fallback to item.id if vehicleId is not available
     });
   };
 
@@ -269,6 +266,9 @@ const ManageRate = () => {
         throw new Error('No authentication token found');
       }
 
+      console.log('Deleting rate with vehicleId:', deleteConfirm.vehicleId); // Debug log
+
+      // Add a forward slash between vehicleId and 'rate'
       const response = await fetch(`http://localhost:8000/api/v1/vehicles/${deleteConfirm.vehicleId}/rate`, {
         method: 'DELETE',
         headers: {
@@ -277,17 +277,20 @@ const ManageRate = () => {
         }
       });
 
+      if (response.status === 404) {
+        throw new Error('Vehicle rate not found');
+      }
+
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.message || 'Failed to delete rate');
       }
 
       // Update local state and UI
-      setRates(rates.filter(rate => rate.id !== deleteConfirm.id));
+      await fetchVehicleRates(); // Refresh the rates list after deletion
       setDeleteConfirm({ show: false, id: null, vehicleId: null });
       showSuccess('Rate deleted successfully!');
 
-      // Reset form if deleting currently edited item
       if (deleteConfirm.id === editingId) {
         resetForm();
       }
@@ -404,7 +407,11 @@ const ManageRate = () => {
           {/* Vehicle Type Dropdown */}
           <select
             value={selectedVehicle}
-            onChange={(e) => setSelectedVehicle(e.target.value)}
+            onChange={(e) => {
+              const selected = e.target.value;
+              console.log('Selected vehicle:', selected); // Debug log
+              setSelectedVehicle(selected);
+            }}
             className="px-4 py-3 bg-gray-900 text-gray-300 rounded-lg border border-gray-700 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 transition-all duration-300 min-w-[200px]"
             disabled={isLoading}
           >
@@ -412,14 +419,17 @@ const ManageRate = () => {
             {isLoading ? (
               <option value="" disabled>Loading vehicles...</option>
             ) : vehicles && vehicles.length > 0 ? (
-              vehicles.map(vehicle => (
-                <option 
-                  key={vehicle._id} 
-                  value={vehicle.vehicleType}
-                >
-                  {vehicle.vehicleType}
-                </option>
-              ))
+              vehicles.map(vehicle => {
+                console.log('Rendering vehicle:', vehicle); // Debug log
+                return (
+                  <option 
+                    key={vehicle._id} 
+                    value={vehicle.vehicleType}
+                  >
+                    {vehicle.vehicleType}
+                  </option>
+                );
+              })
             ) : (
               <option value="" disabled>No vehicles available</option>
             )}

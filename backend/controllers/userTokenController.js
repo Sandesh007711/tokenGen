@@ -102,7 +102,7 @@ exports.createToken = catchAsync(async (req, res, next) => {
 // get all printtokens
 exports.getAllTokens = catchAsync(async (req, res) => {
     const { role } = req.user;
-    const { updated, loaded, deleted } = req.query;
+    const { user, updated, loaded, deleted, dateFrom, dateTo } = req.query;
 
     let filter = {};
     if(role !== 'admin') {
@@ -110,41 +110,58 @@ exports.getAllTokens = catchAsync(async (req, res) => {
     }
 
     if(role === 'admin') {
+        if(user) {
+            filter.userId = user
+        }
+
         if(loaded) {
             filter.isLoaded = {}
             filter.isLoaded.$eq = true
-        }
-        if(updated) {
+
+            if(dateFrom && dateTo) {
+                filter.loadedAt = {}
+                filter.loadedAt.$gte = dateFrom
+                filter.loadedAt.$lte = dateTo
+            }
+        } else if (updated) {
             filter.updatedAt = {}
             filter.updatedAt.$ne = null
-        }
-        if(deleted) {
+
+            if(dateFrom && dateTo) {
+                filter.updatedAt.$gte = dateFrom
+                filter.updatedAt.$lte = dateTo
+            }
+        } else if (deleted) {
             filter.deletedAt = {}
             filter.deletedAt.$ne = null
+
+            if(dateFrom && dateTo) {
+                filter.deletedAt.$gte = dateFrom
+                filter.deletedAt.$lte = dateTo
+            }
+        } else {
+            if(dateFrom && dateTo) {
+                filter.createdAt = {}
+                filter.createdAt.$gte = dateFrom
+                filter.createdAt.$lte = dateTo
+            }
         }
+
+
     }
 
-    const data = await UserToken.find(filter)
-        .populate('userId', {_id: 0, 'username': 1})
-        // .populate('vehicleId', 'vehicleType')
-        // .lean()
+    const totalCount = await UserToken.countDocuments(filter);
+    const features = new APIfeatures(UserToken.find(filter).populate('userId', {_id: 0, 'username': 1}), req.query)
+                    .sort()
+                    .paginate()
 
-/*     const vehicleIds = userTokens.map(token => token.vehicleId._id);
-
-    const rates = await Rate.find({ vehicleId: { $in: vehicleIds } }).select('vehicleId vehicleRate').lean();
-
-    const data = userTokens.map(token => {
-        const rate = rates.find(rate => rate.vehicleId.toString() === token.vehicleId._id.toString());
-        return {
-            ...token,
-            vehicleRate: rate ? rate.vehicleRate : null
-        }
-    }) */
+    const data = await features.query
 
     res.status(200).json({
         status: 'success',
         message: 'Tokens fetched succesfully',
-        data
+        data,
+        totalCount
     })
 });
 
@@ -274,9 +291,10 @@ exports.exitToken = catchAsync(async (req, res, next) => {
         if(userId.toString() !== token.userId.toString())
             return next(new AppError('You don\'t have permission to perform this action', 401))
 
-
+    const today = new Date();
     token.isLoaded = isLoaded;
-    token.updatedAt = new Date(),
+    token.loadedAt = today;
+    token.updatedAt = today;
     token.updatedBy = req.user.username
 
     token.save()
@@ -288,12 +306,18 @@ exports.exitToken = catchAsync(async (req, res, next) => {
 });
 
 exports.getLoadedList = catchAsync(async (req, res, next) => {
-    const data = await UserToken.find({ isLoaded: { $eq: true } })
+    const totalCount = await UserToken.find({ isLoaded: { $eq: true } }).estimatedDocumentCount();
+    const features = new APIfeatures(UserToken.find({ isLoaded: { $eq: true } }), req.query)
+                    .sort()
+                    .paginate()
+
+    const data = await features.query
 
     res.status(200).json({
         status: 'success',
         message: 'Updated Tokens fetched succesfully',
-        data
+        data,
+        totalCount
     })
 });
 
