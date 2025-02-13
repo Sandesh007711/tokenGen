@@ -1033,8 +1033,8 @@ const formatDateTime = (dateString) => {
       </button>
 
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center pt-20">
-          <div className="bg-gradient-to-b from-gray-800 to-gray-900 rounded-2xl shadow-2xl p-6 w-[800px] max-h-[85vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center z-50 overflow-y-auto">
+          <div className="bg-gradient-to-b from-gray-800 to-gray-900 rounded-2xl shadow-2xl p-6 w-[800px] my-20 mx-auto">
             <h2 className="text-2xl font-bold text-gray-300 mb-4">Add New Token</h2>
             <form 
               onSubmit={handleSubmitClick} 

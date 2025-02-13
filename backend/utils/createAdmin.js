@@ -27,8 +27,8 @@ const importAdmin = async() => {
         
         const admin = {
             username: 'Super Admin',
-            password: 'Router@123',
-            phone: 9334466191,
+            password: 'admin@123',
+            phone: 9508694942,
             role: 'admin',
             route: 'Sadmin'
         }
