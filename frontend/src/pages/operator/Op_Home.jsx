@@ -3,6 +3,7 @@ import { FaCheckCircle, FaTimes } from 'react-icons/fa';
 import { QRCodeSVG } from 'qrcode.react';
 import ReactDOMServer from 'react-dom/server';
 import axios from 'axios';
+import DataTable from 'react-data-table-component';
 
 const Op_Home = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -28,6 +29,9 @@ const Op_Home = () => {
   const [apiTokens, setApiTokens] = useState([]);
   const [loading, setLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [perPage, setPerPage] = useState(20);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalRows, setTotalRows] = useState(0);
 
   const generateRandomToken = () => {
     return Math.floor(100000 + Math.random() * 900000).toString();
@@ -167,61 +171,84 @@ const Op_Home = () => {
     fetchVehicleRates();
   }, []);
 
-  useEffect(() => {
-    const fetchUserTokens = async () => {
-      setLoading(true);
-      try {
-        const userStr = localStorage.getItem('user');
-        if (!userStr) {
-          showError('User not authenticated');
-          return;
-        }
-
-        const userData = JSON.parse(userStr);
-        const authToken = userData.token;
-        const currentUser = userData.data || userData.user || userData;
-
-        if (!currentUser) {
-          console.error('Invalid user data structure:', userData);
-          showError('Invalid user data structure');
-          return;
-        }
-
-        console.log('Current user for token fetch:', currentUser);
-
-        const response = await axios.get('http://localhost:8000/api/v1/tokens', {
-          headers: {
-            'Authorization': `Bearer ${authToken}`,
-            'Content-Type': 'application/json'
-          }
-        });
-
-        console.log('Tokens Response:', response.data);
-
-        if (response.data?.status === 'success' && Array.isArray(response.data.data)) {
-          // Filter and process tokens for current user
-          const userTokens = response.data.data
-            .filter(token => token.userId?.username === currentUser.username)
-            .map(token => ({
-              ...token,
-              displayVehicleType: token.vehicleId?.vehicleType || token.vehicleType || 'N/A',
-              displayVehicleRate: token.vehicleRate || 'N/A'
-            }));
-
-          console.log('Processed user tokens:', userTokens);
-          setApiTokens(userTokens);
-          setEntries(userTokens);
-        }
-      } catch (error) {
-        console.error('Error fetching tokens:', error);
-        showError(error.response?.data?.message || 'Error loading tokens');
-      } finally {
-        setLoading(false);
+  const fetchUserTokens = async (page = currentPage) => {
+    setLoading(true);
+    try {
+      const userStr = localStorage.getItem('user');
+      if (!userStr) {
+        showError('User not authenticated');
+        return;
       }
-    };
 
-    fetchUserTokens();
-  }, []); // Run once on component mount
+      const userData = JSON.parse(userStr);
+      const authToken = userData.token;
+      const currentUser = userData.data || userData.user || userData;
+
+      if (!currentUser) {
+        console.error('Invalid user data structure:', userData);
+        showError('Invalid user data structure');
+        return;
+      }
+
+      const queryParams = new URLSearchParams({
+        page: page,
+        limit: perPage,
+        username: currentUser.username
+      });
+
+      const response = await axios.get(`http://localhost:8000/api/v1/tokens?${queryParams}`, {
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.data?.status === 'success') {
+        const processedTokens = response.data.data.map(token => ({
+          ...token,
+          displayVehicleType: token.vehicleId?.vehicleType || token.vehicleType || 'N/A',
+          displayVehicleRate: token.vehicleRate || 'N/A'
+        }));
+
+        setApiTokens(processedTokens);
+        setEntries(processedTokens);
+        setTotalRows(response.data.totalCount || 0);
+        setCurrentPage(page);
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Error fetching tokens:', error);
+      showError(error.response?.data?.message || 'Error loading tokens');
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const initializePage = async () => {
+      await fetchUserTokens(currentPage);
+    };
+    initializePage();
+  }, [perPage]); // Remove currentPage dependency
+
+  const handlePageChange = async (page) => {
+    console.log('Changing to page:', page);
+    const success = await fetchUserTokens(page);
+    if (!success) {
+      showError('Failed to load page data');
+    }
+  };
+
+  const handlePerPageChange = async (newPerPage, page) => {
+    console.log('Changing rows per page:', { newPerPage, page });
+    setPerPage(newPerPage);
+    const success = await fetchUserTokens(page);
+    if (!success) {
+      showError('Failed to update rows per page');
+    }
+  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -851,6 +878,122 @@ const formatDateTime = (dateString) => {
   }
 };
 
+  const columns = [
+    {
+      name: 'Sr No.',
+      cell: (row, index) => ((currentPage - 1) * perPage) + index + 1,
+      width: '70px',
+    },
+    {
+      name: 'Token No.',
+      selector: row => row.tokenNo || 'N/A',
+      sortable: true,
+    },
+    {
+      name: 'Date/Time',
+      selector: row => formatDateTime(row.createdAt),
+      sortable: true,
+    },
+    {
+      name: 'Driver Name',
+      selector: row => row.driverName,
+      sortable: true,
+    },
+    {
+      name: 'Driver Mobile',
+      selector: row => row.driverMobileNo,
+      sortable: true,
+    },
+    {
+      name: 'Vehicle Type',
+      selector: row => row.displayVehicleType,
+      sortable: true,
+    },
+    {
+      name: 'Vehicle Rate',
+      selector: row => row.displayVehicleRate,
+      sortable: true,
+    },
+    {
+      name: 'Vehicle No',
+      selector: row => row.vehicleNo,
+      sortable: true,
+    },
+    {
+      name: 'Place',
+      selector: row => row.place || 'N/A',
+      sortable: true,
+    },
+    {
+      name: 'Route',
+      selector: row => row.route || 'N/A',
+      sortable: true,
+    },
+    {
+      name: 'Challan Pin',
+      selector: row => row.challanPin || 'N/A',
+      sortable: true,
+    },
+    {
+      name: 'Quantity',
+      selector: row => row.quantity,
+      sortable: true,
+    },
+    {
+      name: 'Status',
+      cell: row => (
+        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+          row.isLoaded ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+        }`}>
+          {row.isLoaded ? 'Loaded' : 'Pending'}
+        </span>
+      ),
+    },
+    {
+      name: 'Actions',
+      cell: row => (
+        <div className="flex flex-col gap-2 py-2">
+          <button
+            onClick={() => handlePrint(row)}
+            className="bg-gradient-to-r from-green-400 to-green-600 hover:from-green-600 hover:to-green-400 text-white px-3 py-1 rounded-full flex items-center justify-center transition duration-300 transform hover:scale-105"
+          >
+            A4 Print
+          </button>
+          <button
+            onClick={() => handleReceiptPrint(row)}
+            className="bg-gradient-to-r from-blue-400 to-blue-600 hover:from-blue-600 hover:to-blue-400 text-white px-3 py-1 rounded-full flex items-center justify-center transition duration-300 transform hover:scale-105"
+          >
+            Receipt
+          </button>
+        </div>
+      ),
+      width: '120px', // Add fixed width for better alignment
+    },
+  ];
+
+  const customStyles = {
+    headRow: {
+      style: {
+        backgroundColor: '#f1f5f9',
+        fontWeight: 'bold',
+      },
+    },
+    rows: {
+      style: {
+        minHeight: '60px',
+        '&:hover': {
+          backgroundColor: '#f8fafc',
+        },
+      },
+    },
+    pagination: {
+      style: {
+        border: 'none',
+        backgroundColor: '#f8fafc',
+      },
+    },
+  };
+
   return (
     <div className="p-7 max-w-7xl mx-auto">
       {successPopup.show && (
@@ -1149,86 +1292,30 @@ const formatDateTime = (dateString) => {
       )}
 
       <div className="bg-white rounded-lg shadow-lg overflow-x-auto mt-6">
-        {loading ? (
-          <div className="flex justify-center items-center p-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
-            <span className="ml-3 text-gray-500">Loading tokens...</span>
-          </div>
-        ) : (
-          <table className="w-full min-w-[640px]">
-            <thead className="bg-gradient-to-r from-slate-400 via-slate-300 to-slate-200">
-              <tr>
-                <th className="py-3 px-4 text-left font-semibold">Sr No.</th>
-                <th className="py-3 px-4 text-left font-semibold">Token No.</th>
-                <th className="py-3 px-4 text-left font-semibold">Date/Time</th>
-                <th className="py-3 px-4 text-left font-semibold">Driver Name</th>
-                <th className="py-3 px-4 text-left font-semibold">Driver Mobile</th>
-                <th className="py-3 px-4 text-left font-semibold">Vehicle Type</th>
-                <th className="py-3 px-4 text-left font-semibold">Vehicle Rate</th>
-                <th className="py-3 px-4 text-left font-semibold">Vehicle No</th>
-                <th className="py-3 px-4 text-left font-semibold">Place</th>
-                <th className="py-3 px-4 text-left font-semibold">Route</th>
-                <th className="py-3 px-4 text-left font-semibold">Challan Pin</th>
-                <th className="py-3 px-4 text-left font-semibold">Quantity</th>
-                <th className="py-3 px-4 text-left font-semibold">Status</th>
-                <th className="py-3 px-4 text-left font-semibold">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {entries.length === 0 ? (
-                <tr>
-                  <td colSpan="14" className="py-8 text-center text-gray-500">
-                    No tokens found
-                  </td>
-                </tr>
-              ) : (
-                sortedEntries.map((entry, index) => (
-                  <tr key={entry._id || index} className="hover:bg-gray-50 transition duration-200">
-                    <td className="py-3 px-4 whitespace-nowrap">{index + 1}</td>
-                    <td className="py-3 px-4 whitespace-nowrap font-medium text-blue-600">
-                      {entry.tokenNo || 'N/A'}
-                    </td>
-                    <td className="py-3 px-4 whitespace-nowrap">
-                      {formatDateTime(entry.createdAt)}
-                    </td>
-                    <td className="py-3 px-4 whitespace-nowrap">{entry.driverName}</td>
-                    <td className="py-3 px-4 whitespace-nowrap">{entry.driverMobileNo}</td>
-                    <td className="py-3 px-4 whitespace-nowrap">{entry.displayVehicleType}</td>
-                    <td className="py-3 px-4 whitespace-nowrap">{entry.displayVehicleRate}</td>
-                    <td className="py-3 px-4 whitespace-nowrap">{entry.vehicleNo}</td>
-                    <td className="py-3 px-4 whitespace-nowrap">{entry.place || 'N/A'}</td>
-                    <td className="py-3 px-4 whitespace-nowrap">{entry.route || 'N/A'}</td>
-                    <td className="py-3 px-4 whitespace-nowrap">{entry.challanPin || 'N/A'}</td>
-                    <td className="py-3 px-4 whitespace-nowrap">{entry.quantity}</td>
-                    <td className="py-3 px-4 whitespace-nowrap">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        entry.isLoaded ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-                      }`}>
-                        {entry.isLoaded ? 'Loaded' : 'Pending'}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4 whitespace-nowrap">
-                      <div className="flex space-x-2">
-                        <button
-                          onClick={() => handlePrint(entry)}
-                          className="bg-gradient-to-r from-green-400 to-green-600 hover:from-green-600 hover:to-green-400 text-white px-3 py-1 rounded-full flex items-center justify-center transition duration-300 transform hover:scale-105"
-                        >
-                          A4 Print
-                        </button>
-                        <button
-                          onClick={() => handleReceiptPrint(entry)}
-                          className="bg-gradient-to-r from-blue-400 to-blue-600 hover:from-blue-600 hover:to-blue-400 text-white px-3 py-1 rounded-full flex items-center justify-center transition duration-300 transform hover:scale-105"
-                        >
-                          Receipt
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        )}
+        <DataTable
+          columns={columns}
+          data={entries}
+          pagination
+          paginationServer
+          paginationTotalRows={totalRows}
+          paginationPerPage={perPage}
+          paginationDefaultPage={currentPage}
+          paginationRowsPerPageOptions={[10, 20, 25, 50, 100]}
+          onChangePage={handlePageChange}
+          onChangeRowsPerPage={handlePerPageChange}
+          progressPending={loading}
+          progressComponent={
+            <div className="flex justify-center items-center gap-2 p-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+              <span className="text-gray-500">Loading tokens...</span>
+            </div>
+          }
+          customStyles={customStyles}
+          responsive
+          highlightOnHover
+          pointerOnHover
+          striped
+        />
       </div>
     </div>
   )
