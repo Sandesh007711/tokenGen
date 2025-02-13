@@ -15,7 +15,7 @@ const Loaded = () => {
         const token = localStorage.getItem('token');
         if (!token) return;
 
-        const response = await fetch('http://localhost:8000/api/v1/tokens', {
+        const response = await fetch('http://localhost:8000/api/v1/tokens?limit=1000', {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
