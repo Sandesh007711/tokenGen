@@ -22,6 +22,9 @@ const Update_Token_list = () => {
   const [loading, setLoading] = useState(false);
   const [users, setUsers] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [perPage, setPerPage] = useState(20);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalRows, setTotalRows] = useState(0);
 
   // Error handling and form submission functions
   const showError = (message) => {
@@ -31,47 +34,79 @@ const Update_Token_list = () => {
     }, 3000);
   };
 
-  // Fetch tokens data with authentication
-  useEffect(() => {
-    const fetchTokens = async () => {
-      setLoading(true);
-      try {
-        const token = localStorage.getItem('token');
-        if (!token) {
-          showError('Authentication token not found');
-          return;
-        }
-
-        const response = await fetch('http://localhost:8000/api/v1/tokens?updated=true', {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const result = await response.json();
-        console.log('Raw API Response:', result);
-
-        if (result.status === 'success' && Array.isArray(result.data)) {
-          // Show all tokens without filtering
-          setTokens(result.data);
-          setFilteredData(result.data);
-        } else {
-          showError('Invalid data format received');
-        }
-      } catch (error) {
-        console.error('Fetch error:', error);
-        showError(error.message);
-      }
-      setLoading(false);
+  const getAuthHeaders = () => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      throw new Error('No authentication token found');
+    }
+    return {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
     };
+  };
 
-    fetchTokens();
-  }, []);
+  // Update fetchTokens to return a promise and handle state updates more carefully
+  const fetchTokens = async (searchParams = {}, newPage = currentPage) => {
+    setLoading(true);
+    try {
+      const headers = getAuthHeaders();
+      
+      const queryParams = new URLSearchParams({
+        updated: true,
+        page: newPage,
+        limit: perPage,
+        ...(searchParams.fromDate && { fromDate: searchParams.fromDate.toISOString() }),
+        ...(searchParams.toDate && { toDate: searchParams.toDate.toISOString() }),
+        ...(searchParams.username && { username: searchParams.username })
+      });
+
+      const apiUrl = `http://localhost:8000/api/v1/tokens?${queryParams}`;
+      console.log('Fetching with pagination:', { page: newPage, perPage });
+
+      const response = await fetch(apiUrl, {
+        method: 'GET',
+        headers,
+        credentials: 'include'
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log('API Response:', result);
+
+      if (result.status === 'success') {
+        // Only update state after successful fetch
+        setFilteredData(result.data);
+        setTotalRows(result.totalCount || 0);
+        setCurrentPage(newPage); // Update page only after successful data fetch
+        
+        if (result.data.length === 0) {
+          showError('No matching records found for the selected criteria');
+        }
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Fetch error:', error);
+      showError(error.message);
+      setFilteredData([]);
+      setTotalRows(0);
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Update useEffect to handle pagination changes
+  useEffect(() => {
+    const initializePage = async () => {
+      await fetchTokens({}, currentPage);
+    };
+    initializePage();
+  }, [perPage]); // Remove currentPage dependency to prevent double fetching
 
   // Fetch users for dropdown
   useEffect(() => {
@@ -120,42 +155,20 @@ const Update_Token_list = () => {
     setShowConfirm(true);
   };
 
-  // Update handleConfirm to filter based on date range and selected user
+  // Update handleConfirm to use the new fetchTokens
   const handleConfirm = async () => {
     setIsSubmitting(true);
     try {
-      if (!tokens.length) {
-        showError('No tokens available to filter');
-        return;
+      const searchParams = {
+        fromDate: fromDate,
+        toDate: toDate,
+        ...(selectedUser && { username: selectedUser })
+      };
+
+      const success = await fetchTokens(searchParams, 1);
+      if (success) {
+        setShowConfirm(false);
       }
-
-      // Set time to start of day for fromDate and end of day for toDate
-      const startDate = new Date(fromDate.setHours(0, 0, 0, 0));
-      const endDate = new Date(toDate.setHours(23, 59, 59, 999));
-
-      const filtered = tokens.filter(token => {
-        const tokenDate = new Date(token.updatedAt);
-        
-        // Debug logs
-        console.log('Token being checked:', {
-          tokenDate,
-          startDate,
-          endDate,
-          tokenUsername: token.userId?.username,
-          selectedUser,
-          isInDateRange: tokenDate >= startDate && tokenDate <= endDate,
-          matchesUser: !selectedUser || token.userId?.username === selectedUser
-        });
-
-        const matchesDateRange = tokenDate >= startDate && tokenDate <= endDate;
-        const matchesUser = !selectedUser || token.userId?.username === selectedUser;
-
-        return matchesDateRange && matchesUser;
-      });
-
-      console.log('Filtered results:', filtered);
-      setFilteredData(filtered);
-      setShowConfirm(false);
     } catch (error) {
       console.error('Filter error:', error);
       showError('Error filtering data');
@@ -164,18 +177,36 @@ const Update_Token_list = () => {
     }
   };
 
-  // Add handleShowAll function
-  const handleShowAll = () => {
-    setFilteredData(tokens);
+  // Update handleShowAll to use the new fetchTokens
+  const handleShowAll = async () => {
     setSelectedUser('');
     setFromDate(new Date());
     setToDate(new Date());
+    await fetchTokens({}, 1);
   };
 
   // Add function to check if data is filtered
   const isDataFiltered = () => {
     return filteredData.length !== tokens.length || 
            JSON.stringify(filteredData) !== JSON.stringify(tokens);
+  };
+
+  // Update pagination handlers to wait for data before changing page
+  const handlePageChange = async (page) => {
+    console.log('Changing to page:', page);
+    const success = await fetchTokens({}, page);
+    if (!success) {
+      showError('Failed to load page data');
+    }
+  };
+
+  const handlePerPageChange = async (newPerPage, page) => {
+    console.log('Changing rows per page:', { newPerPage, page });
+    setPerPage(newPerPage);
+    const success = await fetchTokens({}, page);
+    if (!success) {
+      showError('Failed to update rows per page');
+    }
   };
 
   // Add this after your existing state declarations
@@ -387,6 +418,13 @@ const Update_Token_list = () => {
           columns={columns}
           data={filteredData}
           pagination
+          paginationServer
+          paginationTotalRows={totalRows}
+          paginationPerPage={perPage}
+          paginationDefaultPage={currentPage}
+          paginationRowsPerPageOptions={[10, 20, 25, 50, 100]}
+          onChangePage={handlePageChange}
+          onChangeRowsPerPage={handlePerPageChange}
           progressPending={loading}
           progressComponent={
             <div className="flex items-center justify-center gap-2 py-8">

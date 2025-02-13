@@ -243,20 +243,9 @@ const Content = () => {
 
         const result = await response.json();
         if (result.status === 'success' && result.data) {
+          // Just filter operators and set them directly, maintaining original structure
           const operatorData = result.data.filter(user => user.role === 'operator');
-          
-          const formattedOperators = operatorData.map(op => ({
-            operator: op.username,
-            operatorId: op._id,
-            totalEntries: op.tokenData.totalTokens,
-            dailyTokens: op.tokenData.dailyTokens.count,
-            route: op.route,
-            latestDate: op.tokenData.dailyTokens.date ? 
-              new Date(op.tokenData.dailyTokens.date).toLocaleDateString() : 
-              'No activity'
-          }));
-
-          setOperators(formattedOperators);
+          setOperators(operatorData);
         }
       } catch (error) {
         console.error('Error fetching operators:', error);
@@ -388,9 +377,11 @@ const Content = () => {
     fetchUsers();
   }, []);
 
-  // Handle operator card click - toggle selection
-  const handleCardClick = (operator, operatorId) => {
-    setSelectedOperator(operator === selectedOperator ? null : { username: operator, id: operatorId });
+  // Update handleCardClick to pass the complete operator data
+  const handleCardClick = (operator) => {
+    setSelectedOperator(prev => 
+      prev?._id === operator._id ? null : operator
+    );
   };
 
   // Render component based on loading and selection state
@@ -603,17 +594,21 @@ const Content = () => {
           {/* Map through operators and create cards */}
           {operators.map((op) => (
             <div
-              key={op.operator}
-              onClick={() => handleCardClick(op.operator, op.operatorId)}
+              key={op._id}
+              onClick={() => handleCardClick(op)}
               className="cursor-pointer transform transition-transform duration-300 hover:scale-105"
             >
               <div className="bg-white rounded-lg shadow-lg p-4 sm:p-6 hover:shadow-xl hover:bg-slate-200">
-                <div className="text-xl sm:text-2xl font-bold mb-3 sm:mb-4 text-gray-800">Operator {op.operator}</div>
+                <div className="text-xl sm:text-2xl font-bold mb-3 sm:mb-4 text-gray-800">
+                  Operator {op.username}
+                </div>
                 <div className="text-sm sm:text-base text-gray-600">
-                  <p className="mb-2">Total Tokens: {op.totalEntries}</p>
-                  <p className="mb-2">Daily Tokens: {op.dailyTokens}</p>
-                  <p className="mb-2">Route: {op.route}</p>
-                  <p>Latest Activity: {op.latestDate}</p>
+                  <p className="mb-2">Total Tokens: {op.tokenData?.totalTokens || 0}</p>
+                  <p className="mb-2">Daily Tokens: {op.tokenData?.dailyTokens?.count || 0}</p>
+                  <p className="mb-2">Route: {op.route || 'N/A'}</p>
+                  <p>Latest Activity: {op.tokenData?.dailyTokens?.date ? 
+                    new Date(op.tokenData.dailyTokens.date).toLocaleDateString() : 
+                    'No activity'}</p>
                 </div>
                 <div className="mt-3 sm:mt-4 text-blue-500 text-xs sm:text-sm">Click to view details →</div>
               </div>

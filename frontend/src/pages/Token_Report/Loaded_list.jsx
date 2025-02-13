@@ -10,7 +10,6 @@ import "react-datepicker/dist/react-datepicker.css";
  * Features: Date range selection, user filtering, and tabular display of loaded token data
  */
 const Loaded_list = () => {
-  // Remove route-related states
   const [isFiltered, setIsFiltered] = useState(false);
   const [fromDate, setFromDate] = useState(new Date());
   const [toDate, setToDate] = useState(new Date());
@@ -18,12 +17,13 @@ const Loaded_list = () => {
   const [errorPopup, setErrorPopup] = useState({ show: false, message: '' });
   const [showConfirm, setShowConfirm] = useState(false);
   const [successPopup, setSuccessPopup] = useState({ show: false, message: '' });
-  const [perPage, setPerPage] = useState(10);
-  const [totalRows, setTotalRows] = useState(0);
+  const [perPage, setPerPage] = useState(20); // Changed default to 20 to match Token_list
   const [currentPage, setCurrentPage] = useState(1);
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [selectedUser, setSelectedUser] = useState('');
   const [users, setUsers] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [totalRows, setTotalRows] = useState(0); // Add this state
 
   const getAuthHeaders = () => {
     const token = localStorage.getItem('token'); // Changed from 'authToken' to 'token'
@@ -64,11 +64,27 @@ const Loaded_list = () => {
     }
   };
 
-  // Add new function for initial data load
-  const loadInitialData = async () => {
+  // Update the fetchTokenData function to use the correct endpoint
+  const fetchTokenData = async (searchParams = {}, newPage = currentPage) => {
+    setIsLoading(true);
     try {
       const headers = getAuthHeaders();
-      const response = await fetch('http://localhost:8000/api/v1/tokens/loaded', {
+      
+      // Build query parameters
+      const queryParams = new URLSearchParams({
+        loaded: true, // Change this from previous implementation
+        page: newPage,
+        limit: perPage,
+        ...(searchParams.fromDate && { fromDate: searchParams.fromDate.toISOString() }),
+        ...(searchParams.toDate && { toDate: searchParams.toDate.toISOString() }),
+        ...(searchParams.username && { username: searchParams.username })
+      });
+
+      // Update API URL to use the tokens endpoint
+      const apiUrl = `http://localhost:8000/api/v1/tokens?${queryParams}`;
+      console.log('Fetching loaded tokens with URL:', apiUrl);
+
+      const response = await fetch(apiUrl, {
         method: 'GET',
         headers,
         credentials: 'include'
@@ -78,66 +94,43 @@ const Loaded_list = () => {
         throw new Error('Failed to fetch data');
       }
 
-      const data = await response.json();
-      console.log('Initial data load:', data);
+      const result = await response.json();
+      
+      // Log the complete API response
+      console.log('API Response:', result);
 
-      if (data.status === 'success' && Array.isArray(data.data)) {
-        setFilteredData(data.data);
-      }
-    } catch (error) {
-      console.error('Error loading initial data:', error);
-      showError(error.message);
-    }
-  };
-
-  // Update fetchTokenData to remove route filtering
-  const fetchTokenData = async () => {
-    try {
-      const headers = getAuthHeaders();
-      const response = await fetch('http://localhost:8000/api/v1/tokens/loaded', {
-        method: 'GET',
-        headers,
-        credentials: 'include'
-      });
-
-      const data = await response.json();
-      console.log('Fetch data response:', data);
-
-      if (data.status === 'success' && Array.isArray(data.data)) {
-        let tokens = data.data;
-
-        // Apply user filter
-        if (selectedUser) {
-          tokens = tokens.filter(token => token.userId?.username === selectedUser);
+      if (result.status === 'success') {
+        setFilteredData(result.data);
+        setTotalRows(result.totalCount || 0);
+        setCurrentPage(newPage); // Update page only after successful data fetch
+        
+        if (result.data.length > 0) {
+          showSuccess(`Found ${result.totalCount} matching records`);
+        } else {
+          showError('No matching records found for the selected criteria');
         }
-
-        // Apply date filter if dates are valid
-        if (fromDate && toDate) {
-          const start = new Date(fromDate);
-          start.setHours(0, 0, 0, 0);
-          const end = new Date(toDate);
-          end.setHours(23, 59, 59, 999);
-
-          tokens = tokens.filter(token => {
-            const date = new Date(token.createdAt);
-            return date >= start && date <= end;
-          });
-        }
-
-        setFilteredData(tokens);
-        showSuccess(`Found ${tokens.length} matching records`);
+        return true;
       }
+      return false;
     } catch (error) {
       console.error('Error in fetchTokenData:', error);
       showError(error.message);
+      setFilteredData([]);
+      setTotalRows(0);
+      return false;
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  // Modified useEffects
+  // Remove loadInitialData function since we're using fetchTokenData for everything
   useEffect(() => {
     fetchUsers();
-    loadInitialData(); // Load initial data when component mounts
-  }, []);
+    const initializePage = async () => {
+      await fetchTokenData({}, currentPage);
+    };
+    initializePage();
+  }, [perPage]); // Remove currentPage dependency
 
   // Error handling and form submission functions
   const showError = (message) => {
@@ -160,30 +153,50 @@ const Loaded_list = () => {
     setShowConfirm(true);
   };
 
-  // Update handleShowFullData to remove route reset
-  const handleShowFullData = () => {
+  // Update handleShowFullData to reset pagination
+  const handleShowFullData = async () => {
     setFromDate(null);
     setToDate(null);
     setSelectedUser('');
     setIsFiltered(false);
-    loadInitialData();
+    setCurrentPage(1); // Reset to first page
+    await fetchTokenData({}, 1);
   };
 
-  // Modify handleConfirm to set isFiltered
-  const handleConfirm = () => {
-    setIsFiltered(true);
-    fetchTokenData();
+  // Update handleConfirm to reset pagination
+  const handleConfirm = async () => {
     setShowConfirm(false);
+    setCurrentPage(1); // Reset to first page
+    setIsFiltered(true);
+
+    const searchParams = {
+      fromDate: fromDate,
+      toDate: toDate,
+      ...(selectedUser && { username: selectedUser })
+    };
+
+    const success = await fetchTokenData(searchParams, 1);
+    if (!success) {
+      showError('Failed to fetch filtered data');
+    }
   };
 
   // Add these new functions
-  const handlePageChange = (page) => {
-    setCurrentPage(page);
+  const handlePageChange = async (page) => {
+    console.log('Changing to page:', page);
+    const success = await fetchTokenData({}, page);
+    if (!success) {
+      showError('Failed to load page data');
+    }
   };
 
-  const handlePerPageChange = (newPerPage, page) => {
+  const handlePerPageChange = async (newPerPage, page) => {
+    console.log('Changing rows per page:', { newPerPage, page });
     setPerPage(newPerPage);
-    setCurrentPage(page);
+    const success = await fetchTokenData({}, page);
+    if (!success) {
+      showError('Failed to update rows per page');
+    }
   };
 
   const toggleFullScreen = () => {
@@ -386,11 +399,22 @@ const Loaded_list = () => {
             columns={columns}
             data={filteredData}
             pagination
-            paginationPerPage={perPage}
-            paginationRowsPerPageOptions={[10, 25, 50, 100]}
+            paginationServer
             paginationTotalRows={totalRows}
+            paginationPerPage={perPage}
+            paginationDefaultPage={currentPage}
+            paginationRowsPerPageOptions={[10, 20, 25, 50, 100]}
             onChangePage={handlePageChange}
             onChangeRowsPerPage={handlePerPageChange}
+            progressPending={isLoading}
+            progressComponent={
+              <div className="py-8 text-center text-gray-500">
+                <div className="flex flex-col items-center justify-center">
+                  <FaSpinner className="animate-spin text-2xl mb-2" />
+                  <span className="font-medium">Loading tokens...</span>
+                </div>
+              </div>
+            }
             noDataComponent={
               <div className="py-8 text-center text-gray-500 text-lg">
                 <div className="flex flex-col items-center justify-center">

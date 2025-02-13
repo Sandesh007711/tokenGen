@@ -26,7 +26,7 @@ const Token_list = () => {
   const [selectedToken, setSelectedToken] = useState(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [pending, setPending] = useState(true);
-  const [perPage, setPerPage] = useState(10);
+  const [perPage, setPerPage] = useState(20);
   const [totalRows, setTotalRows] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [showUpdateForm, setShowUpdateForm] = useState(false);
@@ -98,7 +98,7 @@ const Token_list = () => {
     return d1 <= d2;
   };
 
-  // Update fetchTokens function to filter out deleted items
+  // Update fetchTokens function to handle pagination
   const fetchTokens = async (searchParams = {}) => {
     setIsLoading(true);
     try {
@@ -107,7 +107,19 @@ const Token_list = () => {
         throw new Error('No authentication token found');
       }
 
-      const response = await fetch('http://localhost:8000/api/v1/tokens', {
+      // Build query parameters
+      const queryParams = new URLSearchParams({
+        page: currentPage,
+        limit: perPage,
+        ...(searchParams.fromDate && { fromDate: searchParams.fromDate.toISOString() }),
+        ...(searchParams.toDate && { toDate: searchParams.toDate.toISOString() }),
+        ...(searchParams.username && { username: searchParams.username })
+      });
+
+      // Log the API request URL
+      console.log('Fetching tokens with URL:', `http://localhost:8000/api/v1/tokens?${queryParams}`);
+
+      const response = await fetch(`http://localhost:8000/api/v1/tokens?${queryParams}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -120,56 +132,33 @@ const Token_list = () => {
 
       const result = await response.json();
       
-      // Check if result is an array or has data property
-      const tokenData = Array.isArray(result) ? result : (result.data || []);
+      // Log the complete API response
+      console.log('Pagination API Response:', {
+        currentPage,
+        perPage,
+        totalRows: result.totalCount,
+        data: result.data,
+        fullResponse: result
+      });
       
-      if (tokenData.length > 0) {
-        // First filter out deleted items
-        const activeTokens = tokenData.filter(token => token.deletedAt === null);
-        
-        const sortedTokens = activeTokens.sort((a, b) => 
-          new Date(b.createdAt) - new Date(a.createdAt)
-        );
-
-        const filteredTokens = sortedTokens.filter(token => {
-          const dateMatches = (() => {
-            if (!searchParams.fromDate || !searchParams.toDate) return true;
-            
-            const tokenDate = new Date(token.createdAt);
-            const fromDateTime = new Date(searchParams.fromDate);
-            const toDateTime = new Date(searchParams.toDate);
-            
-            return isSameOrAfterDate(tokenDate, fromDateTime) && 
-                   isSameOrBeforeDate(tokenDate, toDateTime);
-          })();
-
-          const usernameMatches = (() => {
-            if (!searchParams.username) return true;
-            return token.userId?.username === searchParams.username;
-          })();
-
-          return dateMatches && usernameMatches;
-        });
-
-        // Process the data to match the table structure
-        const processedTokens = filteredTokens.map(token => ({
+      if (result.status === 'success') {
+        // Assuming the backend returns { data: [...tokens], totalCount: number }
+        const processedTokens = result.data.map(token => ({
           ...token,
           vehicleType: token.vehicleType || token.vehicleId?.vehicleType || 'N/A',
           vehicleRate: token.vehicleRate || 'N/A',
         }));
 
         setFilteredData(processedTokens);
-        setTotalRows(processedTokens.length);
+        setTotalRows(result.totalCount || 0);
         
         if (processedTokens.length > 0) {
-          showSuccess(`Found ${processedTokens.length} matching records`);
+          showSuccess(`Found ${result.totalCount} matching records`);
         } else {
           showError('No matching records found for the selected criteria');
         }
       } else {
-        setFilteredData([]);
-        setTotalRows(0);
-        showError('No records available');
+        throw new Error('Invalid response format');
       }
     } catch (error) {
       console.error('Error fetching tokens:', error);
@@ -184,17 +173,19 @@ const Token_list = () => {
   // Replace initial useEffect
   useEffect(() => {
     fetchTokens();
-  }, []);
+  }, [currentPage, perPage]); // Add dependencies
 
-  // Update handlePageChange to handle client-side pagination
+  // Update handlePageChange to trigger new API call
   const handlePageChange = (page) => {
     setCurrentPage(page);
+    fetchTokens();
   };
 
-  // Update handlePerPageChange for client-side pagination
+  // Update handlePerPageChange to trigger new API call
   const handlePerPageChange = (newPerPage, page) => {
     setPerPage(newPerPage);
     setCurrentPage(page);
+    fetchTokens();
   };
 
   /**
@@ -593,6 +584,7 @@ const Token_list = () => {
     setToDate(null);
     setSelectedUser('');
     setIsFiltered(false); // Set to false when showing full data
+    setCurrentPage(1); // Reset to first page
     fetchTokens();
   };
 
@@ -792,8 +784,10 @@ const Token_list = () => {
             columns={columns}
             data={filteredData}
             pagination
-            paginationPerPage={perPage}
-            paginationRowsPerPageOptions={[10, 25, 50, 100]}
+            paginationServer
+            paginationPerPage={20} // Changed from perPage to hard-coded 20
+            paginationDefaultPage={1}
+            paginationRowsPerPageOptions={[10, 20, 25, 50, 100]}
             paginationTotalRows={totalRows}
             onChangePage={handlePageChange}
             onChangeRowsPerPage={handlePerPageChange}
