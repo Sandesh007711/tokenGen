@@ -22,6 +22,9 @@ class APIfeatures {
         if(this.queryString.sort) {
             const sortBy = this.queryString.sort.split(',').join(' ')
             this.query = this.query.sort(sortBy)
+        } else {
+            // Modified by Abhinav: Added default sort by createdAt in descending order
+            this.query = this.query.sort('-createdAt')
         }
 
         return this;

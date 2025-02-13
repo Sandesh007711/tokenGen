@@ -100,7 +100,7 @@ const VehicleRate = () => {
       }
 
       if (editIndex !== null) {
-        // Update existing vehicle
+        // Update existing vehicle using the new endpoint
         const vehicleToUpdate = vehicleList[editIndex];
         
         console.log('Updating vehicle:', {
@@ -109,7 +109,7 @@ const VehicleRate = () => {
         });
 
         const response = await axios.patch(
-          `http://localhost:8000/api/v1/vehicles/${vehicleToUpdate.id}`,
+          `http://localhost:8000/api/v1/vehicles/type/${vehicleToUpdate.id}`, // Updated endpoint
           {
             vehicleType: vehicleType
           },

@@ -151,6 +151,7 @@ exports.getAllTokens = catchAsync(async (req, res) => {
     }
 
     const totalCount = await UserToken.countDocuments(filter);
+    // Modified by Abhinav: Using default sort from APIfeatures
     const features = new APIfeatures(UserToken.find(filter).populate('userId', {_id: 0, 'username': 1}), req.query)
                     .sort()
                     .paginate()

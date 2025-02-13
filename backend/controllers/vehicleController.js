@@ -45,7 +45,7 @@ exports.getAllVehicles = catchAsync(async (req, res) => {
 exports.updateVehicleStatus = catchAsync(async (req, res, next) => {
     const { isActive } = req.body;
 
-    const vehicle = await User.findOne({_id: req.params.id})
+    const vehicle = await Vehicle.findOne({_id: req.params.id})  // Changed from User to Vehicle
     if(!vehicle) {
         return next(new AppError('Vehicle not identified!', 400))
     }
@@ -95,6 +95,35 @@ exports.deleteVehicle = catchAsync(async (req, res, next) => {
     } finally {
         session.endSession();
     }
+});
+
+// Added by user - New controller to update vehicle type
+exports.updateVehicleType = catchAsync(async (req, res, next) => {
+    const { vehicleType } = req.body;
+    const { id } = req.params;
+
+    const existingVehicle = await Vehicle.findOne({ 
+        vehicleType,
+        _id: { $ne: id }
+    });
+
+    if(existingVehicle) {
+        return next(new AppError('This vehicle type already exists!', 400));
+    }
+
+    const vehicle = await Vehicle.findById(id);
+    if(!vehicle) {
+        return next(new AppError('Vehicle not found!', 400));
+    }
+
+    vehicle.vehicleType = vehicleType;
+    await vehicle.save();
+
+    res.status(200).json({
+        status: 'success',
+        message: 'Vehicle type updated successfully',
+        data: vehicle
+    });
 });
 
 // =============== Vehicle Rate section ================= //
