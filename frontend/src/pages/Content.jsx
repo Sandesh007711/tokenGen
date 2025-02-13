@@ -17,6 +17,7 @@ const Content = () => {
     driverMobile: '',
     vehicleNo: '',
     vehicleType: '',
+    vehicleId: '', // Add this line
     vehicleRate: '',
     quantity: '',
     place: '',
@@ -51,14 +52,24 @@ const Content = () => {
     const { name, value } = e.target;
 
     if (name === 'vehicleType') {
-      if (value === '') return;
+      if (value === '') {
+        setFormData(prev => ({
+          ...prev,
+          vehicleType: '',
+          vehicleId: '',
+          vehicleRate: ''
+        }));
+        return;
+      }
       
-      // Find the corresponding rate for selected vehicle type
-      const selectedVehicleData = vehicleTypes.find(type => type.vehicleType === value);
+      const selectedVehicleData = vehicleTypes.find(type => type.vehicleId === value);
+      console.log('Selected vehicle data:', selectedVehicleData);
+      
       if (selectedVehicleData) {
         setFormData(prev => ({
           ...prev,
-          [name]: value,
+          vehicleType: selectedVehicleData.vehicleType,
+          vehicleId: selectedVehicleData.vehicleId,
           vehicleRate: selectedVehicleData.rate.toString()
         }));
       }
@@ -114,6 +125,24 @@ const Content = () => {
       return;
     }
 
+    if (!formData.vehicleId) {
+      showError('Please select a vehicle type');
+      return;
+    }
+
+    // Log vehicle types and selected vehicle ID for debugging
+    console.log('Vehicle Types:', vehicleTypes);
+    console.log('Selected Vehicle ID:', formData.vehicleId);
+    
+    // Find vehicle using vehicleId instead of _id
+    const selectedVehicle = vehicleTypes.find(v => v.vehicleId === formData.vehicleId);
+    console.log('Selected Vehicle:', selectedVehicle);
+
+    if (!selectedVehicle) {
+      showError('Selected vehicle type is not valid');
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       const token = localStorage.getItem('token');
@@ -121,25 +150,16 @@ const Content = () => {
         throw new Error('No authentication token found');
       }
 
-      // Find the selected vehicle data to get the vehicleId
-      const selectedVehicleData = vehicleTypes.find(
-        type => type.vehicleType === formData.vehicleType
-      );
-
-      if (!selectedVehicleData) {
-        throw new Error('Selected vehicle type not found');
-      }
-
       // Format the data according to API requirements
       const submitData = {
-        userId: formData.userId,  // Add this line
-        vehicleId: selectedVehicleData._id,
+        userId: formData.userId,
         driverName: formData.driverName.trim(),
         driverMobileNo: parseInt(formData.driverMobile),
         vehicleNo: formData.vehicleNo.trim(),
+        vehicleId: formData.vehicleId, // Use formData.vehicleId directly
         quantity: parseInt(formData.quantity),
-        place: formData.place.trim() || undefined, // Only include if not empty
-        challanPin: formData.chalaanPin ? parseInt(formData.chalaanPin) : undefined,
+        place: formData.place.trim() || undefined,
+        challanPin: formData.chalaanPin || undefined,
         route: formData.route
       };
 
@@ -149,7 +169,7 @@ const Content = () => {
       );
 
       // Validate required fields
-      const requiredFields = ['userId', 'vehicleId', 'driverName', 'driverMobileNo', 'vehicleNo', 'quantity', 'route'];
+      const requiredFields = ['userId', 'driverName', 'driverMobileNo', 'vehicleNo', 'vehicleId', 'quantity', 'route'];
       const missingFields = requiredFields.filter(field => !submitData[field]);
       
       if (missingFields.length > 0) {
@@ -186,6 +206,7 @@ const Content = () => {
           driverMobile: '',
           vehicleNo: '',
           vehicleType: '',
+          vehicleId: '',
           vehicleRate: '',
           quantity: '',
           place: '',
@@ -258,7 +279,7 @@ const Content = () => {
           throw new Error('No authentication token found');
         }
 
-        const response = await fetch('http://localhost:8000/api/v1/vehicles/rates', {
+        const response = await fetch('http://localhost:8000/api/v1/vehicles/get-rates', {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -275,10 +296,11 @@ const Content = () => {
         }
 
         const result = await response.json();
+        console.log('Vehicle types response:', result); // Add this line for debugging
         
-        // Check if the response has the expected structure
         if (result.status === 'success' && result.data && result.data.rates) {
           setVehicleTypes(result.data.rates);
+          console.log('Set vehicle types:', result.data.rates); // Add this line for debugging
         } else {
           throw new Error('Invalid response format');
         }
@@ -467,14 +489,14 @@ const Content = () => {
                   <label className="block text-gray-300 text-sm font-bold mb-2">Vehicle Type</label>
                   <select
                     name="vehicleType"
-                    value={formData.vehicleType}
+                    value={formData.vehicleId || ''} // Change to use vehicleId
                     onChange={handleInputChange}
                     className="px-4 py-3 w-full bg-gray-900 text-gray-300 rounded-lg border border-gray-700 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 transition-all duration-300"
                     required
                   >
                     <option value="">Select Vehicle Type</option>
-                    {Array.isArray(vehicleTypes) && vehicleTypes.map((type, index) => (
-                      <option key={index} value={type.vehicleType}>
+                    {Array.isArray(vehicleTypes) && vehicleTypes.map((type) => (
+                      <option key={type.vehicleId} value={type.vehicleId}>
                         {type.vehicleType} - ₹{type.rate}
                       </option>
                     ))}

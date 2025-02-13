@@ -51,8 +51,8 @@ const VehicleRate = () => {
       
       console.log('API Response:', response.data);
 
-      if (response.data && response.data.data && response.data.data.vehicles) {
-        const vehicles = response.data.data.vehicles; // Access the vehicles array correctly
+      if (response.data && response.data.data) {
+        const vehicles = response.data.data; // Data array is directly in response.data.data
         console.log('Vehicles received:', vehicles);
         setVehicleList(vehicles.map(vehicle => ({
           id: vehicle._id,
