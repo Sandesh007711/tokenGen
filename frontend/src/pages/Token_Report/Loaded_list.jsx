@@ -81,7 +81,7 @@ const Loaded_list = () => {
       });
 
       // Update API URL to use the tokens endpoint
-      const apiUrl = `http://localhost:8000/api/v1/tokens?${queryParams}`;
+      const apiUrl = `http://localhost:8000/api/v1/tokens?${queryParams}&limit=1000`;
       console.log('Fetching loaded tokens with URL:', apiUrl);
 
       const response = await fetch(apiUrl, {
