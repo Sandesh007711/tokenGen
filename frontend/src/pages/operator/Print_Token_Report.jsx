@@ -64,7 +64,8 @@ const Token_list = () => {
       const queryParams = new URLSearchParams({
         page: page,
         limit: perPage,
-        username: currentUser.username
+        username: currentUser.username,
+        deleted: false  // Add this parameter to filter out deleted entries
       });
 
       const response = await axios.get(`http://localhost:8000/api/v1/tokens?${queryParams}`, {
@@ -75,11 +76,14 @@ const Token_list = () => {
       });
 
       if (response.data?.status === 'success') {
-        const processedTokens = response.data.data.map(token => ({
-          ...token,
-          displayVehicleType: token.vehicleId?.vehicleType || token.vehicleType || 'N/A',
-          displayVehicleRate: token.vehicleRate || 'N/A'
-        }));
+        // Filter out deleted entries
+        const processedTokens = response.data.data
+          .filter(token => !token.deletedAt)
+          .map(token => ({
+            ...token,
+            displayVehicleType: token.vehicleId?.vehicleType || token.vehicleType || 'N/A',
+            displayVehicleRate: token.vehicleRate || 'N/A'
+          }));
 
         setTokens(processedTokens);
         setFilteredData(processedTokens);
@@ -125,59 +129,89 @@ const Token_list = () => {
   // Add DataTable columns configuration
   const columns = [
     {
+      name: 'S.No.',
+      selector: (row, index) => index + 1 + (currentPage - 1) * perPage,
+      sortable: false,
+      width: '80px',
+    },
+    {
+      name: 'Created Date',
+      selector: row => new Date(row.createdAt).toLocaleString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      }),
+      sortable: true,
+      width: '200px',
+      wrap: true,
+    },
+    {
       name: 'Token No',
       selector: row => row.tokenNo || 'N/A',
       sortable: true,
+      width: '120px',
     },
     {
       name: 'Driver Name',
       selector: row => row.driverName || 'N/A',
       sortable: true,
-    },
-    {
-      name: 'Mobile No',
-      selector: row => row.driverMobileNo || 'N/A',
-      sortable: true,
-    },
-    {
-      name: 'Vehicle Type',
-      selector: row => row.displayVehicleType,
-      sortable: true,
-    },
-    {
-      name: 'Vehicle Rate',
-      selector: row => row.displayVehicleRate,
-      sortable: true,
+      width: '150px',
+      wrap: true,
     },
     {
       name: 'Vehicle No',
       selector: row => row.vehicleNo || 'N/A',
       sortable: true,
+      width: '130px',
     },
     {
-      name: 'Route',
-      selector: row => row.route || 'N/A',
+      name: 'Vehicle Type',
+      selector: row => row.displayVehicleType,
       sortable: true,
+      width: '130px',
+      wrap: true,
+    },
+    {
+      name: 'Vehicle Rate',
+      selector: row => row.displayVehicleRate,
+      sortable: true,
+      width: '120px',
     },
     {
       name: 'Quantity',
       selector: row => row.quantity || 'N/A',
       sortable: true,
+      width: '100px',
     },
     {
       name: 'Place',
       selector: row => row.place || 'N/A',
       sortable: true,
+      width: '130px',
+      wrap: true,
+    },
+    {
+      name: 'Route',
+      selector: row => row.route || 'N/A',
+      sortable: true,
+      width: '130px',
+      wrap: true,
+    },
+    {
+      name: 'Operator',
+      selector: row => row.userId?.username || 'N/A',
+      sortable: true,
+      width: '130px',
+      wrap: true,
     },
     {
       name: 'Challan Pin',
       selector: row => row.challanPin || 'N/A',
       sortable: true,
-    },
-    {
-      name: 'Created At',
-      selector: row => new Date(row.createdAt).toLocaleString(),
-      sortable: true,
+      width: '120px',
     },
   ];
 
@@ -238,13 +272,15 @@ const Token_list = () => {
    */
   const handleConfirm = () => {
     try {
-      const filtered = tokens.filter(token => {
-        const tokenDate = new Date(token.createdAt);
-        const from = new Date(fromDate.setHours(0, 0, 0, 0));
-        const to = new Date(toDate.setHours(23, 59, 59, 999));
-        
-        return tokenDate >= from && tokenDate <= to;
-      });
+      const filtered = tokens
+        .filter(token => !token.deletedAt) // Add this filter
+        .filter(token => {
+          const tokenDate = new Date(token.createdAt);
+          const from = new Date(fromDate.setHours(0, 0, 0, 0));
+          const to = new Date(toDate.setHours(23, 59, 59, 999));
+          
+          return tokenDate >= from && tokenDate <= to;
+        });
       
       console.log('Filtered tokens:', filtered);
       setFilteredData(filtered);

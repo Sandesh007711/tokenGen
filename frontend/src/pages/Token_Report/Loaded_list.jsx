@@ -203,61 +203,129 @@ const Loaded_list = () => {
     setIsFullScreen(!isFullScreen);
   };
 
+  const formatDateTime = (date) => {
+    return new Date(date).toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+      timeZone: 'Asia/Kolkata'
+    });
+  };
+
   // Define columns for DataTable
   const columns = [
     {
-      name: 'Driver Name',
-      selector: row => row.driverName,
-      sortable: true,
+      name: 'S.No.',
+      selector: (row, index) => index + 1 + (currentPage - 1) * perPage,
+      sortable: false,
+      width: '80px',
     },
     {
-      name: 'Mobile No',
-      selector: row => row.driverMobileNo,
+      name: 'Loaded Date',
+      selector: row => formatDateTime(row.loadedAt),
       sortable: true,
+      width: '200px',
+      wrap: true,
     },
     {
       name: 'Token No',
       selector: row => row.tokenNo,
       sortable: true,
+      width: '120px',
     },
     {
-      name: 'Challan Pin',
-      selector: row => row.challanPin,
+      name: 'Driver Name',
+      selector: row => row.driverName,
       sortable: true,
-    },
-    {
-      name: 'Place',
-      selector: row => row.place,
-      sortable: true,
-    },
-    {
-      name: 'Route',
-      selector: row => row.route,
-      sortable: true,
-    },
-    {
-      name: 'Quantity',
-      selector: row => row.quantity,
-      sortable: true,
+      width: '150px',
+      wrap: true,
     },
     {
       name: 'Vehicle No',
       selector: row => row.vehicleNo,
       sortable: true,
+      width: '130px',
     },
     {
-      name: 'Loaded At',
-      selector: row => row.loadedAt ? new Date(row.loadedAt).toLocaleString() : 'Not Loaded',
+      name: 'Vehicle Type',
+      selector: row => row.vehicleType || row.vehicleId?.vehicleType || 'N/A',
       sortable: true,
+      width: '130px',
+      wrap: true,
+    },
+    {
+      name: 'Vehicle Rate',
+      selector: row => row.vehicleRate || 'N/A',
+      sortable: true,
+      width: '120px',
+    },
+    {
+      name: 'Quantity',
+      selector: row => row.quantity,
+      sortable: true,
+      width: '100px',
+    },
+    {
+      name: 'Place',
+      selector: row => row.place,
+      sortable: true,
+      width: '130px',
+      wrap: true,
+    },
+    {
+      name: 'Route',
+      selector: row => row.route || 'N/A',
+      sortable: true,
+      width: '130px',
+      wrap: true,
+    },
+    {
+      name: 'Operator',
+      selector: row => row.userId?.username || 'N/A',
+      sortable: true,
+      width: '130px',
+      wrap: true,
+    },
+    {
+      name: 'Challan Pin',
+      selector: row => row.challanPin || 'N/A',
+      sortable: true,
+      width: '120px',
     },
   ];
 
-  // Define custom styles for DataTable
+  // Update custom styles to match the formatting
   const customStyles = {
     headRow: {
       style: {
         background: 'linear-gradient(to right, #94a3b8, #cbd5e1, #e2e8f0)',
         fontWeight: 'bold',
+        minHeight: '52px',
+        paddingLeft: '8px',
+        paddingRight: '8px',
+      },
+    },
+    headCells: {
+      style: {
+        fontSize: '14px',
+        padding: '8px',
+        justifyContent: 'center',
+        textAlign: 'center',
+        fontWeight: '600',
+      },
+    },
+    cells: {
+      style: {
+        padding: '8px',
+        justifyContent: 'center',
+        textAlign: 'center',
+        '&:not(:last-of-type)': {
+          borderRightWidth: '1px',
+          borderRightColor: '#e5e7eb',
+        },
       },
     },
     rows: {
@@ -266,12 +334,6 @@ const Loaded_list = () => {
         '&:hover': {
           backgroundColor: '#f8fafc',
         },
-      },
-    },
-    pagination: {
-      style: {
-        border: 'none',
-        backgroundColor: '#f8fafc',
       },
     },
   };

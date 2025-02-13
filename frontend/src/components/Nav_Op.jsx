@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import styled from 'styled-components';
 import logo from "../assets/logo.png";
-import { FaUser, FaRoute } from 'react-icons/fa'; // Add FaRoute import
+import { FaUser, FaRoute, FaExpandAlt, FaCompressAlt } from 'react-icons/fa';
 
 const StyledWrapper = styled.div`
   .Btn {
@@ -75,7 +75,8 @@ const StyledWrapper = styled.div`
 const Nav = () => {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [username, setUsername] = useState('');
-  const [route, setRoute] = useState(''); // Add this state
+  const [route, setRoute] = useState('');
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -85,7 +86,7 @@ const Nav = () => {
         const userData = JSON.parse(userStr);
         const currentUser = userData.data || userData.user || userData;
         setUsername(currentUser.username || '');
-        setRoute(currentUser.route || ''); // Set the route from user data
+        setRoute(currentUser.route || '');
       }
     } catch (error) {
       console.error('Error loading user data:', error);
@@ -103,6 +104,24 @@ const Nav = () => {
 
   const handleLogoutCancel = () => {
     setShowLogoutConfirm(false);
+  };
+
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().then(() => {
+        setIsFullscreen(true);
+      }).catch(err => {
+        console.error(`Error attempting to enable fullscreen: ${err.message}`);
+      });
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen().then(() => {
+          setIsFullscreen(false);
+        }).catch(err => {
+          console.error(`Error attempting to exit fullscreen: ${err.message}`);
+        });
+      }
+    }
   };
 
   return (
@@ -126,6 +145,18 @@ const Nav = () => {
 
           {/* Menu Items */}
           <div className="flex items-center gap-2 sm:gap-3 md:gap-4 lg:gap-6">
+            {/* Fullscreen Toggle Button */}
+            <button
+              onClick={toggleFullscreen}
+              className="p-2 text-white hover:text-gray-300 transition-colors"
+            >
+              {isFullscreen ? (
+                <FaCompressAlt className="text-lg sm:text-xl" />
+              ) : (
+                <FaExpandAlt className="text-lg sm:text-xl" />
+              )}
+            </button>
+
             {/* User Icon and Name */}
             <div className="flex items-center gap-2">
               <FaUser className="text-lg sm:text-xl text-white" />
