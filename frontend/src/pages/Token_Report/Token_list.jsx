@@ -36,6 +36,8 @@ const Token_list = () => {
   const [isUpdating, setIsUpdating] = useState(false); // Add this new state with other states
   const [isFiltered, setIsFiltered] = useState(false); // Add this new state
   const [isDeleting, setIsDeleting] = useState(false); // Add new state for delete loading
+  const [isPaginationLoading, setIsPaginationLoading] = useState(false);
+  const [currentData, setCurrentData] = useState([]);
 
   // Helper function to sort tokens by date (newest first)
   const sortTokensByDate = (tokens) => {
@@ -98,8 +100,8 @@ const Token_list = () => {
     return d1 <= d2;
   };
 
-  // Update fetchTokens function to handle pagination
-  const fetchTokens = async (searchParams = {}) => {
+  // Update fetchTokens function
+  const fetchTokens = async (searchParams = {}, newPage = currentPage) => {
     setIsLoading(true);
     try {
       const token = localStorage.getItem('token');
@@ -109,15 +111,12 @@ const Token_list = () => {
 
       // Build query parameters
       const queryParams = new URLSearchParams({
-        page: currentPage,
+        page: newPage,
         limit: perPage,
         ...(searchParams.fromDate && { fromDate: searchParams.fromDate.toISOString() }),
         ...(searchParams.toDate && { toDate: searchParams.toDate.toISOString() }),
         ...(searchParams.username && { username: searchParams.username })
       });
-
-      // Log the API request URL
-      console.log('Fetching tokens with URL:', `http://localhost:8000/api/v1/tokens?${queryParams}`);
 
       const response = await fetch(`http://localhost:8000/api/v1/tokens?${queryParams}`, {
         headers: {
@@ -132,17 +131,7 @@ const Token_list = () => {
 
       const result = await response.json();
       
-      // Log the complete API response
-      console.log('Pagination API Response:', {
-        currentPage,
-        perPage,
-        totalRows: result.totalCount,
-        data: result.data,
-        fullResponse: result
-      });
-      
       if (result.status === 'success') {
-        // Assuming the backend returns { data: [...tokens], totalCount: number }
         const processedTokens = result.data.map(token => ({
           ...token,
           vehicleType: token.vehicleType || token.vehicleId?.vehicleType || 'N/A',
@@ -151,41 +140,52 @@ const Token_list = () => {
 
         setFilteredData(processedTokens);
         setTotalRows(result.totalCount || 0);
+        setCurrentPage(newPage); // Update page only after successful data fetch
         
         if (processedTokens.length > 0) {
           showSuccess(`Found ${result.totalCount} matching records`);
         } else {
           showError('No matching records found for the selected criteria');
         }
-      } else {
-        throw new Error('Invalid response format');
+        return true;
       }
+      return false;
     } catch (error) {
       console.error('Error fetching tokens:', error);
       showError(error.message);
       setFilteredData([]);
       setTotalRows(0);
+      return false;
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Replace initial useEffect
+  // Update initial useEffect
   useEffect(() => {
-    fetchTokens();
-  }, [currentPage, perPage]); // Add dependencies
+    const initializePage = async () => {
+      await fetchTokens({}, currentPage);
+    };
+    initializePage();
+  }, [perPage]); // Remove currentPage dependency
 
-  // Update handlePageChange to trigger new API call
-  const handlePageChange = (page) => {
-    setCurrentPage(page);
-    fetchTokens();
+  // Update handlePageChange
+  const handlePageChange = async (page) => {
+    console.log('Changing to page:', page);
+    const success = await fetchTokens({}, page);
+    if (!success) {
+      showError('Failed to load page data');
+    }
   };
 
-  // Update handlePerPageChange to trigger new API call
-  const handlePerPageChange = (newPerPage, page) => {
+  // Update handlePerPageChange
+  const handlePerPageChange = async (newPerPage, page) => {
+    console.log('Changing rows per page:', { newPerPage, page });
     setPerPage(newPerPage);
-    setCurrentPage(page);
-    fetchTokens();
+    const success = await fetchTokens({}, page);
+    if (!success) {
+      showError('Failed to update rows per page');
+    }
   };
 
   /**
@@ -228,8 +228,7 @@ const Token_list = () => {
   // Update handleConfirm
   const handleConfirm = async () => {
     setShowConfirm(false);
-    setCurrentPage(1); // Reset to first page
-    setIsFiltered(true); // Set to true when filters are applied
+    setIsFiltered(true);
 
     const searchParams = {
       fromDate: fromDate,
@@ -237,8 +236,10 @@ const Token_list = () => {
       ...(selectedUser && { username: selectedUser })
     };
 
-    console.log('Submitting search with params:', searchParams);
-    await fetchTokens(searchParams);
+    const success = await fetchTokens(searchParams, 1); // Reset to first page
+    if (!success) {
+      showError('Failed to fetch filtered data');
+    }
   };
 
   /**
@@ -782,11 +783,11 @@ const Token_list = () => {
         <div className={`${isFullScreen ? 'h-[calc(100vh-80px)] overflow-auto' : ''}`}>
           <DataTable
             columns={columns}
-            data={filteredData}
+            data={filteredData} // Use filteredData directly instead of currentData
             pagination
             paginationServer
-            paginationPerPage={20} // Changed from perPage to hard-coded 20
-            paginationDefaultPage={1}
+            paginationPerPage={perPage}
+            paginationDefaultPage={currentPage}
             paginationRowsPerPageOptions={[10, 20, 25, 50, 100]}
             paginationTotalRows={totalRows}
             onChangePage={handlePageChange}
