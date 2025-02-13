@@ -280,8 +280,10 @@ exports.getUpdatedTokens = catchAsync(async (req, res) => {
 
 exports.exitToken = catchAsync(async (req, res, next) => {
     const { _id: userId, role: loggedUserRole } = req.user;
-    const { tokenNo, isLoaded } = req.body;
-    const token = await UserToken.findOne({ tokenNo })
+    // change in line 284 const { tokenNo, isLoaded } = req.body; 
+    // now the in the payload of exit token we are sending _id and isLoaded done by sandesh
+    const { _id, isLoaded } = req.body;
+    const token = await UserToken.findOne({ _id });
     if(!token) {
         return next(new AppError('Print Token not found', 400))
     }
