@@ -263,10 +263,9 @@ const Token_list = () => {
     return new Date(date).toLocaleString('en-US', {
       year: 'numeric',
       month: 'short',
-      day: 'numeric',
+      day: '2-digit',
       hour: '2-digit',
       minute: '2-digit',
-      second: '2-digit',
       hour12: true
     });
   };
@@ -279,22 +278,23 @@ const Token_list = () => {
     const worksheet = workbook.addWorksheet('Token Report');
 
     worksheet.columns = [
+      { header: 'S.No.', key: 'sNo', width: 10 },
+      { header: 'Created Date', key: 'createdAt', width: 25 }, // Increased width
+      { header: 'Token No', key: 'tokenNo', width: 15 },
       { header: 'Driver Name', key: 'driverName', width: 20 },
-      { header: 'Driver Mobile No.', key: 'driverMobileNo', width: 15 },
+      { header: 'Vehicle No', key: 'vehicleNo', width: 15 },
       { header: 'Vehicle Type', key: 'vehicleType', width: 15 },
       { header: 'Vehicle Rate', key: 'vehicleRate', width: 15 },
-      { header: 'Vehicle No', key: 'vehicleNo', width: 15 },
+      { header: 'Quantity', key: 'quantity', width: 10 },
       { header: 'Place', key: 'place', width: 20 },
       { header: 'Route', key: 'route', width: 20 },
-      { header: 'Token No', key: 'tokenNo', width: 15 },
+      { header: 'Operator', key: 'createdBy', width: 20 },
       { header: 'Challan Pin', key: 'challanPin', width: 15 },
-      { header: 'Quantity', key: 'quantity', width: 10 },
-      { header: 'User', key: 'createdBy', width: 20 },
-      { header: 'Created Date', key: 'createdAt', width: 20 }
     ];
 
     // Format the data for Excel with date and time
-    const formattedData = filteredData.map(item => ({
+    const formattedData = filteredData.map((item, index) => ({
+      sNo: index + 1 + (currentPage - 1) * perPage,
       driverName: item.driverName || 'N/A',
       driverMobileNo: item.driverMobileNo || 'N/A',
       vehicleType: item.vehicleType || 'N/A',
@@ -447,69 +447,87 @@ const Token_list = () => {
   // Define the columns for DataTable
   const columns = [
     {
-      name: 'Driver Name',
-      selector: row => row.driverName,
-      sortable: true,
+      name: 'S.No.',
+      selector: (row, index) => index + 1 + (currentPage - 1) * perPage,
+      sortable: false,
+      width: '80px',
     },
     {
-      name: 'Driver Mobile No.',
-      selector: row => row.driverMobileNo,
+      name: 'Created Date',
+      selector: row => formatDateTime(row.createdAt),
       sortable: true,
-    },
-    {
-      name: 'Vehicle Type',  // Add this new column
-      selector: row => row.vehicleType || 'N/A',  // Updated to use direct vehicleType
-      sortable: true,
-    },
-    {
-      name: 'Vehicle Rate',  // New column
-      selector: row => row.vehicleRate || 'N/A',  // Updated to use direct vehicleRate
-      sortable: true,
-    },
-    {
-      name: 'Vehicle No',
-      selector: row => row.vehicleNo,
-      sortable: true,
-    },
-    {
-      name: 'Place',
-      selector: row => row.place,
-      sortable: true,
-    },
-    {
-      name: 'Route',
-      selector: row => row.route || 'N/A',
-      sortable: true,
+      width: '200px', // Increased width
+      wrap: true, // Allow text wrapping
     },
     {
       name: 'Token No',
       selector: row => row.tokenNo,
       sortable: true,
+      width: '120px',
     },
     {
-      name: 'Challan Pin',
-      selector: row => row.challanPin || 'N/A',
+      name: 'Driver Name',
+      selector: row => row.driverName,
       sortable: true,
+      width: '150px',
+      wrap: true,
+    },
+    {
+      name: 'Vehicle No',
+      selector: row => row.vehicleNo,
+      sortable: true,
+      width: '130px',
+    },
+    {
+      name: 'Vehicle Type',
+      selector: row => row.vehicleType || 'N/A',
+      sortable: true,
+      width: '130px',
+      wrap: true,
+    },
+    {
+      name: 'Vehicle Rate',
+      selector: row => row.vehicleRate || 'N/A',
+      sortable: true,
+      width: '120px',
     },
     {
       name: 'Quantity',
       selector: row => row.quantity,
       sortable: true,
+      width: '100px',
     },
     {
-      name: 'User',
+      name: 'Place',
+      selector: row => row.place,
+      sortable: true,
+      width: '130px',
+      wrap: true,
+    },
+    {
+      name: 'Route',
+      selector: row => row.route || 'N/A',
+      sortable: true,
+      width: '130px',
+      wrap: true,
+    },
+    {
+      name: 'Operator',
       selector: row => row.userId?.username || 'N/A',
       sortable: true,
+      width: '130px',
+      wrap: true,
     },
     {
-      name: 'Date',
-      selector: row => formatDateTime(row.createdAt),
+      name: 'Challan Pin',
+      selector: row => row.challanPin || 'N/A',
       sortable: true,
+      width: '120px',
     },
     {
       name: 'Actions',
       cell: (row) => (
-        <div className="flex gap-2">
+        <div className="flex justify-center w-full gap-2">
           <button
             onClick={() => handleUpdate(row)}
             className="p-2 text-blue-600 hover:text-blue-800 transition-colors"
@@ -519,7 +537,7 @@ const Token_list = () => {
           </button>
           <button
             onClick={() => {
-              setSelectedToken({ _id: row._id }); // Ensure we capture the _id
+              setSelectedToken({ _id: row._id });
               setShowDeleteConfirm(true);
             }}
             className="p-2 text-red-600 hover:text-red-800 transition-colors"
@@ -530,7 +548,7 @@ const Token_list = () => {
         </div>
       ),
       ignoreRowClick: true,
-      // Removed allowOverflow property as it's not needed
+      width: '100px',
     },
   ];
 
@@ -540,6 +558,29 @@ const Token_list = () => {
       style: {
         background: 'linear-gradient(to right, #94a3b8, #cbd5e1, #e2e8f0)',
         fontWeight: 'bold',
+        minHeight: '52px', // Increased height for header row
+        paddingLeft: '8px',
+        paddingRight: '8px',
+      },
+    },
+    headCells: {
+      style: {
+        fontSize: '14px',
+        padding: '8px',
+        justifyContent: 'center', // Center align headers
+        textAlign: 'center',
+        fontWeight: '600',
+      },
+    },
+    cells: {
+      style: {
+        padding: '8px',
+        justifyContent: 'center',
+        textAlign: 'center',
+        '&:not(:last-of-type)': {
+          borderRightWidth: '1px',
+          borderRightColor: '#e5e7eb',
+        },
       },
     },
     rows: {

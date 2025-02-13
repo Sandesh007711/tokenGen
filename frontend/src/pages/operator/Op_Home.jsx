@@ -193,8 +193,11 @@ const Op_Home = () => {
       const queryParams = new URLSearchParams({
         page: page,
         limit: perPage,
-        username: currentUser.username
+        username: currentUser.username,
+        deleted: false  // Add this parameter to filter out deleted entries
       });
+
+      console.log('Fetching tokens with params:', queryParams.toString()); // Log query params
 
       const response = await axios.get(`http://localhost:8000/api/v1/tokens?${queryParams}`, {
         headers: {
@@ -204,11 +207,19 @@ const Op_Home = () => {
       });
 
       if (response.data?.status === 'success') {
-        const processedTokens = response.data.data.map(token => ({
-          ...token,
-          displayVehicleType: token.vehicleId?.vehicleType || token.vehicleType || 'N/A',
-          displayVehicleRate: token.vehicleRate || 'N/A'
-        }));
+        console.log('Raw API Response:', response.data); // Log raw API response
+
+        // Filter out entries where deletedAt is not null
+        const processedTokens = response.data.data
+          .filter(token => !token.deletedAt)
+          .map(token => ({
+            ...token,
+            displayVehicleType: token.vehicleId?.vehicleType || token.vehicleType || 'N/A',
+            displayVehicleRate: token.vehicleRate || 'N/A'
+          }));
+
+        console.log('Processed Tokens:', processedTokens); // Log processed tokens
+        console.log('Total Rows:', response.data.totalCount); // Log total count
 
         setApiTokens(processedTokens);
         setEntries(processedTokens);
@@ -234,20 +245,22 @@ const Op_Home = () => {
   }, [perPage]); // Remove currentPage dependency
 
   const handlePageChange = async (page) => {
-    console.log('Changing to page:', page);
+    console.log('Page change requested:', page);
     const success = await fetchUserTokens(page);
     if (!success) {
       showError('Failed to load page data');
     }
+    console.log('Current table data:', entries); // Log current table data after page change
   };
 
   const handlePerPageChange = async (newPerPage, page) => {
-    console.log('Changing rows per page:', { newPerPage, page });
+    console.log('Rows per page change:', { newPerPage, page });
     setPerPage(newPerPage);
     const success = await fetchUserTokens(page);
     if (!success) {
       showError('Failed to update rows per page');
     }
+    console.log('Updated table data:', entries); // Log table data after rows per page change
   };
 
   const handleInputChange = (e) => {
@@ -265,7 +278,7 @@ const Op_Home = () => {
         setFormData(prev => ({
           ...prev,
           vehicleType: selectedVehicle.vehicleType,
-          vehicleId: selectedVehicle.vehicleId, // Use vehicleId from the response
+          vehicleId: selectedVehicle.vehicleId || selectedVehicle._id, // Add fallback to _id
           vehicleRate: selectedVehicle.rate.toString() // Use rate instead of vehicleRate
         }));
       } else {
@@ -314,50 +327,52 @@ const Op_Home = () => {
 
   const handleSubmitClick = (e) => {
     e.preventDefault();
-  
-    // Basic validation
+    e.stopPropagation();
+
+    // Validate required fields
     if (!formData.driverName.trim()) {
       showError('Driver Name is required');
       return;
     }
-  
+
+    if (!formData.vehicleNo.trim()) {
+      showError('Vehicle Number is required');
+      return;
+    }
+
+    if (!formData.vehicleType) {
+      showError('Please select a vehicle type');
+      return;
+    }
+
+    if (!formData.quantity || formData.quantity === 'Select Quantity') {
+      showError('Please select a quantity');
+      return;
+    }
+
+    if (!formData.driverMobile || formData.driverMobile.length !== 10) {
+      showError('Please enter a valid 10-digit mobile number');
+      return;
+    }
+
     try {
       // Find the selected vehicle data from vehicleRates
       const selectedVehicle = vehicleRates.find(
         vehicle => vehicle.vehicleType === formData.vehicleType
       );
-  
+
       if (!selectedVehicle) {
         throw new Error('Please select a valid vehicle type');
       }
-  
-      // Format the data according to API requirements
-      const submitData = {
-        userId: formData.userId,
-        vehicleId: selectedVehicle.vehicleId, // Use vehicleId
-        driverName: formData.driverName.trim(),
-        driverMobileNo: parseInt(formData.driverMobile),
-        vehicleNo: formData.vehicleNo.trim(),
-        quantity: parseInt(formData.quantity),
-        place: formData.place.trim() || undefined,
-        challanPin: formData.chalaanPin ? parseInt(formData.chalaanPin) : undefined,
-        route: formData.route
-      };
-  
-      // Debug logging
-      console.log('Selected Vehicle:', selectedVehicle);
-      console.log('Submit Data1:', submitData);
-  
-      // Set temporary form data and show confirmation
-      setTempFormData(submitData);
+
+      // If all validations pass, show confirmation dialog
       setShowSubmitConfirm(true);
-  
     } catch (error) {
       console.error('Form validation error:', error);
       showError(error.message);
     }
   };
-  
+
   const showSuccess = (message) => {
     setSuccessPopup({ show: true, message });
     setTimeout(() => {
@@ -389,12 +404,17 @@ const Op_Home = () => {
         headers: {
           'Authorization': `Bearer ${authToken}`,
           'Content-Type': 'application/json'
+        },
+        params: {
+          deleted: false  // Add this parameter to filter out deleted entries
         }
       });
 
       if (response.data?.status === 'success' && Array.isArray(response.data.data)) {
         const userTokens = response.data.data
-          .filter(token => token.userId?.username === currentUser.username)
+          .filter(token => 
+            token.userId?.username === currentUser.username && !token.deletedAt
+          )
           .map(token => ({
             ...token,
             displayVehicleType: token.vehicleId?.vehicleType || token.vehicleType || 'N/A',
@@ -424,7 +444,6 @@ const Op_Home = () => {
       const userData = JSON.parse(userStr);
       const authToken = userData.token;
   
-      // Get selected vehicle data from formData, not tempFormData
       const selectedVehicle = vehicleRates.find(
         vehicle => vehicle.vehicleType === formData.vehicleType
       );
@@ -433,10 +452,9 @@ const Op_Home = () => {
         throw new Error('Please select a valid vehicle type');
       }
   
-      // Format the data according to API requirements
       const submitData = {
         userId: formData.userId,
-        vehicleId: selectedVehicle.vehicleId, // Use vehicleId
+        vehicleId: selectedVehicle.vehicleId || selectedVehicle._id, // Add fallback to _id
         driverName: formData.driverName.trim(),
         driverMobileNo: parseInt(formData.driverMobile),
         vehicleNo: formData.vehicleNo.trim(),
@@ -446,10 +464,7 @@ const Op_Home = () => {
         route: formData.route
       };
   
-  
-      // Debug log
-      console.log('Vehicle Data:', selectedVehicle);
-      console.log('Submit Data:', submitData);
+      console.log('Submitting data:', submitData);
   
       const response = await axios.post(
         'http://localhost:8000/api/v1/tokens',
@@ -462,14 +477,15 @@ const Op_Home = () => {
         }
       );
   
+      console.log('API Response:', response.data);
+  
       if (response.data?.status === 'success') {
-        // Instead of fetching tokens here, use the refreshTable function
         await refreshTable();
-        
         setIsModalOpen(false);
-        setFormData({
-          userId: '',
-          route: '',
+        setShowSubmitConfirm(false);
+        // Reset form data after successful submission
+        setFormData(prev => ({
+          ...prev,
           driverName: '',
           driverMobile: '',
           vehicleNo: '',
@@ -478,8 +494,7 @@ const Op_Home = () => {
           quantity: '',
           place: '',
           chalaanPin: ''
-        });
-        setShowSubmitConfirm(false);
+        }));
         showSuccess('Token generated successfully!');
       } else {
         throw new Error(response.data?.message || 'Failed to generate token');
@@ -493,11 +508,48 @@ const Op_Home = () => {
   };
 
   const handleCancelClick = () => {
-    if (Object.values(formData).some(value => value !== '')) {
+    // Only check non-system fields for changes
+    const formFields = {
+      driverName: formData.driverName,
+      driverMobile: formData.driverMobile,
+      vehicleNo: formData.vehicleNo,
+      vehicleType: formData.vehicleType,
+      quantity: formData.quantity,
+      place: formData.place,
+      chalaanPin: formData.chalaanPin
+    };
+    
+    const hasChanges = Object.values(formFields).some(value => value !== '' && value !== undefined);
+    
+    if (hasChanges) {
       setShowCancelConfirm(true);
     } else {
       setIsModalOpen(false);
     }
+  };
+
+  const handleCancelConfirm = () => {
+    // Get the current user data
+    const userStr = localStorage.getItem('user');
+    const userData = JSON.parse(userStr);
+    const currentUser = userData.data || userData.user || userData;
+
+    // Reset form but keep the user data
+    setFormData({
+      userId: currentUser._id || '',
+      username: currentUser.username || '',
+      route: currentUser.route || '',
+      driverName: '',
+      driverMobile: '',
+      vehicleNo: '',
+      vehicleType: '',
+      vehicleRate: '',
+      quantity: '',
+      place: '',
+      chalaanPin: ''
+    });
+    setShowCancelConfirm(false);
+    setIsModalOpen(false);
   };
 
   const handlePrint = (entry) => {
@@ -885,59 +937,70 @@ const formatDateTime = (dateString) => {
       width: '70px',
     },
     {
+      name: 'Created Date',
+      selector: row => formatDateTime(row.createdAt),
+      sortable: true,
+      width: '200px',
+    },
+    {
       name: 'Token No.',
       selector: row => row.tokenNo || 'N/A',
       sortable: true,
-    },
-    {
-      name: 'Date/Time',
-      selector: row => formatDateTime(row.createdAt),
-      sortable: true,
+      width: '120px',
     },
     {
       name: 'Driver Name',
       selector: row => row.driverName,
       sortable: true,
-    },
-    {
-      name: 'Driver Mobile',
-      selector: row => row.driverMobileNo,
-      sortable: true,
-    },
-    {
-      name: 'Vehicle Type',
-      selector: row => row.displayVehicleType,
-      sortable: true,
-    },
-    {
-      name: 'Vehicle Rate',
-      selector: row => row.displayVehicleRate,
-      sortable: true,
+      width: '150px',
     },
     {
       name: 'Vehicle No',
       selector: row => row.vehicleNo,
       sortable: true,
+      width: '130px',
     },
     {
-      name: 'Place',
-      selector: row => row.place || 'N/A',
+      name: 'Vehicle Type',
+      selector: row => row.displayVehicleType,
       sortable: true,
+      width: '130px',
     },
     {
-      name: 'Route',
-      selector: row => row.route || 'N/A',
+      name: 'Vehicle Rate',
+      selector: row => row.displayVehicleRate,
       sortable: true,
-    },
-    {
-      name: 'Challan Pin',
-      selector: row => row.challanPin || 'N/A',
-      sortable: true,
+      width: '120px',
     },
     {
       name: 'Quantity',
       selector: row => row.quantity,
       sortable: true,
+      width: '100px',
+    },
+    {
+      name: 'Place',
+      selector: row => row.place || 'N/A',
+      sortable: true,
+      width: '130px',
+    },
+    {
+      name: 'Route',
+      selector: row => row.route || 'N/A',
+      sortable: true,
+      width: '130px',
+    },
+    {
+      name: 'Operator',
+      selector: row => row.userId?.username || 'N/A',
+      sortable: true,
+      width: '130px',
+    },
+    {
+      name: 'Challan Pin',
+      selector: row => row.challanPin || 'N/A',
+      sortable: true,
+      width: '120px',
     },
     {
       name: 'Status',
@@ -948,6 +1011,7 @@ const formatDateTime = (dateString) => {
           {row.isLoaded ? 'Loaded' : 'Pending'}
         </span>
       ),
+      width: '100px',
     },
     {
       name: 'Actions',
@@ -967,7 +1031,7 @@ const formatDateTime = (dateString) => {
           </button>
         </div>
       ),
-      width: '120px', // Add fixed width for better alignment
+      width: '120px',
     },
   ];
 
@@ -1033,7 +1097,7 @@ const formatDateTime = (dateString) => {
       </button>
 
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center pt-20">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center pt-20 z-[9999]">
           <div className="bg-gradient-to-b from-gray-800 to-gray-900 rounded-2xl shadow-2xl p-6 w-[800px] max-h-[85vh] overflow-y-auto">
             <h2 className="text-2xl font-bold text-gray-300 mb-4">Add New Token</h2>
             <form 
@@ -1140,7 +1204,7 @@ const formatDateTime = (dateString) => {
                     </select>
                     <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-400">
                       <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-                        <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a 1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/>
+                        <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/>
                       </svg>
                     </div>
                   </div>
@@ -1225,7 +1289,6 @@ const formatDateTime = (dateString) => {
                 </button>
                 <button 
                   type="submit"
-                  onClick={handleSubmitClick}
                   className="px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                 >
                   Submit
@@ -1237,7 +1300,7 @@ const formatDateTime = (dateString) => {
       )}
 
       {showSubmitConfirm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[99999]">
           <div className="bg-white rounded-lg p-6 max-w-sm w-full mx-4">
             <h2 className="text-xl font-bold mb-4">Confirm Submission</h2>
             <p className="text-gray-600 mb-6">Are you sure you want to submit this token?</p>
@@ -1266,7 +1329,7 @@ const formatDateTime = (dateString) => {
       )}
 
       {showCancelConfirm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999]">
           <div className="bg-white rounded-lg p-6 max-w-sm w-full mx-4">
             <h2 className="text-xl font-bold mb-4">Confirm Cancel</h2>
             <p className="text-gray-600 mb-6">Are you sure you want to cancel? All entered data will be lost.</p>
@@ -1278,10 +1341,7 @@ const formatDateTime = (dateString) => {
                 No, Keep Editing
               </button>
               <button
-                onClick={() => {
-                  setShowCancelConfirm(false);
-                  setIsModalOpen(false);
-                }}
+                onClick={handleCancelConfirm}
                 className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
               >
                 Yes, Cancel
