@@ -10,16 +10,23 @@ const Card = ({ operator }) => {
   const [totalRows, setTotalRows] = useState(0);
   const [perPage, setPerPage] = useState(20); // Changed from 10 to 20
   const [currentPage, setCurrentPage] = useState(1);
+  const [isPaginationLoading, setIsPaginationLoading] = useState(false);
 
   // Update the fetchData function to use the correct user ID
-  const fetchData = async (page) => {
+  const fetchData = async (page, newPerPage = perPage) => {
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
       console.log('Fetching data for operator:', operator); // Log operator info
 
       // Use the correct _id from operator object
-      const response = await fetch(`http://localhost:8000/api/v1/tokens?user=${operator._id}&page=${page}`, {
+      const queryParams = new URLSearchParams({
+        user: operator._id,
+        page: page,
+        limit: newPerPage
+      });
+
+      const response = await fetch(`http://localhost:8000/api/v1/tokens?${queryParams}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -65,23 +72,43 @@ const Card = ({ operator }) => {
   };
 
   // Pagination handlers
-  const handlePageChange = page => {
-    setCurrentPage(page);
-    fetchData(page);
+  const handlePageChange = async (page) => {
+    setIsPaginationLoading(true);
+    try {
+      console.log('Changing to page:', page);
+      const success = await fetchData(page);
+      if (!success) {
+        console.error('Failed to load page data');
+      }
+      setCurrentPage(page);
+    } finally {
+      setIsPaginationLoading(false);
+    }
   };
 
   const handlePerRowsChange = async (newPerPage, page) => {
-    setPerPage(newPerPage);
-    setCurrentPage(page);
-    fetchData(page);
+    setIsPaginationLoading(true);
+    try {
+      console.log('Changing rows per page:', { newPerPage, page });
+      setPerPage(newPerPage);
+      const success = await fetchData(page, newPerPage);
+      if (!success) {
+        console.error('Failed to update rows per page');
+      }
+    } finally {
+      setIsPaginationLoading(false);
+    }
   };
 
   // Load initial data when operator changes
   useEffect(() => {
     if (operator?._id) {
-      fetchData(currentPage);
+      const initializePage = async () => {
+        await fetchData(currentPage);
+      };
+      initializePage();
     }
-  }, [operator?._id]);
+  }, [operator?._id, perPage]); // Add perPage dependency
 
   // Generate QR code for row data
   const generateQR = async (data) => {
@@ -392,16 +419,18 @@ const Card = ({ operator }) => {
       <DataTable
         columns={columns}
         data={data}
-        progressPending={loading}
+        progressPending={loading || isPaginationLoading}
         progressComponent={
           <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-gray-900"></div>
         }
         pagination
         paginationServer
         paginationTotalRows={totalRows}
+        paginationPerPage={perPage}
+        paginationDefaultPage={currentPage}
+        paginationRowsPerPageOptions={[10, 20, 25, 50, 100]}
         onChangeRowsPerPage={handlePerRowsChange}
         onChangePage={handlePageChange}
-        paginationPerPage={perPage}
         highlightOnHover
         striped
         customStyles={customStyles}
