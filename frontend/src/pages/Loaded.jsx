@@ -15,7 +15,7 @@ const Loaded = () => {
         const token = localStorage.getItem('token');
         if (!token) return;
 
-        const response = await fetch('http://localhost:8000/api/v1/tokens', {
+        const response = await fetch('http://localhost:8000/api/v1/tokens?limit=1000', {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
@@ -25,9 +25,18 @@ const Loaded = () => {
         if (!response.ok) throw new Error('Failed to fetch tokens');
 
         const data = await response.json();
+        console.log('Raw API Response:', {
+          status: response.status,
+          statusText: response.statusText,
+          headers: Object.fromEntries(response.headers.entries()),
+          body: data
+        });
+
         const tokens = Array.isArray(data) ? data : 
                       (data.data && Array.isArray(data.data)) ? data.data :
                       (data.tokens && Array.isArray(data.tokens)) ? data.tokens : [];
+        
+        console.log('Processed tokens:', tokens); // Log processed tokens array
 
         // Create index map for O(1) lookup
         const map = new Map();
@@ -39,6 +48,7 @@ const Loaded = () => {
           map.get(key).push(token);
         });
 
+        console.log('Token map:', Object.fromEntries(map)); // Log the map structure
         setTokenMap(map);
       } catch (err) {
         console.error('Error initializing token index:', err);
@@ -62,30 +72,40 @@ const Loaded = () => {
     
     const key = tokenInput.toLowerCase();
     const matchingTokens = tokenMap.get(key) || [];
+    console.log('Matching tokens for', key, ':', matchingTokens); // Log matching tokens
     
+    // First check if token exists
+    if (matchingTokens.length === 0) {
+      setError('Token not found');
+      setTokenData([]);
+      setLoading(false);
+      return;
+    }
+
     // Check if token is deleted
     const activeTokens = matchingTokens.filter(t => t.deletedAt === null);
-    
-    if (matchingTokens.length > 0 && activeTokens.length === 0) {
+    console.log('Active tokens:', activeTokens); // Log active tokens
+
+    if (activeTokens.length === 0) {
       setError('This token has been deleted');
       setTokenData([]);
       setLoading(false);
       return;
     }
-    
-    // Filter unloaded and active tokens and sort by date
-    const unloadedTokens = activeTokens
-      .filter(t => !t.isLoaded)
-      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
-    if (activeTokens.length > 0 && unloadedTokens.length === 0) {
-      setError('All tokens with this number have already been loaded');
-      setTokenData([]);
-    } else if (unloadedTokens.length === 0) {
-      setError('Token not found');
+    // Get only unloaded tokens
+    const unloadedTokens = activeTokens.filter(t => {
+      console.log('Token:', t.tokenNo, 'isLoaded:', t.isLoaded); // Log each token's loaded status
+      return t.isLoaded === false;
+    });
+    
+    console.log('Unloaded tokens:', unloadedTokens); // Log filtered unloaded tokens
+    
+    if (unloadedTokens.length === 0) {
+      setError('This token has already been loaded');
       setTokenData([]);
     } else {
-      setTokenData(unloadedTokens);
+      setTokenData(unloadedTokens.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)));
       setError(null);
     }
     setLoading(false);
@@ -110,19 +130,26 @@ const Loaded = () => {
       setLoading(true);
       const token = localStorage.getItem('token');
       
+      const payload = {
+        _id: selectedToken._id,
+        isLoaded: true
+      };
+
+      console.log('Sending payload:', payload); // Debug log
+
       const response = await fetch('http://localhost:8000/api/v1/tokens/loaded', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({
-          tokenNo: selectedToken.tokenNo,
-          isLoaded: true
-        })
+        body: JSON.stringify(payload)
       });
 
       if (!response.ok) throw new Error('Failed to load token');
+
+      const responseData = await response.json();
+      console.log('Response received:', responseData);
 
       // Update local token map
       const tokens = tokenMap.get(selectedToken.tokenNo.toLowerCase()) || [];

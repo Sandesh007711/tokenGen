@@ -1,12 +1,11 @@
 import React from 'react'
 
-
 const Footer = () => {
   return (
     <footer className="footer_w">
-      <p className="m-0 font-bold tracking-wide">
+      <p className="m-0 text-xs tracking-wide opacity-75">
         COPYRIGHT &copy; RAMJEE SINGH AND COMPANY - DEVELOPED BY TRIADEVS ALL RIGHTS RESERVED - 2025
-        </p>
+      </p>
     </footer>
   )
 }

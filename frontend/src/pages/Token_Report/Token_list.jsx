@@ -113,10 +113,22 @@ const Token_list = () => {
       const queryParams = new URLSearchParams({
         page: newPage,
         limit: perPage,
-        ...(searchParams.fromDate && { fromDate: searchParams.fromDate.toISOString() }),
-        ...(searchParams.toDate && { toDate: searchParams.toDate.toISOString() }),
-        ...(searchParams.username && { username: searchParams.username })
       });
+
+      // Only add date filters if they exist and filtering is active
+      if (isFiltered && searchParams.fromDate) {
+        queryParams.append('dateFrom', searchParams.fromDate.toISOString().split('T')[0]);
+      }
+      if (isFiltered && searchParams.toDate) {
+        queryParams.append('dateTo', searchParams.toDate.toISOString().split('T')[0]);
+      }
+      if (isFiltered && searchParams.username) {
+        // Find the user object to get the ID
+        const userObj = users.find(u => u.username === searchParams.username);
+        if (userObj) {
+          queryParams.append('user', userObj._id);
+        }
+      }
 
       const response = await fetch(`http://localhost:8000/api/v1/tokens?${queryParams}`, {
         headers: {
@@ -605,6 +617,16 @@ const Token_list = () => {
     }
   };
 
+  // Add reset filters function
+  const handleResetFilters = async () => {
+    setFromDate(new Date());
+    setToDate(new Date());
+    setSelectedUser('');
+    setIsFiltered(false);
+    setCurrentPage(1);
+    await fetchTokens({}, 1);
+  };
+
   return (
     <div className="p-7 max-w-7xl mx-auto">
       {/* Confirmation Popup */}
@@ -734,22 +756,22 @@ const Token_list = () => {
           </div>
 
           <div className="flex flex-col">
-            <label className="text-transparent mb-1">Submit</label>
+            <label className="text-transparent mb-1">Actions</label>
             <div className="flex gap-2">
               <button
                 type="submit"
                 className="px-8 py-2 rounded-md bg-gray-500 text-white font-bold transition duration-200 hover:bg-white hover:text-black border-2 border-transparent hover:border-teal-500 flex items-center justify-center"
               >
-                Submit
+                Apply Filters
               </button>
               
               {isFiltered && (
                 <button
                   type="button"
-                  onClick={handleShowFullData}
-                  className="px-8 py-2 rounded-md bg-gray-500 text-white font-bold transition duration-200 hover:bg-white hover:text-black border-2 border-transparent hover:border-teal-500 flex items-center justify-center"
+                  onClick={handleResetFilters}
+                  className="px-8 py-2 rounded-md bg-red-500 text-white font-bold transition duration-200 hover:bg-white hover:text-black border-2 border-transparent hover:border-red-500 flex items-center justify-center"
                 >
-                  Show Full Data
+                  Reset Filters
                 </button>
               )}
             </div>
