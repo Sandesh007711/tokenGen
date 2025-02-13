@@ -8,17 +8,18 @@ const Card = ({ operator }) => {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [totalRows, setTotalRows] = useState(0);
-  const [perPage, setPerPage] = useState(10);
+  const [perPage, setPerPage] = useState(20); // Changed from 10 to 20
   const [currentPage, setCurrentPage] = useState(1);
 
-  // Modified fetchData function to handle vehicle data correctly
-  const fetchData = async () => {
+  // Update the fetchData function to use the correct user ID
+  const fetchData = async (page) => {
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
       console.log('Fetching data for operator:', operator); // Log operator info
 
-      const response = await fetch('http://localhost:8000/api/v1/tokens', {
+      // Use the correct _id from operator object
+      const response = await fetch(`http://localhost:8000/api/v1/tokens?user=${operator._id}&page=${page}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -29,30 +30,21 @@ const Card = ({ operator }) => {
       }
 
       const json = await response.json();
-      console.log('Raw API response:', json); // Log raw API response
       
       if (!json.data || !Array.isArray(json.data)) {
         console.error('Invalid response format:', json);
         throw new Error('Invalid data format received from server');
       }
 
-      console.log('Print Tokens array:', json.data); // Log tokens array
-
-      // Filter tokens for this specific operator
-      const operatorTokens = json.data.filter(token => 
-        token.userId?.username === operator.username
-      );
-
-      const formattedData = operatorTokens.map(item => ({
+      const formattedData = json.data.map(item => ({
         tokenNo: item.tokenNo,
         date: new Date(item.createdAt).toLocaleString(),
         driver: item.driverName,
-        mobileNo: item.driverMobileNo, // Already a number
+        mobileNo: item.driverMobileNo,
         vehicleNo: item.vehicleNo,
-        // Update vehicle type handling to match Token_list
         vehicleType: item.vehicleType || item.vehicleId?.vehicleType || 'N/A',
         vehicleRate: item.vehicleRate || 'N/A',
-        quantity: item.quantity, // Already a number
+        quantity: item.quantity,
         route: item.route || '-',
         place: item.place || '-',
         challanPin: item.challanPin || '-',
@@ -61,10 +53,8 @@ const Card = ({ operator }) => {
         updatedAt: item.updatedAt ? new Date(item.updatedAt).toLocaleString() : '-'
       }));
 
-      console.log('Formatted data:', formattedData); // Log formatted data
-
       setData(formattedData);
-      setTotalRows(formattedData.length); // Use the actual array length for total
+      setTotalRows(json.totalCount || formattedData.length);
     } catch (error) {
       console.error('Error fetching data:', error);
       setData([]);
@@ -77,19 +67,21 @@ const Card = ({ operator }) => {
   // Pagination handlers
   const handlePageChange = page => {
     setCurrentPage(page);
+    fetchData(page);
   };
 
   const handlePerRowsChange = async (newPerPage, page) => {
     setPerPage(newPerPage);
     setCurrentPage(page);
+    fetchData(page);
   };
 
   // Load initial data when operator changes
   useEffect(() => {
-    if (operator?.username) {
-      fetchData();
+    if (operator?._id) {
+      fetchData(currentPage);
     }
-  }, [operator?.username]);
+  }, [operator?._id]);
 
   // Generate QR code for row data
   const generateQR = async (data) => {
@@ -396,7 +388,7 @@ const Card = ({ operator }) => {
   // Render DataTable with all configurations
   return (
     <div className="bg-white shadow-lg rounded-lg overflow-hidden p-4 mt-4 md:mt-6 lg:mt-8 xl:mt-6 sm:p-6 max-w-full">
-      <h2 className="text-2xl font-bold mb-4">Tokens for {operator.username} ({data.length} total)</h2>
+      <h2 className="text-2xl font-bold mb-4">Tokens for {operator.username} ({totalRows} total)</h2>
       <DataTable
         columns={columns}
         data={data}
