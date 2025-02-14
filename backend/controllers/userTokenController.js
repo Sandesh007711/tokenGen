@@ -223,7 +223,7 @@ exports.deleteToken = catchAsync(async (req, res, next) => {
     try {
         const tokenId = req.params.id
         // Find the token
-        const token = await UserToken.findOne({ _id: tokenId, isLoaded: false }).session(session);
+        const token = await UserToken.findOne({ _id: tokenId }).session(session);
         if (!token) return next(new AppError('Token not found!', 400))
     
         const userId = token.userId;

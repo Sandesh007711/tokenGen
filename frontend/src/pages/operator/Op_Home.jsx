@@ -407,9 +407,11 @@ const Op_Home = () => {
         driverName: formData.driverName.trim(),
         driverMobileNo: parseInt(formData.driverMobile),
         vehicleNo: formData.vehicleNo.trim(),
+        vehicleType: formData.vehicleType,
+        vehicleRate: parseInt(formData.vehicleRate),
         quantity: parseInt(formData.quantity),
         place: formData.place.trim() || undefined,
-        challanPin: formData.chalaanPin ? parseInt(formData.chalaanPin) : undefined,
+        challanPin: formData.chalaanPin ? formData.chalaanPin : undefined,
         route: formData.route
       };
   
@@ -509,7 +511,7 @@ const Op_Home = () => {
         query: entry.route,
         cluster: '6',
         driver: entry.driverName,
-        vehicle: entry.displayVehicleType,
+        vehicle: entry.vehicleType, 
         quantity: entry.quantity,
         mobile: entry.driverMobileNo,
         operator: entry.userId?.username,
@@ -546,7 +548,7 @@ const Op_Home = () => {
               <tr><td>Query Name:</td><td>${entry.route || 'N/A'}</td></tr>
               <tr><td>Cluster:</td><td>6</td></tr>
               <tr><td>Driver Name:</td><td>${entry.driverName}</td></tr>
-              <tr><td>Vehicle Type:</td><td>${entry.displayVehicleType}</td></tr>
+              <tr><td>Vehicle Type:</td><td>${entry.vehicleType}</td></tr> 
               <tr><td>Quantity:</td><td>${entry.quantity}</td></tr>
               <tr><td>Driver Mobile:</td><td>${entry.driverMobileNo}</td></tr>
               <tr><td>Operator:</td><td>${entry.userId?.username || 'N/A'}</td></tr>
@@ -673,7 +675,7 @@ const Op_Home = () => {
         query: entry.route,
         cluster: '6',
         driver: entry.driverName,
-        vehicle: entry.displayVehicleType,
+        vehicle: entry.vehicleType, // Changed from VehicleType
         quantity: entry.quantity,
         mobile: entry.driverMobileNo,
         operator: entry.userId?.username,
@@ -711,7 +713,7 @@ const Op_Home = () => {
             <div>Query Name: ${entry.route || 'N/A'}</div>
             <div>Cluster: 6</div>
             <div>Driver Name: ${entry.driverName}</div>
-            <div>Vehicle Type: ${entry.displayVehicleType}</div>
+            <div>Vehicle Type: ${entry.vehicleType}</div> 
             <div>Quantity: ${entry.quantity}</div>
             <div>Driver Mobile: ${entry.driverMobileNo}</div>
             <div>Operator: ${entry.userId?.username || 'N/A'}</div>
@@ -911,13 +913,13 @@ const formatDateTime = (dateString) => {
     },
     {
       name: 'Vehicle Type',
-      selector: row => row.displayVehicleType,
+      selector: row => row.vehicleType,
       sortable: true,
       width: '130px',
     },
     {
       name: 'Vehicle Rate',
-      selector: row => row.displayVehicleRate,
+      selector: row => row.vehicleRate,
       sortable: true,
       width: '120px',
     },
