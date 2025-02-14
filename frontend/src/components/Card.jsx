@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { QRCodeSVG } from 'qrcode.react';
+import ReactDOMServer from 'react-dom/server';
 import DataTable from 'react-data-table-component';
 import QRCode from 'qrcode';
 
@@ -10,16 +12,23 @@ const Card = ({ operator }) => {
   const [totalRows, setTotalRows] = useState(0);
   const [perPage, setPerPage] = useState(20); // Changed from 10 to 20
   const [currentPage, setCurrentPage] = useState(1);
+  const [isPaginationLoading, setIsPaginationLoading] = useState(false);
 
   // Update the fetchData function to use the correct user ID
-  const fetchData = async (page) => {
+  const fetchData = async (page, newPerPage = perPage) => {
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
       console.log('Fetching data for operator:', operator); // Log operator info
 
       // Use the correct _id from operator object
-      const response = await fetch(`http://localhost:8000/api/v1/tokens?user=${operator._id}&page=${page}`, {
+      const queryParams = new URLSearchParams({
+        user: operator._id,
+        page: page,
+        limit: newPerPage
+      });
+
+      const response = await fetch(`http://localhost:8000/api/v1/tokens?${queryParams}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -65,23 +74,43 @@ const Card = ({ operator }) => {
   };
 
   // Pagination handlers
-  const handlePageChange = page => {
-    setCurrentPage(page);
-    fetchData(page);
+  const handlePageChange = async (page) => {
+    setIsPaginationLoading(true);
+    try {
+      console.log('Changing to page:', page);
+      const success = await fetchData(page);
+      if (!success) {
+        console.error('Failed to load page data');
+      }
+      setCurrentPage(page);
+    } finally {
+      setIsPaginationLoading(false);
+    }
   };
 
   const handlePerRowsChange = async (newPerPage, page) => {
-    setPerPage(newPerPage);
-    setCurrentPage(page);
-    fetchData(page);
+    setIsPaginationLoading(true);
+    try {
+      console.log('Changing rows per page:', { newPerPage, page });
+      setPerPage(newPerPage);
+      const success = await fetchData(page, newPerPage);
+      if (!success) {
+        console.error('Failed to update rows per page');
+      }
+    } finally {
+      setIsPaginationLoading(false);
+    }
   };
 
   // Load initial data when operator changes
   useEffect(() => {
     if (operator?._id) {
-      fetchData(currentPage);
+      const initializePage = async () => {
+        await fetchData(currentPage);
+      };
+      initializePage();
     }
-  }, [operator?._id]);
+  }, [operator?._id, perPage]); // Add perPage dependency
 
   // Generate QR code for row data
   const generateQR = async (data) => {
@@ -233,185 +262,466 @@ const Card = ({ operator }) => {
   };
 
   // Handle print action
-  const handlePrint = async (row) => {
+  const handlePrint = (entry) => {
+    const createQRData = (entry) => {
+      return JSON.stringify({
+        date: entry.date,
+        token: entry.tokenNo,
+        query: entry.route,
+        cluster: '6',
+        driver: entry.driver,
+        vehicle: entry.vehicleType,
+        quantity: entry.quantity,
+        mobile: entry.mobileNo,
+        operator: operator.username,
+        destination: entry.place,
+        challan: entry.challanPin
+      });
+    };
+
+    const QRCodeComponent = ({ data }) => (
+      <QRCodeSVG 
+        value={data}
+        size={50}
+        level="M"
+        includeMargin={true}
+      />
+    );
+
+    const createCopy = (title) => {
+      const qrData = createQRData(entry);
+      const qrCodeSvg = ReactDOMServer.renderToString(
+        <QRCodeComponent data={qrData} />
+      );
+
+      return `
+        <div class="token-section">
+          <div class="header">
+            <div class="company-name">RAMJEE SINGH & COMPANY</div>
+            <div class="copy-type">${title}</div>
+          </div>
+          <div class="content">
+            <table class="info-table">
+              <tr><td>Date/Time:</td><td>${entry.date}</td></tr>
+              <tr><td>Token No.:</td><td>${entry.tokenNo || 'N/A'}</td></tr>
+              <tr><td>Query Name:</td><td>${entry.route || 'N/A'}</td></tr>
+              <tr><td>Cluster:</td><td>6</td></tr>
+              <tr><td>Driver Name:</td><td>${entry.driver}</td></tr>
+              <tr><td>Vehicle Type:</td><td>${entry.vehicleType}</td></tr>
+              <tr><td>Quantity:</td><td>${entry.quantity}</td></tr>
+              <tr><td>Driver Mobile:</td><td>${entry.mobileNo}</td></tr>
+              <tr><td>Operator:</td><td>${operator.username}</td></tr>
+              <tr><td>Destination:</td><td>${entry.place}</td></tr>
+              <tr><td>Challan Pin:</td><td>${entry.challanPin}</td></tr>
+            </table>
+            <div class="qr-code">
+              ${qrCodeSvg}
+            </div>
+          </div>
+        </div>
+      `;
+    };
+
+    const printContent = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Token Details</title>
+          <style>
+            @page {
+              size: A4;
+              margin: 10mm;
+            }
+            body {
+              font-family: Arial, sans-serif;
+              margin: 0;
+              padding: 0;
+              font-size: 8pt;
+              line-height: 1.1;
+            }
+            .token-section {
+              padding: 3mm;
+              height: 85mm;
+              position: relative;
+            }
+            .header {
+              text-align: left;
+              margin-bottom: 2mm;
+            }
+            .company-name {
+              font-size: 10pt;
+              font-weight: bold;
+            }
+            .copy-type {
+              font-size: 8pt;
+              font-weight: bold;
+            }
+            .content {
+              position: relative;
+            }
+            .info-table {
+              width: 100%;
+              margin-bottom: 4mm;
+            }
+            .info-table td {
+              padding: 0.5mm 2mm 0.5mm 0;
+              vertical-align: top;
+            }
+            .info-table td:first-child {
+              white-space: nowrap;
+              font-weight: bold;
+              width: 25%;
+            }
+            .qr-code {
+              position: relative;
+              left: 1;
+              width: 90px;
+              height: 90px;
+              margin-top: auto;
+            }
+            .qr-code svg {
+              width: 100%;
+              height: 100%;
+            }
+          </style>
+        </head>
+        <body>
+          ${createCopy("OFFICE COPY")}
+          ${createCopy("OPERATOR COPY")}
+          ${createCopy("DRIVER COPY")}
+        </body>
+      </html>
+    `;
+
     const printWindow = window.open('', '_blank');
-    const content = await formatPrintContent(row);
-    printWindow.document.write(content);
+    printWindow.document.write(printContent);
     printWindow.document.close();
-    
+
     setTimeout(() => {
       printWindow.print();
+      printWindow.close();
     }, 500);
   };
 
-  // Modified table column definitions
+  const handleReceiptPrint = (entry) => {
+    const createQRData = (entry) => {
+      return JSON.stringify({
+        date: entry.date,
+        token: entry.tokenNo,
+        query: entry.route,
+        cluster: '6',
+        driver: entry.driver,
+        vehicle: entry.vehicleType,
+        quantity: entry.quantity,
+        mobile: entry.mobileNo,
+        operator: operator.username,
+        destination: entry.place,
+        challan: entry.challanPin
+      });
+    };
+
+    const QRCodeComponent = ({ data }) => (
+      <QRCodeSVG 
+        value={data}
+        size={100}
+        level="M"
+        includeMargin={true}
+      />
+    );
+
+    const createCopy = (title) => {
+      const qrData = createQRData(entry);
+      const qrCodeSvg = ReactDOMServer.renderToString(
+        <QRCodeComponent data={qrData} />
+      );
+
+      return `
+        <div class="receipt">
+          <div class="header">
+            <div class="company-name">RAMJEE SINGH & COMPANY</div>
+            <div class="divider">================================</div>
+            <div class="copy-label">${title}</div>
+            <div class="token-number">Token No: ${entry.tokenNo || 'N/A'}</div>
+            <div class="divider">================================</div>
+          </div>
+          <div class="content">
+            <div>Date/Time: ${entry.date}</div>
+            <div>Query Name: ${entry.route || 'N/A'}</div>
+            <div>Cluster: 6</div>
+            <div>Driver Name: ${entry.driver}</div>
+            <div>Vehicle Type: ${entry.vehicleType}</div>
+            <div>Quantity: ${entry.quantity}</div>
+            <div>Driver Mobile: ${entry.mobileNo}</div>
+            <div>Operator: ${operator.username}</div>
+            <div>Destination: ${entry.place || 'N/A'}</div>
+            <div>Challan Pin: ${entry.challanPin || 'N/A'}</div>
+            <div class="divider">================================</div>
+          </div>
+          <div class="qr-section">
+            ${qrCodeSvg}
+          </div>
+        </div>
+      `;
+    };
+
+    const printContent = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Token Receipt</title>
+          <style>
+            @page {
+              size: 80mm auto;
+              margin: 0;
+              padding: 0;
+            }
+            body {
+              font-family: 'Courier New', Courier, monospace;
+              width: 80mm;
+              margin: 0;
+              padding: 8px;
+              font-size: 12pt;
+              line-height: 1.2;
+              text-transform: uppercase;
+            }
+            .receipt {
+              width: 100%;
+              text-align: center;
+              margin-bottom: 20px;
+              page-break-after: always;
+            }
+            .receipt:last-child {
+              page-break-after: avoid;
+            }
+            .header {
+              margin-bottom: 10px;
+            }
+            .company-name {
+              font-size: 14pt;
+              font-weight: bold;
+              margin-bottom: 5px;
+            }
+            .copy-label {
+              font-size: 14pt;
+              font-weight: bold;
+              margin: 5px 0;
+              text-decoration: underline;
+            }
+            .token-number {
+              font-size: 24pt;
+              font-weight: bold;
+              margin: 10px 0;
+              letter-spacing: 2px;
+            }
+            .divider {
+              margin: 5px 0;
+            }
+            .content {
+              text-align: left;
+              margin-bottom: 10px;
+              font-size: 12pt;
+            }
+            .content div {
+              margin: 3px 0;
+              white-space: nowrap;
+              overflow: hidden;
+              text-overflow: ellipsis;
+            }
+            .qr-section {
+              text-align: center;
+              margin: 10px 0;
+            }
+            .qr-section svg {
+              width: 100px;
+              height: 100px;
+            }
+            @media print {
+              body {
+                width: 80mm;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          ${createCopy("OFFICE COPY")}
+          ${createCopy("OPERATOR COPY")}
+          ${createCopy("DRIVER COPY")}
+        </body>
+      </html>
+    `;
+
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(printContent);
+    printWindow.document.close();
+
+    setTimeout(() => {
+      printWindow.print();
+      printWindow.close();
+    }, 500);
+  };
+
+  // Replace the columns definition with this:
   const columns = [
     {
-      name: 'Token No',
-      selector: row => row.tokenNo,
-      sortable: true,
+      name: 'Sr No.',
+      cell: (row, index) => ((currentPage - 1) * perPage) + index + 1,
+      width: '70px',
     },
     {
-      name: 'Date',
+      name: 'Created Date',
       selector: row => row.date,
       sortable: true,
+      width: '200px',
     },
     {
-      name: 'Driver',
+      name: 'Token No.',
+      selector: row => row.tokenNo || 'N/A',
+      sortable: true,
+      width: '120px',
+    },
+    {
+      name: 'Driver Name',
       selector: row => row.driver,
       sortable: true,
-    },
-    {
-      name: 'Mobile',
-      selector: row => row.mobileNo,
-      sortable: true,
-      format: row => row.mobileNo.toString(), // Convert number to string for display
+      width: '150px',
     },
     {
       name: 'Vehicle No',
       selector: row => row.vehicleNo,
       sortable: true,
+      width: '130px',
     },
     {
       name: 'Vehicle Type',
       selector: row => row.vehicleType,
       sortable: true,
+      width: '130px',
     },
     {
       name: 'Vehicle Rate',
       selector: row => row.vehicleRate,
       sortable: true,
+      width: '120px',
     },
     {
       name: 'Quantity',
       selector: row => row.quantity,
       sortable: true,
-      format: row => row.quantity.toString(), // Convert number to string for display
-    },
-    {
-      name: 'Route',
-      selector: row => row.route,
-      sortable: true,
+      width: '100px',
     },
     {
       name: 'Place',
-      selector: row => row.place,
+      selector: row => row.place || 'N/A',
       sortable: true,
+      width: '130px',
+    },
+    {
+      name: 'Route',
+      selector: row => row.route || 'N/A',
+      sortable: true,
+      width: '130px',
+    },
+    {
+      name: 'Operator',
+      selector: row => operator.username || 'N/A',
+      sortable: true,
+      width: '130px',
     },
     {
       name: 'Challan Pin',
-      selector: row => row.challanPin,
+      selector: row => row.challanPin || 'N/A',
       sortable: true,
+      width: '120px',
     },
     {
-      name: 'Loaded',
-      selector: row => row.isLoaded,
-      sortable: true,
-    },
-    {
-      name: 'Updated By',
-      selector: row => row.updatedBy,
-      sortable: true,
-    },
-    {
-      name: 'Last Updated',
-      selector: row => row.updatedAt,
-      sortable: true,
-    },
-    {
-      name: 'Action',
+      name: 'Status',
       cell: row => (
-        <div className="print-button-wrapper">
+        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+          row.isLoaded === 'Yes' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+        }`}>
+          {row.isLoaded === 'Yes' ? 'Loaded' : 'Pending'}
+        </span>
+      ),
+      width: '100px',
+    },
+    {
+      name: 'Actions',
+      cell: row => (
+        <div className="flex flex-col gap-2 py-2">
           <button
             onClick={() => handlePrint(row)}
-            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-1.5 rounded transition duration-300 ease-in-out transform hover:scale-105 flex items-center gap-2"
+            className="bg-gradient-to-r from-green-400 to-green-600 hover:from-green-600 hover:to-green-400 text-white px-3 py-1 rounded-full flex items-center justify-center transition duration-300 transform hover:scale-105"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-            </svg>
-            Print
+            A4 Print
+          </button>
+          <button
+            onClick={() => handleReceiptPrint(row)}
+            className="bg-gradient-to-r from-blue-400 to-blue-600 hover:from-blue-600 hover:to-blue-400 text-white px-3 py-1 rounded-full flex items-center justify-center transition duration-300 transform hover:scale-105"
+          >
+            Receipt
           </button>
         </div>
       ),
-      ignoreRowClick: true,
+      width: '120px',
     },
   ];
 
-  // Custom styles for the DataTable component
+  // Replace the customStyles definition with this:
   const customStyles = {
-    header: {
-      style: {
-        backgroundColor: '#f8f9fa', // Tailwind: bg-gray-100
-        color: '#343a40', // Tailwind: text-gray-800
-      },
-    },
     headRow: {
       style: {
-        backgroundColor: '#343a40', // Tailwind: bg-gray-800
-        color: '#ffffff', // Tailwind: text-white
-      },
-    },
-    headCells: {
-      style: {
-        color: '#ffffff', // Tailwind: text-white
+        backgroundColor: '#f1f5f9',
+        fontWeight: 'bold',
       },
     },
     rows: {
       style: {
-        backgroundColor: '#ffffff', // Tailwind: bg-white
-        color: '#343a40', // Tailwind: text-gray-800
-        '&:nth-of-type(odd)': {
-          backgroundColor: '#f8f9fa', // Tailwind: bg-gray-100
-        },
+        minHeight: '60px',
         '&:hover': {
-          backgroundColor: '#f3f4f6',
+          backgroundColor: '#f8fafc',
         },
       },
     },
-    table: {
+    pagination: {
       style: {
-        backgroundColor: '#ffffff',
-        borderRadius: '0.5rem',
-        overflow: 'hidden',
-      },
-    },
-    progressWrapper: {
-      style: {
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        minHeight: '100px',
+        border: 'none',
+        backgroundColor: '#f8fafc',
       },
     },
   };
 
-  // Render DataTable with all configurations
+  // Update the return statement's wrapper div
   return (
-    <div className="bg-white shadow-lg rounded-lg overflow-hidden p-4 mt-4 md:mt-6 lg:mt-8 xl:mt-6 sm:p-6 max-w-full">
+    <div className="p-7 max-w-7xl mx-auto">
       <h2 className="text-2xl font-bold mb-4">Tokens for {operator.username} ({totalRows} total)</h2>
-      <DataTable
-        columns={columns}
-        data={data}
-        progressPending={loading}
-        progressComponent={
-          <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-gray-900"></div>
-        }
-        pagination
-        paginationServer
-        paginationTotalRows={totalRows}
-        onChangeRowsPerPage={handlePerRowsChange}
-        onChangePage={handlePageChange}
-        paginationPerPage={perPage}
-        highlightOnHover
-        striped
-        customStyles={customStyles}
-        className="rounded-lg overflow-hidden"
-        noDataComponent={
-          <div className="p-4 text-center text-gray-500">
-            No tokens found for {operator.username}
-          </div>
-        }
-      />
+      <div className="bg-white rounded-lg shadow-lg overflow-x-auto">
+        <DataTable
+          columns={columns}
+          data={data}
+          pagination
+          paginationServer
+          paginationTotalRows={totalRows}
+          paginationPerPage={perPage}
+          paginationDefaultPage={currentPage}
+          paginationRowsPerPageOptions={[10, 20, 25, 50, 100]}
+          onChangePage={handlePageChange}
+          onChangeRowsPerPage={handlePerRowsChange}
+          progressPending={loading}
+          progressComponent={
+            <div className="flex justify-center items-center gap-2 p-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+              <span className="text-gray-500">Loading tokens...</span>
+            </div>
+          }
+          customStyles={customStyles}
+          responsive
+          highlightOnHover
+          pointerOnHover
+          striped
+        />
+      </div>
     </div>
   );
 };

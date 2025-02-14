@@ -104,7 +104,10 @@ exports.getAllTokens = catchAsync(async (req, res) => {
     const { role } = req.user;
     const { user, updated, loaded, deleted, dateFrom, dateTo } = req.query;
 
-    let filter = {};
+    let filter = {
+        deletedAt: null  // Add this line to exclude deleted tokens
+    };
+    
     if(role !== 'admin') {
         filter.userId =  req.user.id
     }
@@ -146,8 +149,14 @@ exports.getAllTokens = catchAsync(async (req, res) => {
                 filter.createdAt.$lte = dateTo
             }
         }
-
-
+    }
+//added by abhinav, filter for operator
+    if(role === 'operator') {
+        if(dateFrom && dateTo) {
+            filter.createdAt = {}
+            filter.createdAt.$gte = dateFrom
+            filter.createdAt.$lte = dateTo
+        }
     }
 
     const totalCount = await UserToken.countDocuments(filter);
@@ -214,7 +223,7 @@ exports.deleteToken = catchAsync(async (req, res, next) => {
     try {
         const tokenId = req.params.id
         // Find the token
-        const token = await UserToken.findOne({ _id: tokenId, isLoaded: false }).session(session);
+        const token = await UserToken.findOne({ _id: tokenId }).session(session);
         if (!token) return next(new AppError('Token not found!', 400))
     
         const userId = token.userId;

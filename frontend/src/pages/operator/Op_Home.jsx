@@ -177,27 +177,18 @@ const Op_Home = () => {
       const userStr = localStorage.getItem('user');
       if (!userStr) {
         showError('User not authenticated');
-        return;
+        return false;
       }
 
       const userData = JSON.parse(userStr);
       const authToken = userData.token;
-      const currentUser = userData.data || userData.user || userData;
-
-      if (!currentUser) {
-        console.error('Invalid user data structure:', userData);
-        showError('Invalid user data structure');
-        return;
-      }
 
       const queryParams = new URLSearchParams({
         page: page,
-        limit: perPage,
-        username: currentUser.username,
-        deleted: false  // Add this parameter to filter out deleted entries
+        limit: perPage
       });
 
-      console.log('Fetching tokens with params:', queryParams.toString()); // Log query params
+      console.log('Fetching tokens with params:', queryParams.toString());
 
       const response = await axios.get(`http://localhost:8000/api/v1/tokens?${queryParams}`, {
         headers: {
@@ -207,22 +198,9 @@ const Op_Home = () => {
       });
 
       if (response.data?.status === 'success') {
-        console.log('Raw API Response:', response.data); // Log raw API response
-
-        // Filter out entries where deletedAt is not null
-        const processedTokens = response.data.data
-          .filter(token => !token.deletedAt)
-          .map(token => ({
-            ...token,
-            displayVehicleType: token.vehicleId?.vehicleType || token.vehicleType || 'N/A',
-            displayVehicleRate: token.vehicleRate || 'N/A'
-          }));
-
-        console.log('Processed Tokens:', processedTokens); // Log processed tokens
-        console.log('Total Rows:', response.data.totalCount); // Log total count
-
-        setApiTokens(processedTokens);
-        setEntries(processedTokens);
+        console.log('Raw API Response:', response.data);
+        setApiTokens(response.data.data);
+        setEntries(response.data.data);
         setTotalRows(response.data.totalCount || 0);
         setCurrentPage(page);
         return true;
@@ -391,42 +369,13 @@ const Op_Home = () => {
   const refreshTable = async () => {
     setLoading(true);
     try {
-      const userStr = localStorage.getItem('user');
-      if (!userStr) {
-        throw new Error('User not authenticated');
-      }
-
-      const userData = JSON.parse(userStr);
-      const authToken = userData.token;
-      const currentUser = userData.data || userData.user || userData;
-
-      const response = await axios.get('http://localhost:8000/api/v1/tokens', {
-        headers: {
-          'Authorization': `Bearer ${authToken}`,
-          'Content-Type': 'application/json'
-        },
-        params: {
-          deleted: false  // Add this parameter to filter out deleted entries
-        }
-      });
-
-      if (response.data?.status === 'success' && Array.isArray(response.data.data)) {
-        const userTokens = response.data.data
-          .filter(token => 
-            token.userId?.username === currentUser.username && !token.deletedAt
-          )
-          .map(token => ({
-            ...token,
-            displayVehicleType: token.vehicleId?.vehicleType || token.vehicleType || 'N/A',
-            displayVehicleRate: token.vehicleRate || 'N/A'
-          }));
-
-        setApiTokens(userTokens);
-        setEntries(userTokens);
+      const success = await fetchUserTokens(currentPage);
+      if (!success) {
+        throw new Error('Failed to refresh table');
       }
     } catch (error) {
       console.error('Error refreshing tokens:', error);
-      showError(error.response?.data?.message || 'Error refreshing table');
+      showError(error.message || 'Error refreshing table');
     } finally {
       setLoading(false);
     }
@@ -458,9 +407,11 @@ const Op_Home = () => {
         driverName: formData.driverName.trim(),
         driverMobileNo: parseInt(formData.driverMobile),
         vehicleNo: formData.vehicleNo.trim(),
+        vehicleType: formData.vehicleType,
+        vehicleRate: parseInt(formData.vehicleRate),
         quantity: parseInt(formData.quantity),
         place: formData.place.trim() || undefined,
-        challanPin: formData.chalaanPin ? parseInt(formData.chalaanPin) : undefined,
+        challanPin: formData.chalaanPin ? formData.chalaanPin : undefined,
         route: formData.route
       };
   
@@ -560,7 +511,7 @@ const Op_Home = () => {
         query: entry.route,
         cluster: '6',
         driver: entry.driverName,
-        vehicle: entry.displayVehicleType,
+        vehicle: entry.vehicleType, 
         quantity: entry.quantity,
         mobile: entry.driverMobileNo,
         operator: entry.userId?.username,
@@ -597,7 +548,7 @@ const Op_Home = () => {
               <tr><td>Query Name:</td><td>${entry.route || 'N/A'}</td></tr>
               <tr><td>Cluster:</td><td>6</td></tr>
               <tr><td>Driver Name:</td><td>${entry.driverName}</td></tr>
-              <tr><td>Vehicle Type:</td><td>${entry.displayVehicleType}</td></tr>
+              <tr><td>Vehicle Type:</td><td>${entry.vehicleType}</td></tr> 
               <tr><td>Quantity:</td><td>${entry.quantity}</td></tr>
               <tr><td>Driver Mobile:</td><td>${entry.driverMobileNo}</td></tr>
               <tr><td>Operator:</td><td>${entry.userId?.username || 'N/A'}</td></tr>
@@ -724,7 +675,7 @@ const Op_Home = () => {
         query: entry.route,
         cluster: '6',
         driver: entry.driverName,
-        vehicle: entry.displayVehicleType,
+        vehicle: entry.vehicleType, // Changed from VehicleType
         quantity: entry.quantity,
         mobile: entry.driverMobileNo,
         operator: entry.userId?.username,
@@ -762,7 +713,7 @@ const Op_Home = () => {
             <div>Query Name: ${entry.route || 'N/A'}</div>
             <div>Cluster: 6</div>
             <div>Driver Name: ${entry.driverName}</div>
-            <div>Vehicle Type: ${entry.displayVehicleType}</div>
+            <div>Vehicle Type: ${entry.vehicleType}</div> 
             <div>Quantity: ${entry.quantity}</div>
             <div>Driver Mobile: ${entry.driverMobileNo}</div>
             <div>Operator: ${entry.userId?.username || 'N/A'}</div>
@@ -962,13 +913,13 @@ const formatDateTime = (dateString) => {
     },
     {
       name: 'Vehicle Type',
-      selector: row => row.displayVehicleType,
+      selector: row => row.vehicleType,
       sortable: true,
       width: '130px',
     },
     {
       name: 'Vehicle Rate',
-      selector: row => row.displayVehicleRate,
+      selector: row => row.vehicleRate,
       sortable: true,
       width: '120px',
     },
@@ -1097,8 +1048,8 @@ const formatDateTime = (dateString) => {
       </button>
 
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center pt-20 z-[9999]">
-          <div className="bg-gradient-to-b from-gray-800 to-gray-900 rounded-2xl shadow-2xl p-6 w-[800px] max-h-[85vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center z-50 overflow-y-auto">
+          <div className="bg-gradient-to-b from-gray-800 to-gray-900 rounded-2xl shadow-2xl p-6 w-[800px] my-20 mx-auto">
             <h2 className="text-2xl font-bold text-gray-300 mb-4">Add New Token</h2>
             <form 
               onSubmit={handleSubmitClick} 
