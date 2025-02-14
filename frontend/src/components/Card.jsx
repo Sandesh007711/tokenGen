@@ -562,79 +562,89 @@ const Card = ({ operator }) => {
     }, 500);
   };
 
-  // Modified table column definitions
+  // Replace the columns definition with this:
   const columns = [
     {
-      name: 'Token No',
-      selector: row => row.tokenNo,
-      sortable: true,
+      name: 'Sr No.',
+      cell: (row, index) => ((currentPage - 1) * perPage) + index + 1,
+      width: '70px',
     },
     {
-      name: 'Date',
+      name: 'Created Date',
       selector: row => row.date,
       sortable: true,
+      width: '200px',
     },
     {
-      name: 'Driver',
+      name: 'Token No.',
+      selector: row => row.tokenNo || 'N/A',
+      sortable: true,
+      width: '120px',
+    },
+    {
+      name: 'Driver Name',
       selector: row => row.driver,
       sortable: true,
-    },
-    {
-      name: 'Mobile',
-      selector: row => row.mobileNo,
-      sortable: true,
-      format: row => row.mobileNo.toString(), // Convert number to string for display
+      width: '150px',
     },
     {
       name: 'Vehicle No',
       selector: row => row.vehicleNo,
       sortable: true,
+      width: '130px',
     },
     {
       name: 'Vehicle Type',
       selector: row => row.vehicleType,
       sortable: true,
+      width: '130px',
     },
     {
       name: 'Vehicle Rate',
       selector: row => row.vehicleRate,
       sortable: true,
+      width: '120px',
     },
     {
       name: 'Quantity',
       selector: row => row.quantity,
       sortable: true,
-      format: row => row.quantity.toString(), // Convert number to string for display
-    },
-    {
-      name: 'Route',
-      selector: row => row.route,
-      sortable: true,
+      width: '100px',
     },
     {
       name: 'Place',
-      selector: row => row.place,
+      selector: row => row.place || 'N/A',
       sortable: true,
+      width: '130px',
+    },
+    {
+      name: 'Route',
+      selector: row => row.route || 'N/A',
+      sortable: true,
+      width: '130px',
+    },
+    {
+      name: 'Operator',
+      selector: row => operator.username || 'N/A',
+      sortable: true,
+      width: '130px',
     },
     {
       name: 'Challan Pin',
-      selector: row => row.challanPin,
+      selector: row => row.challanPin || 'N/A',
       sortable: true,
+      width: '120px',
     },
     {
-      name: 'Loaded',
-      selector: row => row.isLoaded,
-      sortable: true,
-    },
-    {
-      name: 'Updated By',
-      selector: row => row.updatedBy,
-      sortable: true,
-    },
-    {
-      name: 'Last Updated',
-      selector: row => row.updatedAt,
-      sortable: true,
+      name: 'Status',
+      cell: row => (
+        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+          row.isLoaded === 'Yes' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+        }`}>
+          {row.isLoaded === 'Yes' ? 'Loaded' : 'Pending'}
+        </span>
+      ),
+      width: '100px',
     },
     {
       name: 'Actions',
@@ -654,88 +664,64 @@ const Card = ({ operator }) => {
           </button>
         </div>
       ),
-      ignoreRowClick: true,
       width: '120px',
     },
   ];
 
-  // Custom styles for the DataTable component
+  // Replace the customStyles definition with this:
   const customStyles = {
-    header: {
-      style: {
-        backgroundColor: '#f8f9fa', // Tailwind: bg-gray-100
-        color: '#343a40', // Tailwind: text-gray-800
-      },
-    },
     headRow: {
       style: {
-        backgroundColor: '#343a40', // Tailwind: bg-gray-800
-        color: '#ffffff', // Tailwind: text-white
-      },
-    },
-    headCells: {
-      style: {
-        color: '#ffffff', // Tailwind: text-white
+        backgroundColor: '#f1f5f9',
+        fontWeight: 'bold',
       },
     },
     rows: {
       style: {
-        backgroundColor: '#ffffff', // Tailwind: bg-white
-        color: '#343a40', // Tailwind: text-gray-800
-        '&:nth-of-type(odd)': {
-          backgroundColor: '#f8f9fa', // Tailwind: bg-gray-100
-        },
+        minHeight: '60px',
         '&:hover': {
-          backgroundColor: '#f3f4f6',
+          backgroundColor: '#f8fafc',
         },
       },
     },
-    table: {
+    pagination: {
       style: {
-        backgroundColor: '#ffffff',
-        borderRadius: '0.5rem',
-        overflow: 'hidden',
-      },
-    },
-    progressWrapper: {
-      style: {
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        minHeight: '100px',
+        border: 'none',
+        backgroundColor: '#f8fafc',
       },
     },
   };
 
-  // Render DataTable with all configurations
+  // Update the return statement's wrapper div
   return (
-    <div className="bg-white shadow-lg rounded-lg overflow-hidden p-4 mt-4 md:mt-6 lg:mt-8 xl:mt-6 sm:p-6 max-w-full">
+    <div className="p-7 max-w-7xl mx-auto">
       <h2 className="text-2xl font-bold mb-4">Tokens for {operator.username} ({totalRows} total)</h2>
-      <DataTable
-        columns={columns}
-        data={data}
-        progressPending={loading || isPaginationLoading}
-        progressComponent={
-          <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-gray-900"></div>
-        }
-        pagination
-        paginationServer
-        paginationTotalRows={totalRows}
-        paginationPerPage={perPage}
-        paginationDefaultPage={currentPage}
-        paginationRowsPerPageOptions={[10, 20, 25, 50, 100]}
-        onChangeRowsPerPage={handlePerRowsChange}
-        onChangePage={handlePageChange}
-        highlightOnHover
-        striped
-        customStyles={customStyles}
-        className="rounded-lg overflow-hidden"
-        noDataComponent={
-          <div className="p-4 text-center text-gray-500">
-            No tokens found for {operator.username}
-          </div>
-        }
-      />
+      <div className="bg-white rounded-lg shadow-lg overflow-x-auto">
+        <DataTable
+          columns={columns}
+          data={data}
+          pagination
+          paginationServer
+          paginationTotalRows={totalRows}
+          paginationPerPage={perPage}
+          paginationDefaultPage={currentPage}
+          paginationRowsPerPageOptions={[10, 20, 25, 50, 100]}
+          onChangePage={handlePageChange}
+          onChangeRowsPerPage={handlePerRowsChange}
+          progressPending={loading}
+          progressComponent={
+            <div className="flex justify-center items-center gap-2 p-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+              <span className="text-gray-500">Loading tokens...</span>
+            </div>
+          }
+          customStyles={customStyles}
+          responsive
+          highlightOnHover
+          pointerOnHover
+          striped
+        />
+      </div>
     </div>
   );
 };
