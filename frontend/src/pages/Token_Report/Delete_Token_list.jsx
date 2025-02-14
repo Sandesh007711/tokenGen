@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { FaTimes } from 'react-icons/fa';
 import DataTable from 'react-data-table-component';
+import { getDeletedTokens } from '../../services/api';
 
 const Delete_Token_list = () => {
   const [filteredData, setFilteredData] = useState([]);
@@ -34,25 +35,7 @@ const Delete_Token_list = () => {
   const fetchDeletedTokens = async () => {
     setIsLoading(true);
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        throw new Error('No authentication token found');
-      }
-
-      const response = await fetch('http://localhost:8000/api/v1/tokens?deleted=true', {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to fetch deleted tokens');
-      }
-
-      const result = await response.json();
+      const result = await getDeletedTokens();
       const tokens = result.data || [];
       const deletedTokens = tokens.filter(token => token.deletedAt);
       

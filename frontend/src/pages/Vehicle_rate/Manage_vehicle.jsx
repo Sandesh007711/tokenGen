@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import axios from 'axios';
 import { FaEdit, FaTrash, FaSort, FaTimes, FaCheckCircle, FaSpinner } from 'react-icons/fa';
+import { getAllVehicles, createVehicle, updateVehicleType, deleteVehicle } from '../../services/api';
 
 /**
  * VehicleRate Component
@@ -31,40 +31,26 @@ const VehicleRate = () => {
   // Add new loading state for create operation
   const [isCreating, setIsCreating] = useState(false);
 
-  // Add function to fetch all vehicles
+  // Update fetchVehicles function
   const fetchVehicles = async () => {
     try {
-      const token = localStorage.getItem('token');
-      
-      if (!token) {
-        showError('Please login first');
-        return;
-      }
-
       console.log('Fetching vehicles...');
-      const response = await axios.get('http://localhost:8000/api/v1/vehicles', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      const response = await getAllVehicles();
       
-      console.log('API Response:', response.data);
-
-      if (response.data && response.data.data) {
-        const vehicles = response.data.data; // Data array is directly in response.data.data
+      if (response && response.data) {
+        const vehicles = response.data;
         console.log('Vehicles received:', vehicles);
         setVehicleList(vehicles.map(vehicle => ({
           id: vehicle._id,
           vehicleType: vehicle.vehicleType
         })));
       } else {
-        console.error('Unexpected response structure:', response.data);
+        console.error('Unexpected response structure:', response);
         showError('Invalid data format received from server');
       }
     } catch (error) {
-      console.error('Fetch error:', error); // Debug log
-      if (error.response?.status === 401) {
+      console.error('Fetch error:', error);
+      if (error.status === 401) {
         showError('Session expired. Please login again');
       } else {
         showError(`Failed to fetch vehicles: ${error.message}`);
@@ -92,71 +78,42 @@ const VehicleRate = () => {
 
     setIsCreating(true);
     try {
-      const token = localStorage.getItem('token');
-      
-      if (!token) {
-        showError('Please login first');
-        return;
-      }
-
       if (editIndex !== null) {
-        // Update existing vehicle using the new endpoint
         const vehicleToUpdate = vehicleList[editIndex];
-        
         console.log('Updating vehicle:', {
           id: vehicleToUpdate.id,
           vehicleType: vehicleType
         });
 
-        const response = await axios.patch(
-          `http://localhost:8000/api/v1/vehicles/type/${vehicleToUpdate.id}`, // Updated endpoint
-          {
-            vehicleType: vehicleType
-          },
-          {
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json'
-            }
-          }
-        );
+        const response = await updateVehicleType(vehicleToUpdate.id, {
+          vehicleType: vehicleType
+        });
 
-        if (response.data.status === 'success') {
-          await fetchVehicles(); // Refresh the list
+        if (response.status === 'success') {
+          await fetchVehicles();
           setEditIndex(null);
           setVehicleType('');
           showSuccess('Vehicle type updated successfully!');
         }
       } else {
-        // Create new vehicle code remains unchanged
-        const response = await axios.post(
-          'http://localhost:8000/api/v1/vehicles', 
-          {
-            vehicleType: vehicleType
-          },
-          {
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json'
-            }
-          }
-        );
+        const response = await createVehicle({
+          vehicleType: vehicleType
+        });
 
-        if (response.data) {
-          // Refresh the vehicle list instead of manual state update
+        if (response) {
           await fetchVehicles();
           setVehicleType('');
           showSuccess('Vehicle type added successfully!');
         }
       }
     } catch (error) {
-      console.error('Error details:', error.response || error);
-      if (error.response?.status === 401) {
+      console.error('Error details:', error);
+      if (error.status === 401) {
         showError('Session expired. Please login again');
-      } else if (error.response?.status === 404) {
+      } else if (error.status === 404) {
         showError('Vehicle not found');
       } else {
-        showError(error.response?.data?.message || 'Failed to update vehicle type');
+        showError(error.message || 'Failed to update vehicle type');
       }
     } finally {
       setIsCreating(false);
@@ -190,42 +147,26 @@ const VehicleRate = () => {
     setDeleteConfirm({ show: true, index });
   };
 
-  // Add confirm delete handler
+  // Update confirmDelete function
   const confirmDelete = async () => {
     setIsDeleting(true);
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        showError('Please login first');
-        return;
-      }
-
       const vehicleToDelete = vehicleList[deleteConfirm.index];
-      
-      await axios.delete(
-        `http://localhost:8000/api/v1/vehicles/${vehicleToDelete.id}`,
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        }
-      );
+      await deleteVehicle(vehicleToDelete.id);
 
-      // Refresh the list after successful deletion
       await fetchVehicles();
       setDeleteConfirm({ show: false, index: null });
       showSuccess('Vehicle type deleted successfully!');
       
-      // Reset form if deleting the vehicle being edited
       if (editIndex === deleteConfirm.index) {
         setVehicleType('');
         setEditIndex(null);
       }
     } catch (error) {
-      if (error.response?.status === 401) {
+      if (error.status === 401) {
         showError('Session expired. Please login again');
       } else {
-        showError(error.response?.data?.message || 'Failed to delete vehicle');
+        showError(error.message || 'Failed to delete vehicle');
       }
       setDeleteConfirm({ show: false, index: null });
     } finally {

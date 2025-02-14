@@ -3,6 +3,7 @@ import DatePicker from 'react-datepicker';
 import { FaTimes, FaSpinner, FaExpandAlt, FaCompressAlt } from 'react-icons/fa';
 import DataTable from 'react-data-table-component';
 import "react-datepicker/dist/react-datepicker.css";
+import { getLoadedTokens } from '../../services/api';
 
 /**
  * LoadedList Component
@@ -22,18 +23,6 @@ const Loaded_list = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [totalRows, setTotalRows] = useState(0); // Add this state
 
-  const getAuthHeaders = () => {
-    const token = localStorage.getItem('token'); // Changed from 'authToken' to 'token'
-    if (!token) {
-      throw new Error('No authentication token found');
-    }
-    return {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
-      'Accept': 'application/json'
-    };
-  };
-
   // Add helper functions for date comparison
   const isSameOrAfterDate = (date1, date2) => {
     const d1 = new Date(date1.getFullYear(), date1.getMonth(), date1.getDate());
@@ -47,37 +36,24 @@ const Loaded_list = () => {
     return d1 <= d2;
   };
 
-  // Update fetchTokenData function to match Token_list's logic
+  // Update fetchTokenData function to use API service
   const fetchTokenData = async (searchParams = {}, newPage = currentPage) => {
     setIsLoading(true);
     try {
-      const headers = getAuthHeaders();
-      
-      // Build query parameters
-      const queryParams = new URLSearchParams({
+      const params = {
         page: newPage,
-        limit: perPage,
-        loaded: 'true' // Always include loaded=true
-      });
+        limit: perPage
+      };
 
-      // Add date filters if they exist (regardless of isFiltered state)
+      // Add date filters if they exist
       if (searchParams.fromDate) {
-        queryParams.append('dateFrom', searchParams.fromDate.toISOString().split('T')[0]);
+        params.dateFrom = searchParams.fromDate.toISOString().split('T')[0];
       }
       if (searchParams.toDate) {
-        queryParams.append('dateTo', searchParams.toDate.toISOString().split('T')[0]);
+        params.dateTo = searchParams.toDate.toISOString().split('T')[0];
       }
 
-      const response = await fetch(`http://localhost:8000/api/v1/tokens?${queryParams}`, {
-        headers,
-        credentials: 'include'
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch data');
-      }
-
-      const result = await response.json();
+      const result = await getLoadedTokens(params);
       
       if (result.status === 'success') {
         const processedTokens = result.data.map(token => ({

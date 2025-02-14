@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { FaEdit, FaTrash, FaTimes, FaCheckCircle, FaExclamationTriangle, FaSpinner } from 'react-icons/fa';
+import { getVehicles, getVehicleRates, updateVehicleRate, deleteVehicleRate, createVehicleRate } from '../../services/api';
 
 /**
  * ManageRate Component
@@ -30,34 +31,12 @@ const ManageRate = () => {
   // Fetch vehicles when component mounts
   useEffect(() => {
     const fetchVehicles = async () => {
+      setIsLoading(true);
       try {
-        const token = localStorage.getItem('token');
-        
-        if (!token) {
-          throw new Error('No authentication token found');
-        }
-
-        const response = await fetch('http://localhost:8000/api/v1/vehicles', {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to fetch vehicles');
-        }
-
-        const result = await response.json();
-        console.log('Raw vehicles data:', result); // Debug log
-
-        // Access the vehicles array directly from result.data
+        const result = await getVehicles();
         if (result.status === 'success' && Array.isArray(result.data)) {
-          console.log('Setting vehicles:', result.data); // Debug log
           setVehicles(result.data);
         } else {
-          console.log('No vehicles found in response'); // Debug log
           setVehicles([]);
         }
         setFetchError(null);
@@ -86,42 +65,17 @@ const ManageRate = () => {
   const fetchVehicleRates = async () => {
     setIsTableLoading(true);
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        throw new Error('No authentication token found');
-      }
-
-      const response = await fetch('http://localhost:8000/api/v1/vehicles/get-rates', {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch vehicle rates');
-      }
-
-      const result = await response.json();
-      console.log('Raw API Response:', result);
-
-      // Handle the API response structure
+      const result = await getVehicleRates();
+      
       if (result.status === 'success' && result.data && result.data.rates) {
-        const ratesList = result.data.rates;
-        console.log('Rates list:', ratesList);
-
-        const formattedRates = ratesList.map(rate => ({
+        const formattedRates = result.data.rates.map(rate => ({
           id: rate._id,
-          vehicleType: rate.vehicleType, // Direct access to vehicleType
-          rate: rate.rate,               // Direct access to rate
-          vehicleId: rate.vehicleId // Make sure this comes from the API response
+          vehicleType: rate.vehicleType,
+          rate: rate.rate,
+          vehicleId: rate.vehicleId || rate._id
         }));
-
-        console.log('Formatted rates:', formattedRates);
         setRates(formattedRates);
       } else {
-        console.log('No rates found in response');
         setRates([]);
       }
     } catch (error) {
@@ -154,58 +108,32 @@ const ManageRate = () => {
    * @returns {void}
    */
   const handleAddRate = async () => {
-    // Input validation
-    if (!selectedVehicle) {
-      showError('Please select a vehicle type');
-      return;
-    }
-    if (!rate) {
-      showError('Please enter a rate');
-      return;
-    }
-    if (isNaN(parseFloat(rate))) {
-      showError('Please enter a valid number');
+    if (!selectedVehicle || !rate || isNaN(parseFloat(rate))) {
+      showError(!selectedVehicle ? 'Please select a vehicle type' : 
+                !rate ? 'Please enter a rate' : 
+                'Please enter a valid number');
       return;
     }
 
     setIsAddingRate(true);
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        throw new Error('No authentication token found');
-      }
-
-      // Find vehicle object from selected vehicle type
       const selectedVehicleObj = vehicles.find(v => v.vehicleType === selectedVehicle);
       if (!selectedVehicleObj) {
         throw new Error('Selected vehicle not found');
       }
 
-      // Use the vehicle ID for the API call
-      const response = await fetch(`http://localhost:8000/api/v1/vehicles/${selectedVehicleObj._id}/rate`, {
-        method: editingId ? 'PATCH' : 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          vehicleRate: parseFloat(rate) // Ensure rate is sent as number
-        })
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || `Failed to ${editingId ? 'update' : 'add'} rate`);
+      if (editingId) {
+        await updateVehicleRate(selectedVehicleObj._id, parseFloat(rate));
+      } else {
+        await createVehicleRate(selectedVehicleObj._id, parseFloat(rate));
       }
 
-      // Refresh rates list and reset form
       await fetchVehicleRates();
       showSuccess(`Rate ${editingId ? 'updated' : 'added'} successfully!`);
       resetForm();
-      setInputError('');
     } catch (error) {
       console.error(`Error ${editingId ? 'updating' : 'adding'} rate:`, error);
-      showError(error.message);
+      showError(error.message || `Failed to ${editingId ? 'update' : 'add'} rate`);
     } finally {
       setIsAddingRate(false);
     }
@@ -261,33 +189,8 @@ const ManageRate = () => {
   const confirmDelete = async () => {
     setIsDeletingRate(true);
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        throw new Error('No authentication token found');
-      }
-
-      console.log('Deleting rate with vehicleId:', deleteConfirm.vehicleId); // Debug log
-
-      // Add a forward slash between vehicleId and 'rate'
-      const response = await fetch(`http://localhost:8000/api/v1/vehicles/${deleteConfirm.vehicleId}/rate`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (response.status === 404) {
-        throw new Error('Vehicle rate not found');
-      }
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to delete rate');
-      }
-
-      // Update local state and UI
-      await fetchVehicleRates(); // Refresh the rates list after deletion
+      await deleteVehicleRate(deleteConfirm.vehicleId);
+      await fetchVehicleRates();
       setDeleteConfirm({ show: false, id: null, vehicleId: null });
       showSuccess('Rate deleted successfully!');
 
@@ -296,7 +199,7 @@ const ManageRate = () => {
       }
     } catch (error) {
       console.error('Error deleting rate:', error);
-      showError(error.message);
+      showError(error.message || 'Failed to delete rate');
     } finally {
       setIsDeletingRate(false);
     }

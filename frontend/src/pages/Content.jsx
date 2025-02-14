@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Card from '../components/Card';
 import { FaCheckCircle, FaTimes } from 'react-icons/fa';
 import { StyledButton } from '../components/StyledButton';
+import { getUsers, getVehicleRates, createToken } from '../services/api';
 
 // Main Content component that displays operators and their details
 const Content = () => {
@@ -145,12 +146,6 @@ const Content = () => {
 
     setIsSubmitting(true);
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        throw new Error('No authentication token found');
-      }
-
-      // Format the data according to API requirements
       const submitData = {
         userId: formData.userId,
         driverName: formData.driverName.trim(),
@@ -178,25 +173,7 @@ const Content = () => {
 
       console.log('Submitting data:', submitData); // For debugging
 
-      const response = await fetch('http://localhost:8000/api/v1/tokens', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(submitData)
-      });
-
-      if (response.status === 401) {
-        throw new Error('Unauthorized access');
-      }
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to submit token');
-      }
-
-      const result = await response.json();
+      const result = await createToken(submitData);
 
       if (result.status === 'success') {
         showSuccess('Token generated successfully!');
@@ -230,18 +207,7 @@ const Content = () => {
     const fetchOperators = async () => {
       setLoading(true);
       try {
-        const token = localStorage.getItem('token');
-        const response = await fetch('http://localhost:8000/api/v1/users', {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to fetch operators');
-        }
-
-        const result = await response.json();
+        const result = await getUsers();
         if (result.status === 'success' && result.data) {
           // Just filter operators and set them directly, maintaining original structure
           const operatorData = result.data.filter(user => user.role === 'operator');
@@ -262,31 +228,7 @@ const Content = () => {
   useEffect(() => {
     const fetchVehicleTypes = async () => {
       try {
-        const token = localStorage.getItem('token');
-        
-        if (!token) {
-          throw new Error('No authentication token found');
-        }
-
-        const response = await fetch('http://localhost:8000/api/v1/vehicles/get-rates', {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
-
-        if (response.status === 401) {
-          throw new Error('Unauthorized access');
-        }
-
-        if (!response.ok) {
-          throw new Error('Failed to fetch vehicle types');
-        }
-
-        const result = await response.json();
-        console.log('Vehicle types response:', result); // Add this line for debugging
-        
+        const result = await getVehicleRates();
         if (result.status === 'success' && result.data && result.data.rates) {
           setVehicleTypes(result.data.rates);
           console.log('Set vehicle types:', result.data.rates); // Add this line for debugging
@@ -306,19 +248,7 @@ const Content = () => {
   useEffect(() => {
     const fetchRoutes = async () => {
       try {
-        const token = localStorage.getItem('token');
-        if (!token) throw new Error('No authentication token found');
-
-        const response = await fetch('http://localhost:8000/api/v1/users', {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
-
-        if (!response.ok) throw new Error('Failed to fetch routes');
-
-        const result = await response.json();
+        const result = await getUsers();
         if (result.status === 'success' && result.data) {
           // Extract unique routes from users
           const uniqueRoutes = [...new Set(
@@ -342,19 +272,7 @@ const Content = () => {
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const token = localStorage.getItem('token');
-        if (!token) throw new Error('No authentication token found');
-
-        const response = await fetch('http://localhost:8000/api/v1/users', {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
-
-        if (!response.ok) throw new Error('Failed to fetch users');
-
-        const result = await response.json();
+        const result = await getUsers();
         if (result.status === 'success' && result.data) {
           // Map users data to required format
           const formattedUsers = result.data

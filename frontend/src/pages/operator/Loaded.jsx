@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { searchUnloadedTokens, updateTokenLoadStatus } from '../../services/api';
 
 const Loaded = () => {
   const [tokenInput, setTokenInput] = useState('');
@@ -17,41 +18,17 @@ const Loaded = () => {
       setLoading(true);
       setError(null);
       
-      const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:8000/api/v1/tokens?limit=1000', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!response.ok) throw new Error('Failed to fetch tokens');
-
-      const data = await response.json();
-      const tokens = Array.isArray(data) ? data : 
-                    (data.data && Array.isArray(data.data)) ? data.data :
-                    (data.tokens && Array.isArray(data.tokens)) ? data.tokens : [];
-
-      // Filter tokens by token number, unloaded status and not deleted
-      const matchingTokens = tokens.filter(t => 
-        t.tokenNo.toLowerCase().includes(tokenInput.toLowerCase()) &&
-        !t.isLoaded &&
-        !t.deletedAt
-      );
+      const matchingTokens = await searchUnloadedTokens(tokenInput);
 
       if (matchingTokens.length === 0) {
         setError('No unloaded tokens found with this number');
         setDisplayTokens([]);
       } else {
-        // Sort by creation date (newest first)
-        const sortedTokens = matchingTokens.sort((a, b) => 
-          new Date(b.createdAt) - new Date(a.createdAt)
-        );
-        setDisplayTokens(sortedTokens);
+        setDisplayTokens(matchingTokens);
       }
     } catch (err) {
       console.error('Error searching tokens:', err);
-      setError('Failed to search tokens');
+      setError(err.message || 'Failed to search tokens');
     } finally {
       setLoading(false);
     }
@@ -65,27 +42,11 @@ const Loaded = () => {
   const handleClick = async (selectedToken) => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
       
-      const payload = {
-        _id: selectedToken._id,
-        isLoaded: true
-      };
+      await updateTokenLoadStatus(selectedToken._id, true);
 
-      const response = await fetch('http://localhost:8000/api/v1/tokens/loaded', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(payload)
-      });
-
-      if (!response.ok) throw new Error('Failed to load token');
-
-      // Remove the loaded token from both arrays
-      const updatedTokens = displayTokens.filter(t => t._id !== selectedToken._id);
-      setDisplayTokens(updatedTokens);
+      // Remove the loaded token from displayTokens
+      setDisplayTokens(prev => prev.filter(t => t._id !== selectedToken._id));
       
       setSuccessMessage('Token loaded successfully! 🎉');
     } catch (err) {

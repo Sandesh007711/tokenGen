@@ -2,8 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { FaCheckCircle, FaTimes } from 'react-icons/fa';
 import { QRCodeSVG } from 'qrcode.react';
 import ReactDOMServer from 'react-dom/server';
-import axios from 'axios';
 import DataTable from 'react-data-table-component';
+import { 
+  getVehicleRates, 
+  getOperatorTokens, 
+  createOperatorToken,
+  getCurrentUser 
+} from '../../services/api';
 
 const Op_Home = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -94,35 +99,20 @@ const Op_Home = () => {
   useEffect(() => {
     const setLoggedInUserData = () => {
       try {
-        const userStr = localStorage.getItem('user');
-        if (!userStr) {
-          console.error('No user data in localStorage');
-          return;
-        }
+        const currentUser = getCurrentUser();
+        
+        setFormData(prev => ({
+          ...prev,
+          userId: currentUser._id || '',
+          username: currentUser.username || '',
+          route: currentUser.route || ''
+        }));
 
-        const userData = JSON.parse(userStr);
-        console.log('Raw user data:', userData);
-
-        // Handle the case where user data is nested in data property
-        const currentUser = userData.data || userData.user || userData;
-        console.log('Processed user data:', currentUser);
-
-        if (currentUser) {
-          setFormData(prev => ({
-            ...prev,
-            userId: currentUser._id || '',
-            username: currentUser.username || '',
-            route: currentUser.route || ''
-          }));
-
-          setUsers([{
-            id: currentUser._id || '',
-            name: currentUser.username || '',
-            route: currentUser.route || ''
-          }]);
-        } else {
-          showError('Invalid user data structure');
-        }
+        setUsers([{
+          id: currentUser._id || '',
+          name: currentUser.username || '',
+          route: currentUser.route || ''
+        }]);
       } catch (error) {
         console.error('Error setting user data:', error);
         showError('Error loading user data');
@@ -135,36 +125,15 @@ const Op_Home = () => {
   useEffect(() => {
     const fetchVehicleRates = async () => {
       try {
-        const userStr = localStorage.getItem('user');
-        if (!userStr) {
-          showError('User not authenticated');
-          return;
-        }
-
-        const userData = JSON.parse(userStr);
-        const authToken = userData.token;
-
-        const response = await axios.get('http://localhost:8000/api/v1/vehicles/get-rates', {
-          headers: {
-            'Authorization': `Bearer ${authToken}`,
-            'Content-Type': 'application/json'
-          }
-        });
-
-        console.log('Vehicle Rates Response:', response.data);
-
-        // Updated to handle the nested response structure
-        if (response.data?.status === 'success' && response.data?.data?.rates) {
-          const rates = response.data.data.rates;
-          console.log('Available rates:', rates);
-          setVehicleRates(rates);
+        const result = await getVehicleRates();
+        if (result?.status === 'success' && result?.data?.rates) {
+          setVehicleRates(result.data.rates);
         } else {
-          console.log('Invalid response structure:', response.data);
           showError('Failed to load vehicle rates');
         }
       } catch (error) {
         console.error('Error fetching vehicle rates:', error);
-        showError(error.response?.data?.message || 'Error loading vehicle rates');
+        showError(error.message || 'Error loading vehicle rates');
       }
     };
 
@@ -174,41 +143,19 @@ const Op_Home = () => {
   const fetchUserTokens = async (page = currentPage) => {
     setLoading(true);
     try {
-      const userStr = localStorage.getItem('user');
-      if (!userStr) {
-        showError('User not authenticated');
-        return false;
-      }
-
-      const userData = JSON.parse(userStr);
-      const authToken = userData.token;
-
-      const queryParams = new URLSearchParams({
-        page: page,
-        limit: perPage
-      });
-
-      console.log('Fetching tokens with params:', queryParams.toString());
-
-      const response = await axios.get(`http://localhost:8000/api/v1/tokens?${queryParams}`, {
-        headers: {
-          'Authorization': `Bearer ${authToken}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (response.data?.status === 'success') {
-        console.log('Raw API Response:', response.data);
-        setApiTokens(response.data.data);
-        setEntries(response.data.data);
-        setTotalRows(response.data.totalCount || 0);
+      const result = await getOperatorTokens(page, perPage);
+      
+      if (result?.status === 'success') {
+        setApiTokens(result.data);
+        setEntries(result.data);
+        setTotalRows(result.totalCount || 0);
         setCurrentPage(page);
         return true;
       }
       return false;
     } catch (error) {
       console.error('Error fetching tokens:', error);
-      showError(error.response?.data?.message || 'Error loading tokens');
+      showError(error.message || 'Error loading tokens');
       return false;
     } finally {
       setLoading(false);
@@ -381,26 +328,39 @@ const Op_Home = () => {
     }
   };
 
+  // Add this resetForm function
+  const resetForm = () => {
+    // Get current user data to preserve it
+    const currentUser = getCurrentUser();
+    
+    // Reset form while keeping user data
+    setFormData({
+      userId: currentUser._id || '',
+      username: currentUser.username || '',
+      route: currentUser.route || '',
+      driverName: '',
+      driverMobile: '',
+      vehicleNo: '',
+      vehicleType: '',
+      vehicleRate: '',
+      quantity: '',
+      place: '',
+      chalaanPin: ''
+    });
+  };
+
   // Modify confirmSubmit to use refreshTable
   const confirmSubmit = async () => {
     setIsSubmitting(true);
     try {
-      const userStr = localStorage.getItem('user');
-      if (!userStr) {
-        throw new Error('No authentication token found');
-      }
-  
-      const userData = JSON.parse(userStr);
-      const authToken = userData.token;
-  
       const selectedVehicle = vehicleRates.find(
         vehicle => vehicle.vehicleType === formData.vehicleType
       );
-  
+
       if (!selectedVehicle) {
         throw new Error('Please select a valid vehicle type');
       }
-  
+
       const submitData = {
         userId: formData.userId,
         vehicleId: selectedVehicle.vehicleId || selectedVehicle._id, // Add fallback to _id
@@ -414,45 +374,21 @@ const Op_Home = () => {
         challanPin: formData.chalaanPin ? formData.chalaanPin : undefined,
         route: formData.route
       };
-  
-      console.log('Submitting data:', submitData);
-  
-      const response = await axios.post(
-        'http://localhost:8000/api/v1/tokens',
-        submitData,
-        {
-          headers: {
-            'Authorization': `Bearer ${authToken}`,
-            'Content-Type': 'application/json'
-          }
-        }
-      );
-  
-      console.log('API Response:', response.data);
-  
-      if (response.data?.status === 'success') {
-        await refreshTable();
+
+      const result = await createOperatorToken(submitData);
+
+      if (result?.status === 'success') {
+        await fetchUserTokens(currentPage);
         setIsModalOpen(false);
         setShowSubmitConfirm(false);
-        // Reset form data after successful submission
-        setFormData(prev => ({
-          ...prev,
-          driverName: '',
-          driverMobile: '',
-          vehicleNo: '',
-          vehicleType: '',
-          vehicleRate: '',
-          quantity: '',
-          place: '',
-          chalaanPin: ''
-        }));
+        resetForm();
         showSuccess('Token generated successfully!');
       } else {
-        throw new Error(response.data?.message || 'Failed to generate token');
+        throw new Error(result?.message || 'Failed to generate token');
       }
     } catch (error) {
       console.error('Error submitting token:', error);
-      showError(error.response?.data?.message || error.message);
+      showError(error.message || 'Failed to create token');
     } finally {
       setIsSubmitting(false);
     }
@@ -479,26 +415,9 @@ const Op_Home = () => {
     }
   };
 
+  // Update handleCancelConfirm to use resetForm
   const handleCancelConfirm = () => {
-    // Get the current user data
-    const userStr = localStorage.getItem('user');
-    const userData = JSON.parse(userStr);
-    const currentUser = userData.data || userData.user || userData;
-
-    // Reset form but keep the user data
-    setFormData({
-      userId: currentUser._id || '',
-      username: currentUser.username || '',
-      route: currentUser.route || '',
-      driverName: '',
-      driverMobile: '',
-      vehicleNo: '',
-      vehicleType: '',
-      vehicleRate: '',
-      quantity: '',
-      place: '',
-      chalaanPin: ''
-    });
+    resetForm();
     setShowCancelConfirm(false);
     setIsModalOpen(false);
   };
@@ -1155,7 +1074,7 @@ const formatDateTime = (dateString) => {
                     </select>
                     <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-400">
                       <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-                        <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/>
+                        <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 111.414 1.414l-4 4a1 1 01-1.414 0l-4-4a1 1 0 010-1.414z"/>
                       </svg>
                     </div>
                   </div>
@@ -1194,7 +1113,7 @@ const formatDateTime = (dateString) => {
                     </select>
                     <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-400">
                       <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-                        <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/>
+                        <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 111.414 1.414l-4 4a1 1 01-1.414 0l-4-4a1 1 010-1.414z"/>
                       </svg>
                     </div>
                   </div>

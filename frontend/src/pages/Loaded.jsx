@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { getTokens, updateTokenLoadStatus } from '../services/api';
 
 const Loaded = () => {
   const [tokenInput, setTokenInput] = useState('');
@@ -17,20 +18,10 @@ const Loaded = () => {
       setLoading(true);
       setError(null);
       
-      const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:8000/api/v1/tokens?limit=1000', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!response.ok) throw new Error('Failed to fetch tokens');
-
-      const data = await response.json();
-      const tokens = Array.isArray(data) ? data : 
-                    (data.data && Array.isArray(data.data)) ? data.data :
-                    (data.tokens && Array.isArray(data.tokens)) ? data.tokens : [];
+      const result = await getTokens();
+      const tokens = Array.isArray(result) ? result : 
+                    (result.data && Array.isArray(result.data)) ? result.data :
+                    (result.tokens && Array.isArray(result.tokens)) ? result.tokens : [];
 
       // Filter tokens by token number, unloaded status and not deleted
       const matchingTokens = tokens.filter(t => 
@@ -51,7 +42,7 @@ const Loaded = () => {
       }
     } catch (err) {
       console.error('Error searching tokens:', err);
-      setError('Failed to search tokens');
+      setError(err.message || 'Failed to search tokens');
     } finally {
       setLoading(false);
     }
@@ -65,23 +56,8 @@ const Loaded = () => {
   const handleClick = async (selectedToken) => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
       
-      const payload = {
-        _id: selectedToken._id,
-        isLoaded: true
-      };
-
-      const response = await fetch('http://localhost:8000/api/v1/tokens/loaded', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(payload)
-      });
-
-      if (!response.ok) throw new Error('Failed to load token');
+      await updateTokenLoadStatus(selectedToken._id, true);
 
       // Remove the loaded token from both arrays
       const updatedTokens = displayTokens.filter(t => t._id !== selectedToken._id);

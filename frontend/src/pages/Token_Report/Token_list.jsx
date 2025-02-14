@@ -5,6 +5,7 @@ import DataTable from 'react-data-table-component';
 import "react-datepicker/dist/react-datepicker.css";
 import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
+import { getUsers, getVehicleRates, getFilteredTokens, updateToken, deleteToken } from '../../services/api';
 
 /**
  * TokenList Component
@@ -46,35 +47,9 @@ const Token_list = () => {
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const token = localStorage.getItem('token');
-        
-        if (!token) {
-          throw new Error('No authentication token found');
-        }
-
-        const response = await fetch('http://localhost:8000/api/v1/users', {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
-
-        if (response.status === 401) {
-          throw new Error('Unauthorized access');
-        }
-
-        if (!response.ok) {
-          throw new Error('Failed to fetch users');
-        }
-
-        const result = await response.json();
-        console.log('API Response:', result);
-
+        const result = await getUsers();
         if (result.status === 'success' && Array.isArray(result.data)) {
           setUsers(result.data);
-        } else {
-          throw new Error('Invalid data format received');
         }
       } catch (error) {
         console.error('Fetch error:', error);
@@ -98,46 +73,29 @@ const Token_list = () => {
     return d1 <= d2;
   };
 
-  // Update fetchTokens function to handle filters consistently
+  // Update fetchTokens function to handle user parameters
   const fetchTokens = async (searchParams = {}, newPage = currentPage) => {
     setIsLoading(true);
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        throw new Error('No authentication token found');
-      }
-
-      // Build query parameters with mandatory fields
-      const queryParams = new URLSearchParams({
+      const params = {
         page: newPage,
         limit: perPage,
-      });
+      };
 
-      // Add date filters if they exist in searchParams
+      // Add date parameters if they exist
       if (searchParams.fromDate) {
-        queryParams.append('dateFrom', searchParams.fromDate.toISOString().split('T')[0]);
+        params.dateFrom = searchParams.fromDate.toISOString().split('T')[0];
       }
       if (searchParams.toDate) {
-        queryParams.append('dateTo', searchParams.toDate.toISOString().split('T')[0]);
+        params.dateTo = searchParams.toDate.toISOString().split('T')[0];
       }
 
-      // Add user filter if it exists
+      // Add user parameter if selected
       if (searchParams.userId) {
-        queryParams.append('user', searchParams.userId);
+        params.user = searchParams.userId;
       }
 
-      const response = await fetch(`http://localhost:8000/api/v1/tokens?${queryParams}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch tokens');
-      }
-
-      const result = await response.json();
+      const result = await getFilteredTokens(params);
       
       if (result.status === 'success') {
         const processedTokens = result.data.map(token => ({
@@ -148,7 +106,7 @@ const Token_list = () => {
 
         setFilteredData(processedTokens);
         setTotalRows(result.totalCount || 0);
-        setCurrentPage(newPage); // Update page only after successful data fetch
+        setCurrentPage(newPage);
         
         if (processedTokens.length > 0) {
           showSuccess(`Found ${result.totalCount} matching records`);
@@ -188,7 +146,7 @@ const Token_list = () => {
       if (selectedUser) {
         const userObj = users.find(u => u.username === selectedUser);
         if (userObj) {
-          searchParams.userId = userObj._id;
+          searchParams.userId = userObj;
         }
       }
     }
@@ -258,17 +216,16 @@ const Token_list = () => {
       return;
     }
 
-    // Create search params object
     const searchParams = {
       fromDate: fromDate,
       toDate: toDate
     };
 
-    // Add user filter if selected
+    // Add user filter with the complete user object
     if (selectedUser) {
       const userObj = users.find(u => u.username === selectedUser);
       if (userObj) {
-        searchParams.userId = userObj._id;
+        searchParams.userId = userObj;
       }
     }
 
@@ -357,12 +314,6 @@ const Token_list = () => {
   const handleUpdateSubmit = async (updatedData) => {
     setIsUpdating(true);
     try {
-      const authToken = localStorage.getItem('token');
-      
-      // Log the entire updatedData for debugging
-      console.log('Updated Data:', updatedData);
-
-      // Find selected vehicle type from vehicleTypes array
       const selectedVehicle = vehicleTypes.find(type => 
         type.vehicleType === (updatedData.vehicleType || updatedData.vehicleId?.vehicleType)
       );
@@ -371,29 +322,9 @@ const Token_list = () => {
         throw new Error('Please select a valid vehicle type');
       }
 
-      // Extract userId more carefully
-      let userId;
-      if (updatedData.userId) {
-        if (typeof updatedData.userId === 'object') {
-          userId = updatedData.userId._id;
-        } else if (typeof updatedData.userId === 'string') {
-          userId = updatedData.userId;
-        }
-      }
-
-      // If still no valid userId, try to get it from localStorage
-      if (!userId) {
-        const currentUser = JSON.parse(localStorage.getItem('user'));
-        userId = currentUser?._id;
-      }
-
-      if (!userId) {
-        throw new Error('Could not determine user ID');
-      }
-
       const updatePayload = {
         vehicleId: selectedVehicle.vehicleId,
-        userId: userId,
+        userId: updatedData.userId?._id || updatedData.userId,
         driverName: updatedData.driverName,
         driverMobileNo: parseInt(updatedData.driverMobileNo) || 0,
         vehicleNo: updatedData.vehicleNo,
@@ -404,26 +335,7 @@ const Token_list = () => {
         updateRate: true
       };
 
-      // Log the final payload for debugging
-      console.log('Sending update payload:', updatePayload);
-
-      const response = await fetch(`http://localhost:8000/api/v1/tokens/${updatedData._id}`, {
-        method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${authToken}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(updatePayload)
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to update token');
-      }
-
-      const responseData = await response.json();
-      console.log('Update response:', responseData);
-
+      await updateToken(updatedData._id, updatePayload);
       await fetchTokens(); // Refresh the data after update
       setShowUpdateForm(false);
       showSuccess('Token updated successfully');
@@ -441,20 +353,7 @@ const Token_list = () => {
 
     setIsDeleting(true);
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:8000/api/v1/tokens/${selectedToken._id}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to delete token');
-      }
-
-      // Remove the deleted token from both states
+      await deleteToken(selectedToken._id);
       setFilteredData(prevData => prevData.filter(t => t._id !== selectedToken._id));
       setTotalRows(prev => prev - 1);
       showSuccess('Token deleted successfully');
@@ -629,20 +528,7 @@ const Token_list = () => {
   useEffect(() => {
     const fetchVehicleTypes = async () => {
       try {
-        const token = localStorage.getItem('token');
-        const response = await fetch('http://localhost:8000/api/v1/vehicles/get-rates', {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to fetch vehicle types');
-        }
-
-        const result = await response.json();
-        console.log('Vehicle rates API response:', result); // Log the API response
+        const result = await getVehicleRates();
         if (result.data && result.data.rates) {
           setVehicleTypes(result.data.rates);
         }
@@ -697,8 +583,6 @@ const Token_list = () => {
 
   return (
     <div className="p-7 max-w-7xl mx-auto">
-      {/* Keep other popups (error, success, delete confirmation) */}
-
       {/* Error Popup */}
       {errorPopup.show && (
         <div className="fixed top-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-2 animate-slide-in-top z-50">

@@ -3,6 +3,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import ReactDOMServer from 'react-dom/server';
 import DataTable from 'react-data-table-component';
 import QRCode from 'qrcode';
+import { getFilteredTokens } from '../services/api';
 
 // Card component for displaying detailed operator data in a table format
 const Card = ({ operator }) => {
@@ -14,38 +15,24 @@ const Card = ({ operator }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [isPaginationLoading, setIsPaginationLoading] = useState(false);
 
-  // Update the fetchData function to use the correct user ID
+  // Update the fetchData function to use the API service
   const fetchData = async (page, newPerPage = perPage) => {
     setLoading(true);
     try {
-      const token = localStorage.getItem('token');
-      console.log('Fetching data for operator:', operator); // Log operator info
+      console.log('Fetching data for operator:', operator);
 
-      // Use the correct _id from operator object
-      const queryParams = new URLSearchParams({
-        user: operator._id,
+      const response = await getFilteredTokens({
+        user: operator,
         page: page,
         limit: newPerPage
       });
 
-      const response = await fetch(`http://localhost:8000/api/v1/tokens?${queryParams}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch data');
-      }
-
-      const json = await response.json();
-      
-      if (!json.data || !Array.isArray(json.data)) {
-        console.error('Invalid response format:', json);
+      if (!response.data || !Array.isArray(response.data)) {
+        console.error('Invalid response format:', response);
         throw new Error('Invalid data format received from server');
       }
 
-      const formattedData = json.data.map(item => ({
+      const formattedData = response.data.map(item => ({
         tokenNo: item.tokenNo,
         date: new Date(item.createdAt).toLocaleString(),
         driver: item.driverName,
@@ -63,7 +50,7 @@ const Card = ({ operator }) => {
       }));
 
       setData(formattedData);
-      setTotalRows(json.totalCount || formattedData.length);
+      setTotalRows(response.totalCount || formattedData.length);
     } catch (error) {
       console.error('Error fetching data:', error);
       setData([]);

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
 import { FaEdit, FaTrash, FaTimes, FaCheckCircle, FaSpinner } from 'react-icons/fa';
+import { getUsers, createUser, updateUser, deleteUser } from '../services/api';
 
 const CreateUser = () => {
   // Add new ref for the form container
@@ -77,26 +78,7 @@ const CreateUser = () => {
   const fetchUsers = async () => {
     try {
       setIsLoading(true);
-      const token = localStorage.getItem('token');
-      
-      if (!token) {
-        throw new Error('No authentication token found');
-      }
-
-      const response = await fetch('http://localhost:8000/api/v1/users', {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch users');
-      }
-
-      const result = await response.json();
-      
+      const result = await getUsers();
       if (result.status === 'success' && Array.isArray(result.data)) {
         setUsers(result.data);
       } else {
@@ -132,41 +114,20 @@ const CreateUser = () => {
 
     setIsSubmitting(true);
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        throw new Error('No authentication token found');
-      }
-
-      const url = isEditMode 
-        ? `http://localhost:8000/api/v1/users/${users[editIndex]._id}`
-        : 'http://localhost:8000/api/v1/users';
-
-      // Format the request body according to API requirements
       const requestBody = {
         username: formData.userName,
         password: formData.password,
-        phone: parseInt(formData.mobileNumber), // Convert string to number
+        phone: parseInt(formData.mobileNumber),
         route: formData.route
       };
 
-      const response = await fetch(url, {
-        method: isEditMode ? 'PATCH' : 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(requestBody)
-      });
+      const result = isEditMode 
+        ? await updateUser(users[editIndex]._id, requestBody)
+        : await createUser(requestBody);
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || `Failed to ${isEditMode ? 'update' : 'create'} user`);
-      }
-
-      await fetchUsers(); // Refresh the users list
+      await fetchUsers();
       showSuccess(`User ${isEditMode ? 'updated' : 'created'} successfully!`);
       
-      // Reset form
       setFormData({
         userName: '',
         mobileNumber: '',
@@ -189,27 +150,8 @@ const CreateUser = () => {
   const confirmDelete = async () => {
     setIsDeletingUser(true);
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        throw new Error('No authentication token found');
-      }
-
-      // This is the correct API endpoint format:
-      // It uses the user's unique ID from deleteConfirm.id
-      const response = await fetch(`http://localhost:8000/api/v1/users/${deleteConfirm.id}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to delete user');
-      }
-
-      await fetchUsers(); // Refresh the users list
+      await deleteUser(deleteConfirm.id);
+      await fetchUsers();
       setDeleteConfirm({ show: false, index: null, id: null });
       showSuccess('User deleted successfully!');
     } catch (error) {

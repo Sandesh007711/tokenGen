@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { FaTimes, FaSpinner } from 'react-icons/fa';
 import DataTable from 'react-data-table-component';
+import { getUpdatedTokens } from '../../services/api';
 
 const Update_Token_list = () => {
   const [filteredData, setFilteredData] = useState([]);
@@ -33,30 +34,13 @@ const Update_Token_list = () => {
   const fetchTokens = async (page = currentPage) => {
     setLoading(true);
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        throw new Error('No authentication token found');
-      }
-
-      const queryParams = new URLSearchParams({
-        updated: true,
+      const params = {
         page: page,
         limit: perPage
-      });
+      };
 
-      const response = await fetch(`http://localhost:8000/api/v1/tokens?${queryParams}`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch updated tokens');
-      }
-
-      const result = await response.json();
+      const result = await getUpdatedTokens(params);
+      
       if (result.status === 'success') {
         setFilteredData(result.data);
         setTotalRows(result.totalCount || 0);

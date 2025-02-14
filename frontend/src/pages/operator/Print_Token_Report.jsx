@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import DatePicker from 'react-datepicker';
 import { FaTimes, FaFileExcel } from 'react-icons/fa';
 import "react-datepicker/dist/react-datepicker.css";
 import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
 import DataTable from 'react-data-table-component';
+import { getCurrentUser, getTokenReport } from '../../services/api';
 
 /**
  * TokenList Component
@@ -28,82 +28,33 @@ const Token_list = () => {
   const [totalRows, setTotalRows] = useState(0);
   const [isFiltered, setIsFiltered] = useState(false);
 
-  // Update the getCurrentUser function to match Op_Home.jsx
-  const getCurrentUser = () => {
-    try {
-      const userStr = localStorage.getItem('user');
-      if (userStr) {
-        const userData = JSON.parse(userStr);
-        return userData.data || userData.user || userData; // Handle nested user data
-      }
-      return null;
-    } catch (error) {
-      console.error('Error parsing user data:', error);
-      return null;
-    }
-  };
-
   const fetchTokens = async (searchParams = {}, page = currentPage) => {
     setLoading(true);
     try {
-      const userStr = localStorage.getItem('user');
-      if (!userStr) {
+      const currentUser = getCurrentUser();
+      if (!currentUser) {
         showError('User not authenticated');
         return false;
       }
 
-      const userData = JSON.parse(userStr);
-      const authToken = userData.token;
-      const currentUser = userData.data || userData.user || userData;
-
-      if (!currentUser) {
-        console.error('Invalid user data structure:', userData);
-        showError('Invalid user data structure');
-        return false;
-      }
-
-      // Build query parameters
-      const queryParams = new URLSearchParams({
-        page: page,
+      const result = await getTokenReport({
+        page,
         limit: perPage,
         username: currentUser.username,
-        deleted: false
+        ...searchParams
       });
 
-      // Add date filters if they exist
-      if (searchParams.fromDate) {
-        queryParams.append('dateFrom', searchParams.fromDate.toISOString().split('T')[0]);
-      }
-      if (searchParams.toDate) {
-        queryParams.append('dateTo', searchParams.toDate.toISOString().split('T')[0]);
-      }
-
-      const response = await axios.get(`http://localhost:8000/api/v1/tokens?${queryParams}`, {
-        headers: {
-          'Authorization': `Bearer ${authToken}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (response.data?.status === 'success') {
-        const processedTokens = response.data.data
-          .filter(token => !token.deletedAt)
-          .map(token => ({
-            ...token,
-            displayVehicleType: token.vehicleId?.vehicleType || token.vehicleType || 'N/A',
-            displayVehicleRate: token.vehicleRate || 'N/A'
-          }));
-
-        setTokens(processedTokens);
-        setFilteredData(processedTokens);
-        setTotalRows(response.data.totalCount || 0);
+      if (result.status === 'success') {
+        setTokens(result.data);
+        setFilteredData(result.data);
+        setTotalRows(result.totalCount);
         setCurrentPage(page);
         return true;
       }
       return false;
     } catch (error) {
       console.error('Error fetching tokens:', error);
-      showError(error.response?.data?.message || 'Error loading tokens');
+      showError(error.message || 'Error loading tokens');
       return false;
     } finally {
       setLoading(false);
