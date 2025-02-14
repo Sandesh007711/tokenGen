@@ -98,15 +98,16 @@ const Delete_Token_list = () => {
     setShowConfirm(true);
   };
 
-  // Add helper function to format date and time
+  // Update formatDateTime function to handle timezone
   const formatDateTime = (date) => {
     return new Date(date).toLocaleString('en-US', {
       year: 'numeric',
       month: 'short',
-      day: 'numeric',
+      day: '2-digit',
       hour: '2-digit',
       minute: '2-digit',
-      hour12: true
+      hour12: true,
+      timeZone: 'Asia/Kolkata' // Add IST timezone
     });
   };
 
@@ -159,6 +160,8 @@ const Delete_Token_list = () => {
           route: token.route || 'N/A',
           tokenNo: token.tokenNo || 'N/A',
           vehicleNo: token.vehicleNo || 'N/A',
+          vehicleType: token.vehicleType || token.vehicleId?.vehicleType || 'N/A', // Add vehicleType
+          vehicleRate: token.vehicleRate || 'N/A', // Add vehicleRate
           challanPin: token.challanPin || 'N/A',
           username: token.userId?.username || 'N/A',
           createdAt: formatDateTime(token.createdAt),
@@ -189,96 +192,128 @@ const Delete_Token_list = () => {
     setShowConfirm(false);
   };
 
-  // Add DataTable custom styles
-  const customStyles = {
-    table: {
-      style: {
-        backgroundColor: 'white',
-      },
-    },
-    headRow: {
-      style: {
-        backgroundColor: '#f1f5f9',
-        borderBottom: '2px solid #e2e8f0',
-      },
-    },
-    headCells: {
-      style: {
-        fontSize: '0.875rem',
-        fontWeight: '600',
-        padding: '1rem',
-      },
-    },
-    cells: {
-      style: {
-        padding: '1rem',
-      },
-    },
-  };
-
   // Define columns for DataTable
   const columns = [
     {
-      name: 'Driver Name',
-      selector: row => row.name,
-      sortable: true,
+      name: 'S.No.',
+      selector: (row, index) => index + 1,
+      sortable: false,
+      width: '80px',
     },
     {
-      name: 'Mobile No',
-      selector: row => row.mobileNo,
+      name: 'Deleted Date',
+      selector: row => row.deletedAt,
       sortable: true,
-    },
-    {
-      name: 'Place',
-      selector: row => row.place,
-      sortable: true,
-    },
-    {
-      name: 'Quantity',
-      selector: row => row.quantity,
-      sortable: true,
-    },
-    {
-      name: 'Route',
-      selector: row => row.route,
-      sortable: true,
+      width: '200px',
+      wrap: true,
     },
     {
       name: 'Token No',
       selector: row => row.tokenNo,
       sortable: true,
+      width: '120px',
+    },
+    {
+      name: 'Driver Name',
+      selector: row => row.name,
+      sortable: true,
+      width: '150px',
+      wrap: true,
     },
     {
       name: 'Vehicle No',
       selector: row => row.vehicleNo,
       sortable: true,
+      width: '130px',
+    },
+    {
+      name: 'Vehicle Type',
+      selector: row => row.vehicleType,
+      sortable: true,
+      width: '130px',
+      wrap: true,
+    },
+    {
+      name: 'Vehicle Rate',
+      selector: row => row.vehicleRate,
+      sortable: true,
+      width: '120px',
+    },
+    {
+      name: 'Quantity',
+      selector: row => row.quantity,
+      sortable: true,
+      width: '100px',
+    },
+    {
+      name: 'Place',
+      selector: row => row.place,
+      sortable: true,
+      width: '130px',
+      wrap: true,
+    },
+    {
+      name: 'Route',
+      selector: row => row.route,
+      sortable: true,
+      width: '130px',
+      wrap: true,
+    },
+    {
+      name: 'Operator',
+      selector: row => row.username,
+      sortable: true,
+      width: '130px',
+      wrap: true,
     },
     {
       name: 'Challan Pin',
       selector: row => row.challanPin,
       sortable: true,
-    },
-    {
-      name: 'Username',
-      selector: row => row.username,
-      sortable: true,
-    },
-    {
-      name: 'Created At',
-      selector: row => row.createdAt,
-      sortable: true,
-    },
-    {
-      name: 'Deleted At',
-      selector: row => row.deletedAt,
-      sortable: true,
-    },
-    {
-      name: 'Updated By',
-      selector: row => row.updatedBy,
-      sortable: true,
+      width: '120px',
     },
   ];
+
+  // Update custom styles to match other components
+  const customStyles = {
+    headRow: {
+      style: {
+        background: 'linear-gradient(to right, #94a3b8, #cbd5e1, #e2e8f0)',
+        fontWeight: 'bold',
+        minHeight: '52px',
+        paddingLeft: '8px',
+        paddingRight: '8px',
+      },
+    },
+    headCells: {
+      style: {
+        fontSize: '14px',
+        padding: '8px',
+        justifyContent: 'center',
+        textAlign: 'center',
+        fontWeight: '600',
+      },
+    },
+    cells: {
+      style: {
+        padding: '8px',
+        justifyContent: 'center',
+        textAlign: 'center',
+        '&:not(:last-of-type)': {
+          borderRightWidth: '1px',
+          borderRightColor: '#e5e7eb',
+        },
+      },
+    },
+    rows: {
+      style: {
+        minHeight: '60px',
+        '&:hover': {
+          backgroundColor: '#f8fafc',
+        },
+      },
+    },
+  };
 
   return (
     <div className="p-7 max-w-7xl mx-auto">
