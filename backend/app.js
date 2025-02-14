@@ -19,7 +19,7 @@ const app = express();
 
 // CORS Configuration - Must be before other middleware
 app.use(cors({
-  origin: 'http://localhost:5175',
+  origin: 'https://ramjeesinghandco1.in',
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   credentials: true,
   allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Origin', 'X-Requested-With']
@@ -27,7 +27,7 @@ app.use(cors({
 
 // Add CORS headers middleware
 app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', 'http://localhost:5175');
+  res.header('Access-Control-Allow-Origin', 'https://ramjeesinghandco1.in');
   res.header('Access-Control-Allow-Credentials', true);
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
