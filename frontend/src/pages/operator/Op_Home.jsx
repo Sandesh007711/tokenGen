@@ -177,27 +177,18 @@ const Op_Home = () => {
       const userStr = localStorage.getItem('user');
       if (!userStr) {
         showError('User not authenticated');
-        return;
+        return false;
       }
 
       const userData = JSON.parse(userStr);
       const authToken = userData.token;
-      const currentUser = userData.data || userData.user || userData;
-
-      if (!currentUser) {
-        console.error('Invalid user data structure:', userData);
-        showError('Invalid user data structure');
-        return;
-      }
 
       const queryParams = new URLSearchParams({
         page: page,
-        limit: perPage,
-        username: currentUser.username,
-        deleted: false  // Add this parameter to filter out deleted entries
+        limit: perPage
       });
 
-      console.log('Fetching tokens with params:', queryParams.toString()); // Log query params
+      console.log('Fetching tokens with params:', queryParams.toString());
 
       const response = await axios.get(`http://localhost:8000/api/v1/tokens?${queryParams}`, {
         headers: {
@@ -207,22 +198,9 @@ const Op_Home = () => {
       });
 
       if (response.data?.status === 'success') {
-        console.log('Raw API Response:', response.data); // Log raw API response
-
-        // Filter out entries where deletedAt is not null
-        const processedTokens = response.data.data
-          .filter(token => !token.deletedAt)
-          .map(token => ({
-            ...token,
-            displayVehicleType: token.vehicleId?.vehicleType || token.vehicleType || 'N/A',
-            displayVehicleRate: token.vehicleRate || 'N/A'
-          }));
-
-        console.log('Processed Tokens:', processedTokens); // Log processed tokens
-        console.log('Total Rows:', response.data.totalCount); // Log total count
-
-        setApiTokens(processedTokens);
-        setEntries(processedTokens);
+        console.log('Raw API Response:', response.data);
+        setApiTokens(response.data.data);
+        setEntries(response.data.data);
         setTotalRows(response.data.totalCount || 0);
         setCurrentPage(page);
         return true;
@@ -391,42 +369,13 @@ const Op_Home = () => {
   const refreshTable = async () => {
     setLoading(true);
     try {
-      const userStr = localStorage.getItem('user');
-      if (!userStr) {
-        throw new Error('User not authenticated');
-      }
-
-      const userData = JSON.parse(userStr);
-      const authToken = userData.token;
-      const currentUser = userData.data || userData.user || userData;
-
-      const response = await axios.get('http://localhost:8000/api/v1/tokens', {
-        headers: {
-          'Authorization': `Bearer ${authToken}`,
-          'Content-Type': 'application/json'
-        },
-        params: {
-          deleted: false  // Add this parameter to filter out deleted entries
-        }
-      });
-
-      if (response.data?.status === 'success' && Array.isArray(response.data.data)) {
-        const userTokens = response.data.data
-          .filter(token => 
-            token.userId?.username === currentUser.username && !token.deletedAt
-          )
-          .map(token => ({
-            ...token,
-            displayVehicleType: token.vehicleId?.vehicleType || token.vehicleType || 'N/A',
-            displayVehicleRate: token.vehicleRate || 'N/A'
-          }));
-
-        setApiTokens(userTokens);
-        setEntries(userTokens);
+      const success = await fetchUserTokens(currentPage);
+      if (!success) {
+        throw new Error('Failed to refresh table');
       }
     } catch (error) {
       console.error('Error refreshing tokens:', error);
-      showError(error.response?.data?.message || 'Error refreshing table');
+      showError(error.message || 'Error refreshing table');
     } finally {
       setLoading(false);
     }

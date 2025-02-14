@@ -26,6 +26,7 @@ const Token_list = () => {
   const [perPage, setPerPage] = useState(20);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalRows, setTotalRows] = useState(0);
+  const [isFiltered, setIsFiltered] = useState(false);
 
   // Update the getCurrentUser function to match Op_Home.jsx
   const getCurrentUser = () => {
@@ -42,7 +43,7 @@ const Token_list = () => {
     }
   };
 
-  const fetchTokens = async (page = currentPage) => {
+  const fetchTokens = async (searchParams = {}, page = currentPage) => {
     setLoading(true);
     try {
       const userStr = localStorage.getItem('user');
@@ -61,12 +62,21 @@ const Token_list = () => {
         return false;
       }
 
+      // Build query parameters
       const queryParams = new URLSearchParams({
         page: page,
         limit: perPage,
         username: currentUser.username,
-        deleted: false  // Add this parameter to filter out deleted entries
+        deleted: false
       });
+
+      // Add date filters if they exist
+      if (searchParams.fromDate) {
+        queryParams.append('dateFrom', searchParams.fromDate.toISOString().split('T')[0]);
+      }
+      if (searchParams.toDate) {
+        queryParams.append('dateTo', searchParams.toDate.toISOString().split('T')[0]);
+      }
 
       const response = await axios.get(`http://localhost:8000/api/v1/tokens?${queryParams}`, {
         headers: {
@@ -76,7 +86,6 @@ const Token_list = () => {
       });
 
       if (response.data?.status === 'success') {
-        // Filter out deleted entries
         const processedTokens = response.data.data
           .filter(token => !token.deletedAt)
           .map(token => ({
@@ -103,7 +112,7 @@ const Token_list = () => {
 
   useEffect(() => {
     const initializePage = async () => {
-      await fetchTokens(currentPage);
+      await fetchTokens({}, currentPage);
     };
     initializePage();
   }, [perPage]); // Remove currentPage dependency
@@ -111,7 +120,12 @@ const Token_list = () => {
   // Add pagination handlers
   const handlePageChange = async (page) => {
     console.log('Changing to page:', page);
-    const success = await fetchTokens(page);
+    const searchParams = {
+      fromDate: fromDate,
+      toDate: toDate
+    };
+    
+    const success = await fetchTokens(searchParams, page);
     if (!success) {
       showError('Failed to load page data');
     }
@@ -120,7 +134,13 @@ const Token_list = () => {
   const handlePerPageChange = async (newPerPage, page) => {
     console.log('Changing rows per page:', { newPerPage, page });
     setPerPage(newPerPage);
-    const success = await fetchTokens(page);
+    
+    const searchParams = {
+      fromDate: fromDate,
+      toDate: toDate
+    };
+    
+    const success = await fetchTokens(searchParams, page);
     if (!success) {
       showError('Failed to update rows per page');
     }
@@ -264,31 +284,36 @@ const Token_list = () => {
    */
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (!fromDate || !toDate) {
+      showError('Please select both from and to dates');
+      return;
+    }
+    setIsFiltered(true);
     setShowConfirm(true);
+  };
+
+  const handleResetFilters = async () => {
+    setFromDate(new Date());
+    setToDate(new Date());
+    setIsFiltered(false);
+    setCurrentPage(1);
+    await fetchTokens({}, 1);
   };
 
   /**
    * Handles confirmation of data fetch
    */
-  const handleConfirm = () => {
-    try {
-      const filtered = tokens
-        .filter(token => !token.deletedAt) // Add this filter
-        .filter(token => {
-          const tokenDate = new Date(token.createdAt);
-          const from = new Date(fromDate.setHours(0, 0, 0, 0));
-          const to = new Date(toDate.setHours(23, 59, 59, 999));
-          
-          return tokenDate >= from && tokenDate <= to;
-        });
-      
-      console.log('Filtered tokens:', filtered);
-      setFilteredData(filtered);
-      setShowConfirm(false);
-    } catch (error) {
-      console.error('Error during filtering:', error);
-      showError('Error filtering data');
+  const handleConfirm = async () => {
+    const searchParams = {
+      fromDate: fromDate,
+      toDate: toDate
+    };
+    
+    const success = await fetchTokens(searchParams, 1);
+    if (!success) {
+      showError('Failed to fetch filtered data');
     }
+    setShowConfirm(false);
   };
 
   /**
@@ -378,27 +403,47 @@ const Token_list = () => {
       {/* Header Section with Form */}
       <div className="bg-gradient-to-b from-gray-800 to-gray-900 rounded-2xl shadow-2xl p-6 mb-6">
         <h1 className="text-2xl font-bold text-gray-300 mb-4">Token Report</h1>
-        <form onSubmit={handleSubmit} className="flex flex-wrap items-center gap-4">
-          <DatePicker
-            selected={fromDate}
-            onChange={date => setFromDate(date)}
-            className="px-4 py-3 bg-gray-900 text-gray-300 rounded-lg border border-gray-700 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 transition-all duration-300"
-            placeholderText="From Date"
-          />
+        <form onSubmit={handleSubmit} className="flex flex-wrap items-end gap-4">
+          <div className="flex flex-col">
+            <label htmlFor="fromDate" className="text-gray-300 mb-1">From Date</label>
+            <DatePicker
+              id="fromDate"
+              selected={fromDate}
+              onChange={date => setFromDate(date)}
+              className="px-4 py-3 bg-gray-900 text-gray-300 rounded-lg border border-gray-700 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 transition-all duration-300"
+              placeholderText="From Date"
+            />
+          </div>
           
-          <DatePicker
-            selected={toDate}
-            onChange={date => setToDate(date)}
-            className="px-4 py-3 bg-gray-900 text-gray-300 rounded-lg border border-gray-700 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 transition-all duration-300"
-            placeholderText="To Date"
-          />
+          <div className="flex flex-col">
+            <label htmlFor="toDate" className="text-gray-300 mb-1">To Date</label>
+            <DatePicker
+              id="toDate"
+              selected={toDate}
+              onChange={date => setToDate(date)}
+              className="px-4 py-3 bg-gray-900 text-gray-300 rounded-lg border border-gray-700 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 transition-all duration-300"
+              placeholderText="To Date"
+            />
+          </div>
 
-          <button
-            type="submit"
-            className="px-8 py-2 rounded-md bg-gray-500 text-white font-bold transition duration-200 hover:bg-white hover:text-black border-2 border-transparent hover:border-teal-500 flex items-center justify-center"
-          >
-            Submit
-          </button>
+          <div className="flex gap-2">
+            <button
+              type="submit"
+              className="px-8 py-2 rounded-md bg-gray-500 text-white font-bold transition duration-200 hover:bg-white hover:text-black border-2 border-transparent hover:border-teal-500 flex items-center justify-center"
+            >
+              Apply Filters
+            </button>
+            
+            {isFiltered && (
+              <button
+                type="button"
+                onClick={handleResetFilters}
+                className="px-8 py-2 rounded-md bg-red-500 text-white font-bold transition duration-200 hover:bg-white hover:text-black border-2 border-transparent hover:border-red-500 flex items-center justify-center"
+              >
+                Reset Filters
+              </button>
+            )}
+          </div>
         </form>
       </div>
 
@@ -438,10 +483,10 @@ const Token_list = () => {
             </div>
           }
           noDataComponent={
-            <div className="py-8 text-center text-gray-500 text-lg">
-              <div className="flex flex-col items-center justify-center">
-                <span className="font-medium">No data available</span>
-                <span className="text-sm text-gray-400 mt-1">Select date range to view records</span>
+            <div class="py-8 text-center text-gray-500 text-lg">
+              <div class="flex flex-col items-center justify-center">
+                <span class="font-medium">No data available</span>
+                <span class="text-sm text-gray-400 mt-1">Select date range to view records</span>
               </div>
             </div>
           }

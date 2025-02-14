@@ -15,13 +15,10 @@ const Loaded_list = () => {
   const [toDate, setToDate] = useState(new Date());
   const [filteredData, setFilteredData] = useState([]);
   const [errorPopup, setErrorPopup] = useState({ show: false, message: '' });
-  const [showConfirm, setShowConfirm] = useState(false);
   const [successPopup, setSuccessPopup] = useState({ show: false, message: '' });
   const [perPage, setPerPage] = useState(20); // Changed default to 20 to match Token_list
   const [currentPage, setCurrentPage] = useState(1);
   const [isFullScreen, setIsFullScreen] = useState(false);
-  const [selectedUser, setSelectedUser] = useState('');
-  const [users, setUsers] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [totalRows, setTotalRows] = useState(0); // Add this state
 
@@ -37,34 +34,20 @@ const Loaded_list = () => {
     };
   };
 
-  // Simplify fetchUsers to only set users
-  const fetchUsers = async () => {
-    try {
-      console.log('Fetching users...');
-      const headers = getAuthHeaders();
-
-      const response = await fetch('http://localhost:8000/api/v1/users', {
-        method: 'GET',
-        headers,
-        credentials: 'include'
-      });
-
-      const data = await response.json();
-      console.log('Raw API response:', data);
-
-      if (data.status === 'success' && Array.isArray(data.data)) {
-        setUsers(data.data);
-      } else {
-        console.error('Invalid users data structure:', data);
-        showError('Invalid users data format');
-      }
-    } catch (error) {
-      console.error('Error in fetchUsers:', error);
-      showError('Failed to fetch users: ' + error.message);
-    }
+  // Add helper functions for date comparison
+  const isSameOrAfterDate = (date1, date2) => {
+    const d1 = new Date(date1.getFullYear(), date1.getMonth(), date1.getDate());
+    const d2 = new Date(date2.getFullYear(), date2.getMonth(), date2.getDate());
+    return d1 >= d2;
   };
 
-  // Update the fetchTokenData function to use the correct endpoint
+  const isSameOrBeforeDate = (date1, date2) => {
+    const d1 = new Date(date1.getFullYear(), date1.getMonth(), date1.getDate());
+    const d2 = new Date(date2.getFullYear(), date2.getMonth(), date2.getDate());
+    return d1 <= d2;
+  };
+
+  // Update fetchTokenData function to match Token_list's logic
   const fetchTokenData = async (searchParams = {}, newPage = currentPage) => {
     setIsLoading(true);
     try {
@@ -72,20 +55,20 @@ const Loaded_list = () => {
       
       // Build query parameters
       const queryParams = new URLSearchParams({
-        loaded: true, // Change this from previous implementation
         page: newPage,
         limit: perPage,
-        ...(searchParams.fromDate && { fromDate: searchParams.fromDate.toISOString() }),
-        ...(searchParams.toDate && { toDate: searchParams.toDate.toISOString() }),
-        ...(searchParams.username && { username: searchParams.username })
+        loaded: 'true' // Always include loaded=true
       });
 
-      // Update API URL to use the tokens endpoint
-      const apiUrl = `http://localhost:8000/api/v1/tokens?${queryParams}`;
-      console.log('Fetching loaded tokens with URL:', apiUrl);
+      // Add date filters if they exist (regardless of isFiltered state)
+      if (searchParams.fromDate) {
+        queryParams.append('dateFrom', searchParams.fromDate.toISOString().split('T')[0]);
+      }
+      if (searchParams.toDate) {
+        queryParams.append('dateTo', searchParams.toDate.toISOString().split('T')[0]);
+      }
 
-      const response = await fetch(apiUrl, {
-        method: 'GET',
+      const response = await fetch(`http://localhost:8000/api/v1/tokens?${queryParams}`, {
         headers,
         credentials: 'include'
       });
@@ -96,15 +79,18 @@ const Loaded_list = () => {
 
       const result = await response.json();
       
-      // Log the complete API response
-      console.log('API Response:', result);
-
       if (result.status === 'success') {
-        setFilteredData(result.data);
+        const processedTokens = result.data.map(token => ({
+          ...token,
+          vehicleType: token.vehicleType || token.vehicleId?.vehicleType || 'N/A',
+          vehicleRate: token.vehicleRate || 'N/A',
+        }));
+
+        setFilteredData(processedTokens);
         setTotalRows(result.totalCount || 0);
-        setCurrentPage(newPage); // Update page only after successful data fetch
+        setCurrentPage(newPage);
         
-        if (result.data.length > 0) {
+        if (processedTokens.length > 0) {
           showSuccess(`Found ${result.totalCount} matching records`);
         } else {
           showError('No matching records found for the selected criteria');
@@ -125,7 +111,6 @@ const Loaded_list = () => {
 
   // Remove loadInitialData function since we're using fetchTokenData for everything
   useEffect(() => {
-    fetchUsers();
     const initializePage = async () => {
       await fetchTokenData({}, currentPage);
     };
@@ -148,31 +133,19 @@ const Loaded_list = () => {
   };
 
   // Modified handleSubmit - removed user check
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setShowConfirm(true);
-  };
+    if (!fromDate || !toDate) {
+      showError('Please select both from and to dates');
+      return;
+    }
 
-  // Update handleShowFullData to reset pagination
-  const handleShowFullData = async () => {
-    setFromDate(null);
-    setToDate(null);
-    setSelectedUser('');
-    setIsFiltered(false);
-    setCurrentPage(1); // Reset to first page
-    await fetchTokenData({}, 1);
-  };
-
-  // Update handleConfirm to reset pagination
-  const handleConfirm = async () => {
-    setShowConfirm(false);
-    setCurrentPage(1); // Reset to first page
     setIsFiltered(true);
+    setCurrentPage(1);
 
     const searchParams = {
       fromDate: fromDate,
-      toDate: toDate,
-      ...(selectedUser && { username: selectedUser })
+      toDate: toDate
     };
 
     const success = await fetchTokenData(searchParams, 1);
@@ -184,7 +157,12 @@ const Loaded_list = () => {
   // Add these new functions
   const handlePageChange = async (page) => {
     console.log('Changing to page:', page);
-    const success = await fetchTokenData({}, page);
+    const searchParams = isFiltered ? {
+      fromDate: fromDate,
+      toDate: toDate
+    } : {};
+    
+    const success = await fetchTokenData(searchParams, page);
     if (!success) {
       showError('Failed to load page data');
     }
@@ -193,7 +171,13 @@ const Loaded_list = () => {
   const handlePerPageChange = async (newPerPage, page) => {
     console.log('Changing rows per page:', { newPerPage, page });
     setPerPage(newPerPage);
-    const success = await fetchTokenData({}, page);
+    
+    const searchParams = isFiltered ? {
+      fromDate: fromDate,
+      toDate: toDate
+    } : {};
+    
+    const success = await fetchTokenData(searchParams, page);
     if (!success) {
       showError('Failed to update rows per page');
     }
@@ -213,6 +197,15 @@ const Loaded_list = () => {
       hour12: true,
       timeZone: 'Asia/Kolkata'
     });
+  };
+
+  // Add reset filters function
+  const handleResetFilters = async () => {
+    setFromDate(new Date());
+    setToDate(new Date());
+    setIsFiltered(false);
+    setCurrentPage(1);
+    await fetchTokenData({}, 1);
   };
 
   // Define columns for DataTable
@@ -340,30 +333,6 @@ const Loaded_list = () => {
 
   return (
     <div className="p-7 max-w-7xl mx-auto">
-      {/* Add Confirmation Popup */}
-      {showConfirm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-96">
-            <h3 className="text-lg font-semibold mb-4">Confirm Submission</h3>
-            <p className="mb-4">Are you sure you want to fetch the data?</p>
-            <div className="flex justify-end gap-4">
-              <button
-                onClick={() => setShowConfirm(false)}
-                className="px-4 py-2 text-gray-600 hover:text-gray-800"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleConfirm}
-                className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-              >
-                Confirm
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Error Popup */}
       {errorPopup.show && (
         <div className="fixed top-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-2 animate-slide-in-top z-50">
@@ -393,51 +362,49 @@ const Loaded_list = () => {
       {/* Header Section with Form */}
       <div className="bg-gradient-to-b from-gray-800 to-gray-900 rounded-2xl shadow-2xl p-6 mb-6">
         <h1 className="text-2xl font-bold text-gray-300 mb-4">Loaded Report</h1>
-        <form onSubmit={handleSubmit} className="flex flex-wrap items-center gap-4">
-          <DatePicker
-            selected={fromDate}
-            onChange={date => setFromDate(date)}
-            className="px-4 py-3 bg-gray-900 text-gray-300 rounded-lg border border-gray-700 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 transition-all duration-300"
-            placeholderText="From Date"
-          />
+        <form onSubmit={handleSubmit} className="flex flex-wrap items-end gap-4">
+          <div className="flex flex-col">
+            <label htmlFor="fromDate" className="text-gray-300 mb-1">From Date</label>
+            <DatePicker
+              id="fromDate"
+              selected={fromDate}
+              onChange={date => setFromDate(date)}
+              className="px-4 py-3 bg-gray-900 text-gray-300 rounded-lg border border-gray-700 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 transition-all duration-300"
+              placeholderText="From Date"
+            />
+          </div>
           
-          <DatePicker
-            selected={toDate}
-            onChange={date => setToDate(date)}
-            className="px-4 py-3 bg-gray-900 text-gray-300 rounded-lg border border-gray-700 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 transition-all duration-300"
-            placeholderText="To Date"
-          />
+          <div className="flex flex-col">
+            <label htmlFor="toDate" className="text-gray-300 mb-1">To Date</label>
+            <DatePicker
+              id="toDate"
+              selected={toDate}
+              onChange={date => setToDate(date)}
+              className="px-4 py-3 bg-gray-900 text-gray-300 rounded-lg border border-gray-700 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 transition-all duration-300"
+              placeholderText="To Date"
+            />
+          </div>
 
-          <select
-            value={selectedUser}
-            onChange={(e) => setSelectedUser(e.target.value)}
-            className="px-4 py-3 bg-gray-900 text-gray-300 rounded-lg border border-gray-700 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 transition-all duration-300 min-w-[200px]"
-          >
-            <option value="">Select User</option>
-            {users.map((user) => (
-              <option key={user._id} value={user.username}>
-                {user.username} ({user.route})
-              </option>
-            ))}
-          </select>
-
-          <div className="flex gap-2">
-            <button
-              type="submit"
-              className="px-8 py-2 rounded-md bg-gray-500 text-white font-bold transition duration-200 hover:bg-white hover:text-black border-2 border-transparent hover:border-teal-500 flex items-center justify-center"
-            >
-              Submit
-            </button>
-            
-            {isFiltered && (
+          <div className="flex flex-col">
+            <label className="text-transparent mb-1">Actions</label>
+            <div className="flex gap-2">
               <button
-                type="button"
-                onClick={handleShowFullData}
+                type="submit"
                 className="px-8 py-2 rounded-md bg-gray-500 text-white font-bold transition duration-200 hover:bg-white hover:text-black border-2 border-transparent hover:border-teal-500 flex items-center justify-center"
               >
-                Show Full Data
+                Apply Filters
               </button>
-            )}
+              
+              {isFiltered && (
+                <button
+                  type="button"
+                  onClick={handleResetFilters}
+                  className="px-8 py-2 rounded-md bg-red-500 text-white font-bold transition duration-200 hover:bg-white hover:text-black border-2 border-transparent hover:border-red-500 flex items-center justify-center"
+                >
+                  Reset Filters
+                </button>
+              )}
+            </div>
           </div>
         </form>
       </div>

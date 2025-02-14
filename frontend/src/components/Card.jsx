@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { QRCodeSVG } from 'qrcode.react';
+import ReactDOMServer from 'react-dom/server';
 import DataTable from 'react-data-table-component';
 import QRCode from 'qrcode';
 
@@ -260,14 +262,303 @@ const Card = ({ operator }) => {
   };
 
   // Handle print action
-  const handlePrint = async (row) => {
+  const handlePrint = (entry) => {
+    const createQRData = (entry) => {
+      return JSON.stringify({
+        date: entry.date,
+        token: entry.tokenNo,
+        query: entry.route,
+        cluster: '6',
+        driver: entry.driver,
+        vehicle: entry.vehicleType,
+        quantity: entry.quantity,
+        mobile: entry.mobileNo,
+        operator: operator.username,
+        destination: entry.place,
+        challan: entry.challanPin
+      });
+    };
+
+    const QRCodeComponent = ({ data }) => (
+      <QRCodeSVG 
+        value={data}
+        size={50}
+        level="M"
+        includeMargin={true}
+      />
+    );
+
+    const createCopy = (title) => {
+      const qrData = createQRData(entry);
+      const qrCodeSvg = ReactDOMServer.renderToString(
+        <QRCodeComponent data={qrData} />
+      );
+
+      return `
+        <div class="token-section">
+          <div class="header">
+            <div class="company-name">RAMJEE SINGH & COMPANY</div>
+            <div class="copy-type">${title}</div>
+          </div>
+          <div class="content">
+            <table class="info-table">
+              <tr><td>Date/Time:</td><td>${entry.date}</td></tr>
+              <tr><td>Token No.:</td><td>${entry.tokenNo || 'N/A'}</td></tr>
+              <tr><td>Query Name:</td><td>${entry.route || 'N/A'}</td></tr>
+              <tr><td>Cluster:</td><td>6</td></tr>
+              <tr><td>Driver Name:</td><td>${entry.driver}</td></tr>
+              <tr><td>Vehicle Type:</td><td>${entry.vehicleType}</td></tr>
+              <tr><td>Quantity:</td><td>${entry.quantity}</td></tr>
+              <tr><td>Driver Mobile:</td><td>${entry.mobileNo}</td></tr>
+              <tr><td>Operator:</td><td>${operator.username}</td></tr>
+              <tr><td>Destination:</td><td>${entry.place}</td></tr>
+              <tr><td>Challan Pin:</td><td>${entry.challanPin}</td></tr>
+            </table>
+            <div class="qr-code">
+              ${qrCodeSvg}
+            </div>
+          </div>
+        </div>
+      `;
+    };
+
+    const printContent = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Token Details</title>
+          <style>
+            @page {
+              size: A4;
+              margin: 10mm;
+            }
+            body {
+              font-family: Arial, sans-serif;
+              margin: 0;
+              padding: 0;
+              font-size: 8pt;
+              line-height: 1.1;
+            }
+            .token-section {
+              padding: 3mm;
+              height: 85mm;
+              position: relative;
+            }
+            .header {
+              text-align: left;
+              margin-bottom: 2mm;
+            }
+            .company-name {
+              font-size: 10pt;
+              font-weight: bold;
+            }
+            .copy-type {
+              font-size: 8pt;
+              font-weight: bold;
+            }
+            .content {
+              position: relative;
+            }
+            .info-table {
+              width: 100%;
+              margin-bottom: 4mm;
+            }
+            .info-table td {
+              padding: 0.5mm 2mm 0.5mm 0;
+              vertical-align: top;
+            }
+            .info-table td:first-child {
+              white-space: nowrap;
+              font-weight: bold;
+              width: 25%;
+            }
+            .qr-code {
+              position: relative;
+              left: 1;
+              width: 90px;
+              height: 90px;
+              margin-top: auto;
+            }
+            .qr-code svg {
+              width: 100%;
+              height: 100%;
+            }
+          </style>
+        </head>
+        <body>
+          ${createCopy("OFFICE COPY")}
+          ${createCopy("OPERATOR COPY")}
+          ${createCopy("DRIVER COPY")}
+        </body>
+      </html>
+    `;
+
     const printWindow = window.open('', '_blank');
-    const content = await formatPrintContent(row);
-    printWindow.document.write(content);
+    printWindow.document.write(printContent);
     printWindow.document.close();
-    
+
     setTimeout(() => {
       printWindow.print();
+      printWindow.close();
+    }, 500);
+  };
+
+  const handleReceiptPrint = (entry) => {
+    const createQRData = (entry) => {
+      return JSON.stringify({
+        date: entry.date,
+        token: entry.tokenNo,
+        query: entry.route,
+        cluster: '6',
+        driver: entry.driver,
+        vehicle: entry.vehicleType,
+        quantity: entry.quantity,
+        mobile: entry.mobileNo,
+        operator: operator.username,
+        destination: entry.place,
+        challan: entry.challanPin
+      });
+    };
+
+    const QRCodeComponent = ({ data }) => (
+      <QRCodeSVG 
+        value={data}
+        size={100}
+        level="M"
+        includeMargin={true}
+      />
+    );
+
+    const createCopy = (title) => {
+      const qrData = createQRData(entry);
+      const qrCodeSvg = ReactDOMServer.renderToString(
+        <QRCodeComponent data={qrData} />
+      );
+
+      return `
+        <div class="receipt">
+          <div class="header">
+            <div class="company-name">RAMJEE SINGH & COMPANY</div>
+            <div class="divider">================================</div>
+            <div class="copy-label">${title}</div>
+            <div class="token-number">Token No: ${entry.tokenNo || 'N/A'}</div>
+            <div class="divider">================================</div>
+          </div>
+          <div class="content">
+            <div>Date/Time: ${entry.date}</div>
+            <div>Query Name: ${entry.route || 'N/A'}</div>
+            <div>Cluster: 6</div>
+            <div>Driver Name: ${entry.driver}</div>
+            <div>Vehicle Type: ${entry.vehicleType}</div>
+            <div>Quantity: ${entry.quantity}</div>
+            <div>Driver Mobile: ${entry.mobileNo}</div>
+            <div>Operator: ${operator.username}</div>
+            <div>Destination: ${entry.place || 'N/A'}</div>
+            <div>Challan Pin: ${entry.challanPin || 'N/A'}</div>
+            <div class="divider">================================</div>
+          </div>
+          <div class="qr-section">
+            ${qrCodeSvg}
+          </div>
+        </div>
+      `;
+    };
+
+    const printContent = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Token Receipt</title>
+          <style>
+            @page {
+              size: 80mm auto;
+              margin: 0;
+              padding: 0;
+            }
+            body {
+              font-family: 'Courier New', Courier, monospace;
+              width: 80mm;
+              margin: 0;
+              padding: 8px;
+              font-size: 12pt;
+              line-height: 1.2;
+              text-transform: uppercase;
+            }
+            .receipt {
+              width: 100%;
+              text-align: center;
+              margin-bottom: 20px;
+              page-break-after: always;
+            }
+            .receipt:last-child {
+              page-break-after: avoid;
+            }
+            .header {
+              margin-bottom: 10px;
+            }
+            .company-name {
+              font-size: 14pt;
+              font-weight: bold;
+              margin-bottom: 5px;
+            }
+            .copy-label {
+              font-size: 14pt;
+              font-weight: bold;
+              margin: 5px 0;
+              text-decoration: underline;
+            }
+            .token-number {
+              font-size: 24pt;
+              font-weight: bold;
+              margin: 10px 0;
+              letter-spacing: 2px;
+            }
+            .divider {
+              margin: 5px 0;
+            }
+            .content {
+              text-align: left;
+              margin-bottom: 10px;
+              font-size: 12pt;
+            }
+            .content div {
+              margin: 3px 0;
+              white-space: nowrap;
+              overflow: hidden;
+              text-overflow: ellipsis;
+            }
+            .qr-section {
+              text-align: center;
+              margin: 10px 0;
+            }
+            .qr-section svg {
+              width: 100px;
+              height: 100px;
+            }
+            @media print {
+              body {
+                width: 80mm;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          ${createCopy("OFFICE COPY")}
+          ${createCopy("OPERATOR COPY")}
+          ${createCopy("DRIVER COPY")}
+        </body>
+      </html>
+    `;
+
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(printContent);
+    printWindow.document.close();
+
+    setTimeout(() => {
+      printWindow.print();
+      printWindow.close();
     }, 500);
   };
 
@@ -346,21 +637,25 @@ const Card = ({ operator }) => {
       sortable: true,
     },
     {
-      name: 'Action',
+      name: 'Actions',
       cell: row => (
-        <div className="print-button-wrapper">
+        <div className="flex flex-col gap-2 py-2">
           <button
             onClick={() => handlePrint(row)}
-            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-1.5 rounded transition duration-300 ease-in-out transform hover:scale-105 flex items-center gap-2"
+            className="bg-gradient-to-r from-green-400 to-green-600 hover:from-green-600 hover:to-green-400 text-white px-3 py-1 rounded-full flex items-center justify-center transition duration-300 transform hover:scale-105"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-            </svg>
-            Print
+            A4 Print
+          </button>
+          <button
+            onClick={() => handleReceiptPrint(row)}
+            className="bg-gradient-to-r from-blue-400 to-blue-600 hover:from-blue-600 hover:to-blue-400 text-white px-3 py-1 rounded-full flex items-center justify-center transition duration-300 transform hover:scale-105"
+          >
+            Receipt
           </button>
         </div>
       ),
       ignoreRowClick: true,
+      width: '120px',
     },
   ];
 

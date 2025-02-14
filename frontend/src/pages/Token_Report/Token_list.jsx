@@ -12,13 +12,11 @@ import { saveAs } from 'file-saver';
  * Features: Date range selection, user filtering, and tabular display of token data
  */
 const Token_list = () => {
-  // State Management
   const [fromDate, setFromDate] = useState(new Date());           // Start date for filtering
   const [toDate, setToDate] = useState(new Date());              // End date for filtering
   const [selectedUser, setSelectedUser] = useState('');          // Selected user from dropdown
   const [filteredData, setFilteredData] = useState([]);         // Filtered token data
   const [errorPopup, setErrorPopup] = useState({ show: false, message: '' }); // Error popup state
-  const [showConfirm, setShowConfirm] = useState(false);         // Confirmation popup state
   const [users, setUsers] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [tokens, setTokens] = useState([]);
@@ -100,7 +98,7 @@ const Token_list = () => {
     return d1 <= d2;
   };
 
-  // Update fetchTokens function
+  // Update fetchTokens function to handle filters consistently
   const fetchTokens = async (searchParams = {}, newPage = currentPage) => {
     setIsLoading(true);
     try {
@@ -109,25 +107,23 @@ const Token_list = () => {
         throw new Error('No authentication token found');
       }
 
-      // Build query parameters
+      // Build query parameters with mandatory fields
       const queryParams = new URLSearchParams({
         page: newPage,
         limit: perPage,
       });
 
-      // Only add date filters if they exist and filtering is active
-      if (isFiltered && searchParams.fromDate) {
+      // Add date filters if they exist in searchParams
+      if (searchParams.fromDate) {
         queryParams.append('dateFrom', searchParams.fromDate.toISOString().split('T')[0]);
       }
-      if (isFiltered && searchParams.toDate) {
+      if (searchParams.toDate) {
         queryParams.append('dateTo', searchParams.toDate.toISOString().split('T')[0]);
       }
-      if (isFiltered && searchParams.username) {
-        // Find the user object to get the ID
-        const userObj = users.find(u => u.username === searchParams.username);
-        if (userObj) {
-          queryParams.append('user', userObj._id);
-        }
+
+      // Add user filter if it exists
+      if (searchParams.userId) {
+        queryParams.append('user', searchParams.userId);
       }
 
       const response = await fetch(`http://localhost:8000/api/v1/tokens?${queryParams}`, {
@@ -181,20 +177,47 @@ const Token_list = () => {
     initializePage();
   }, [perPage]); // Remove currentPage dependency
 
-  // Update handlePageChange
+  // Update handlePageChange to maintain filters
   const handlePageChange = async (page) => {
-    console.log('Changing to page:', page);
-    const success = await fetchTokens({}, page);
+    const searchParams = {};
+    
+    if (isFiltered) {
+      searchParams.fromDate = fromDate;
+      searchParams.toDate = toDate;
+      
+      if (selectedUser) {
+        const userObj = users.find(u => u.username === selectedUser);
+        if (userObj) {
+          searchParams.userId = userObj._id;
+        }
+      }
+    }
+    
+    const success = await fetchTokens(searchParams, page);
     if (!success) {
       showError('Failed to load page data');
     }
   };
 
-  // Update handlePerPageChange
+  // Update handlePerPageChange to maintain filters
   const handlePerPageChange = async (newPerPage, page) => {
-    console.log('Changing rows per page:', { newPerPage, page });
     setPerPage(newPerPage);
-    const success = await fetchTokens({}, page);
+    
+    const searchParams = {};
+    
+    if (isFiltered) {
+      searchParams.fromDate = fromDate;
+      searchParams.toDate = toDate;
+      
+      if (selectedUser) {
+        const userObj = users.find(u => u.username === selectedUser);
+        if (userObj) {
+          searchParams.userId = userObj._id;
+        }
+      }
+    }
+    
+    const success = await fetchTokens(searchParams, page);
     if (!success) {
       showError('Failed to update rows per page');
     }
@@ -228,27 +251,31 @@ const Token_list = () => {
    * Validates user selection and filters data
    * @param {Event} e - Form submission event
    */
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!fromDate || !toDate) {
       showError('Please select both from and to dates');
       return;
     }
-    setShowConfirm(true);
-  };
 
-  // Update handleConfirm
-  const handleConfirm = async () => {
-    setShowConfirm(false);
-    setIsFiltered(true);
-
+    // Create search params object
     const searchParams = {
       fromDate: fromDate,
-      toDate: toDate,
-      ...(selectedUser && { username: selectedUser })
+      toDate: toDate
     };
 
-    const success = await fetchTokens(searchParams, 1); // Reset to first page
+    // Add user filter if selected
+    if (selectedUser) {
+      const userObj = users.find(u => u.username === selectedUser);
+      if (userObj) {
+        searchParams.userId = userObj._id;
+      }
+    }
+
+    setIsFiltered(true);
+    setCurrentPage(1);
+
+    const success = await fetchTokens(searchParams, 1);
     if (!success) {
       showError('Failed to fetch filtered data');
     }
@@ -365,7 +392,7 @@ const Token_list = () => {
       }
 
       const updatePayload = {
-        vehicleId: selectedVehicle._id,
+        vehicleId: selectedVehicle.vehicleId,
         userId: userId,
         driverName: updatedData.driverName,
         driverMobileNo: parseInt(updatedData.driverMobileNo) || 0,
@@ -670,27 +697,31 @@ const Token_list = () => {
 
   return (
     <div className="p-7 max-w-7xl mx-auto">
-      {/* Confirmation Popup */}
-      {showConfirm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-96">
-            <h3 className="text-lg font-semibold mb-4">Confirm Submission</h3>
-            <p className="mb-4">Are you sure you want to fetch the data?</p>
-            <div className="flex justify-end gap-4">
-              <button
-                onClick={() => setShowConfirm(false)}
-                className="px-4 py-2 text-gray-600 hover:text-gray-800"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleConfirm}
-                className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-              >
-                Confirm
-              </button>
-            </div>
-          </div>
+      {/* Keep other popups (error, success, delete confirmation) */}
+
+      {/* Error Popup */}
+      {errorPopup.show && (
+        <div className="fixed top-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-2 animate-slide-in-top z-50">
+          <span>{errorPopup.message}</span>
+          <button
+            onClick={() => setErrorPopup({ show: false, message: '' })}
+            className="text-white hover:text-gray-200 transition-colors"
+          >
+            <FaTimes />
+          </button>
+        </div>
+      )}
+
+      {/* Success Popup */}
+      {successPopup.show && (
+        <div className="fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-2 animate-slide-in-top z-50">
+          <span>{successPopup.message}</span>
+          <button
+            onClick={() => setSuccessPopup({ show: false, message: '' })}
+            className="text-white hover:text-gray-200 transition-colors"
+          >
+            <FaTimes />
+          </button>
         </div>
       )}
 
@@ -724,32 +755,6 @@ const Token_list = () => {
               </button>
             </div>
           </div>
-        </div>
-      )}
-
-      {/* Error Popup */}
-      {errorPopup.show && (
-        <div className="fixed top-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-2 animate-slide-in-top z-50">
-          <span>{errorPopup.message}</span>
-          <button
-            onClick={() => setErrorPopup({ show: false, message: '' })}
-            className="text-white hover:text-gray-200 transition-colors"
-          >
-            <FaTimes />
-          </button>
-        </div>
-      )}
-
-      {/* Success Popup */}
-      {successPopup.show && (
-        <div className="fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-2 animate-slide-in-top z-50">
-          <span>{successPopup.message}</span>
-          <button
-            onClick={() => setSuccessPopup({ show: false, message: '' })}
-            className="text-white hover:text-gray-200 transition-colors"
-          >
-            <FaTimes />
-          </button>
         </div>
       )}
 
