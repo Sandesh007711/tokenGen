@@ -255,7 +255,7 @@ const Card = ({ operator }) => {
         date: entry.date,
         token: entry.tokenNo,
         query: entry.route,
-        cluster: '6',
+        cluster: '1',
         driver: entry.driver,
         vehicle: entry.vehicleType,
         quantity: entry.quantity,
@@ -292,7 +292,7 @@ const Card = ({ operator }) => {
               <tr><td>Date/Time:</td><td>${entry.date}</td></tr>
               <tr><td>Token No.:</td><td>${entry.tokenNo || 'N/A'}</td></tr>
               <tr><td>Query Name:</td><td>${entry.route || 'N/A'}</td></tr>
-              <tr><td>Cluster:</td><td>6</td></tr>
+              <tr><td>Cluster:</td><td>1</td></tr>
               <tr><td>Driver Name:</td><td>${entry.driver}</td></tr>
               <tr><td>Vehicle Type:</td><td>${entry.vehicleType}</td></tr>
               <tr><td>Quantity:</td><td>${entry.quantity}</td></tr>
@@ -396,7 +396,7 @@ const Card = ({ operator }) => {
         date: entry.date,
         token: entry.tokenNo,
         query: entry.route,
-        cluster: '6',
+        cluster: '1',
         driver: entry.driver,
         vehicle: entry.vehicleType,
         quantity: entry.quantity,
@@ -434,7 +434,7 @@ const Card = ({ operator }) => {
           <div class="content">
             <div>Date/Time: ${entry.date}</div>
             <div>Query Name: ${entry.route || 'N/A'}</div>
-            <div>Cluster: 6</div>
+            <div>Cluster: 1</div>
             <div>Driver Name: ${entry.driver}</div>
             <div>Vehicle Type: ${entry.vehicleType}</div>
             <div>Quantity: ${entry.quantity}</div>
