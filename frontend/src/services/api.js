@@ -340,17 +340,13 @@ export const getCurrentUser = () => {
 
 export const getTokenReport = async (params = {}) => {
   try {
-    const { page = 1, limit = 20, username, fromDate, toDate } = params;
+    const { page = 1, limit = 20, fromDate, toDate } = params;
     
     const queryParams = new URLSearchParams({
       page: page.toString(),
-      limit: limit.toString(),
-      deleted: 'false'
+      limit: limit.toString()
     });
 
-    if (username) {
-      queryParams.append('username', username);
-    }
     if (fromDate) {
       queryParams.append('dateFrom', fromDate.toISOString().split('T')[0]);
     }
@@ -361,13 +357,11 @@ export const getTokenReport = async (params = {}) => {
     const response = await api.get(`/tokens?${queryParams}`);
     
     if (response.data?.status === 'success') {
-      const processedTokens = response.data.data
-        .filter(token => !token.deletedAt)
-        .map(token => ({
-          ...token,
-          displayVehicleType: token.vehicleId?.vehicleType || token.vehicleType || 'N/A',
-          displayVehicleRate: token.vehicleRate || 'N/A'
-        }));
+      const processedTokens = response.data.data.map(token => ({
+        ...token,
+        displayVehicleType: token.vehicleId?.vehicleType || token.vehicleType || 'N/A',
+        displayVehicleRate: token.vehicleRate || 'N/A'
+      }));
 
       return {
         status: 'success',

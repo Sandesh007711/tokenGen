@@ -5,7 +5,7 @@ import "react-datepicker/dist/react-datepicker.css";
 import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
 import DataTable from 'react-data-table-component';
-import { getCurrentUser, getOperatorTokens } from '../../services/api';
+import { getCurrentUser, getTokenReport } from '../../services/api';
 
 /**
  * TokenList Component
@@ -37,7 +37,7 @@ const Token_list = () => {
         return false;
       }
 
-      const result = await getOperatorTokens({
+      const result = await getTokenReport({
         page,
         limit: perPage,
         username: currentUser.username,
