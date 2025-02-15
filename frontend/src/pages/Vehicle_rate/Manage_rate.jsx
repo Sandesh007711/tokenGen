@@ -174,7 +174,6 @@ const ManageRate = () => {
    * @param {string} item.vehicleId - The associated vehicle ID
    */
   const handleDelete = (item) => {
-    console.log('Delete item:', item); // Debug log
     setDeleteConfirm({ 
       show: true, 
       id: item.id,
@@ -312,7 +311,6 @@ const ManageRate = () => {
             value={selectedVehicle}
             onChange={(e) => {
               const selected = e.target.value;
-              console.log('Selected vehicle:', selected); // Debug log
               setSelectedVehicle(selected);
             }}
             className="px-4 py-3 bg-gray-900 text-gray-300 rounded-lg border border-gray-700 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 transition-all duration-300 min-w-[200px]"
@@ -323,7 +321,6 @@ const ManageRate = () => {
               <option value="" disabled>Loading vehicles...</option>
             ) : vehicles && vehicles.length > 0 ? (
               vehicles.map(vehicle => {
-                console.log('Rendering vehicle:', vehicle); // Debug log
                 return (
                   <option 
                     key={vehicle._id} 

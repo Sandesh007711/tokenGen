@@ -70,7 +70,6 @@ const Token_list = () => {
 
   // Add pagination handlers
   const handlePageChange = async (page) => {
-    console.log('Changing to page:', page);
     const searchParams = {
       fromDate: fromDate,
       toDate: toDate
@@ -83,7 +82,6 @@ const Token_list = () => {
   };
 
   const handlePerPageChange = async (newPerPage, page) => {
-    console.log('Changing rows per page:', { newPerPage, page });
     setPerPage(newPerPage);
     
     const searchParams = {
@@ -213,7 +211,6 @@ const Token_list = () => {
   // Debug user information
   useEffect(() => {
     const user = getCurrentUser();
-    console.log('Current user from localStorage:', user);
   }, []);
 
   /**

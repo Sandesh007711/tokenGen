@@ -64,7 +64,6 @@ const Content = () => {
       }
       
       const selectedVehicleData = vehicleTypes.find(type => type.vehicleId === value);
-      console.log('Selected vehicle data:', selectedVehicleData);
       
       if (selectedVehicleData) {
         setFormData(prev => ({
@@ -132,12 +131,9 @@ const Content = () => {
     }
 
     // Log vehicle types and selected vehicle ID for debugging
-    console.log('Vehicle Types:', vehicleTypes);
-    console.log('Selected Vehicle ID:', formData.vehicleId);
     
     // Find vehicle using vehicleId instead of _id
     const selectedVehicle = vehicleTypes.find(v => v.vehicleId === formData.vehicleId);
-    console.log('Selected Vehicle:', selectedVehicle);
 
     if (!selectedVehicle) {
       showError('Selected vehicle type is not valid');
@@ -171,7 +167,6 @@ const Content = () => {
         throw new Error(`Please fill in all required fields: ${missingFields.join(', ')}`);
       }
 
-      console.log('Submitting data:', submitData); // For debugging
 
       const result = await createToken(submitData);
 
@@ -231,7 +226,6 @@ const Content = () => {
         const result = await getVehicleRates();
         if (result.status === 'success' && result.data && result.data.rates) {
           setVehicleTypes(result.data.rates);
-          console.log('Set vehicle types:', result.data.rates); // Add this line for debugging
         } else {
           throw new Error('Invalid response format');
         }

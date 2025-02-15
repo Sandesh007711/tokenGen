@@ -170,22 +170,18 @@ const Op_Home = () => {
   }, [perPage]); // Remove currentPage dependency
 
   const handlePageChange = async (page) => {
-    console.log('Page change requested:', page);
     const success = await fetchUserTokens(page);
     if (!success) {
       showError('Failed to load page data');
     }
-    console.log('Current table data:', entries); // Log current table data after page change
   };
 
   const handlePerPageChange = async (newPerPage, page) => {
-    console.log('Rows per page change:', { newPerPage, page });
     setPerPage(newPerPage);
     const success = await fetchUserTokens(page);
     if (!success) {
       showError('Failed to update rows per page');
     }
-    console.log('Updated table data:', entries); // Log table data after rows per page change
   };
 
   const handleInputChange = (e) => {
@@ -199,7 +195,6 @@ const Op_Home = () => {
     if (name === 'vehicleType') {
       const selectedVehicle = vehicleRates.find(v => v.vehicleType === value);
       if (selectedVehicle) {
-        console.log('Selected vehicle data:', selectedVehicle); // Debug log
         setFormData(prev => ({
           ...prev,
           vehicleType: selectedVehicle.vehicleType,

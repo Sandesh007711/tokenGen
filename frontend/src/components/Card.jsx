@@ -19,7 +19,6 @@ const Card = ({ operator }) => {
   const fetchData = async (page, newPerPage = perPage) => {
     setLoading(true);
     try {
-      console.log('Fetching data for operator:', operator);
 
       const response = await getFilteredTokens({
         user: operator,
@@ -64,7 +63,6 @@ const Card = ({ operator }) => {
   const handlePageChange = async (page) => {
     setIsPaginationLoading(true);
     try {
-      console.log('Changing to page:', page);
       const success = await fetchData(page);
       if (!success) {
         console.error('Failed to load page data');
@@ -78,7 +76,6 @@ const Card = ({ operator }) => {
   const handlePerRowsChange = async (newPerPage, page) => {
     setIsPaginationLoading(true);
     try {
-      console.log('Changing rows per page:', { newPerPage, page });
       setPerPage(newPerPage);
       const success = await fetchData(page, newPerPage);
       if (!success) {
