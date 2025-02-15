@@ -90,9 +90,9 @@ const Token_list = () => {
         params.dateTo = searchParams.toDate.toISOString().split('T')[0];
       }
 
-      // Add user parameter if selected
+      // Add user parameter if selected - now passing only the user ID
       if (searchParams.userId) {
-        params.user = searchParams.userId;
+        params.user = searchParams.userId._id; // Extract just the ID
       }
 
       const result = await getFilteredTokens(params);
@@ -146,7 +146,7 @@ const Token_list = () => {
       if (selectedUser) {
         const userObj = users.find(u => u.username === selectedUser);
         if (userObj) {
-          searchParams.userId = userObj;
+          searchParams.userId = { _id: userObj._id }; // Pass only the ID information
         }
       }
     }
@@ -307,42 +307,76 @@ const Token_list = () => {
 
   // Add these new functions for handling updates and deletes
   const handleUpdate = (token) => {
-    setUpdateFormData(token);
+    // Debug logs for initial token data
+    console.log('Original token data:', token);
+    console.log('Original userId:', token.userId);
+    console.log('Original vehicleId:', token.vehicleId);
+    
+    const updatedToken = {
+      ...token,
+      userId: token.userId?._id || token.userId,
+      vehicleType: token.vehicleType || token.vehicleId?.vehicleType,
+      vehicleRate: token.vehicleRate || token.vehicleId?.rate
+    };
+    
+    console.log('Processed token data for form:', updatedToken);
+    setUpdateFormData(updatedToken);
     setShowUpdateForm(true);
   };
 
   const handleUpdateSubmit = async (updatedData) => {
     setIsUpdating(true);
+    console.log('Starting update with data:', updatedData);
+    
     try {
       const selectedVehicle = vehicleTypes.find(type => 
         type.vehicleType === (updatedData.vehicleType || updatedData.vehicleId?.vehicleType)
       );
+      console.log('Selected vehicle for update:', selectedVehicle);
 
       if (!selectedVehicle) {
         throw new Error('Please select a valid vehicle type');
       }
 
+      // Find the user object from the users array based on the token's username
+      const userObj = users.find(u => u.username === updatedData.userId?.username) || 
+                     users.find(u => u._id === updatedData.userId);
+      
+      if (!userObj || !userObj._id) {
+        throw new Error('Invalid user ID - Unable to find user');
+      }
+
       const updatePayload = {
-        vehicleId: selectedVehicle.vehicleId,
-        userId: updatedData.userId?._id || updatedData.userId,
-        driverName: updatedData.driverName,
+        userId: userObj._id, // Use the actual user ID from the found user object
+        driverName: updatedData.driverName || '',
         driverMobileNo: parseInt(updatedData.driverMobileNo) || 0,
-        vehicleNo: updatedData.vehicleNo,
-        route: updatedData.route || '',
+        vehicleNo: updatedData.vehicleNo || '',
+        vehicleId: selectedVehicle.vehicleId,
+        vehicleRate: parseFloat(selectedVehicle.rate) || 0,
+        updateRate: true,
         quantity: parseInt(updatedData.quantity) || 0,
         place: updatedData.place || '',
         challanPin: updatedData.challanPin || '',
-        updateRate: true
+        route: updatedData.route || ''
       };
 
-      await updateToken(updatedData._id, updatePayload);
-      await fetchTokens(); // Refresh the data after update
+      console.log('Final update payload:', updatePayload);
+      console.log('Token ID being updated:', updatedData._id);
+
+      const response = await updateToken(updatedData._id, updatePayload);
+      console.log('Update API response:', response);
+
+      await fetchTokens();
       setShowUpdateForm(false);
       showSuccess('Token updated successfully');
 
     } catch (error) {
-      console.error('Update error:', error);
-      showError(error.message);
+      console.error('Update error details:', {
+        error: error,
+        message: error.message,
+        stack: error.stack
+      });
+      showError(error.message || 'Failed to update token');
     } finally {
       setIsUpdating(false);
     }
@@ -559,15 +593,20 @@ const Token_list = () => {
   const handleVehicleTypeChange = (e) => {
     const selectedVehicleType = e.target.value;
     const selectedVehicle = vehicleTypes.find(type => type.vehicleType === selectedVehicleType);
-    console.log('Selected vehicle:', selectedVehicle); // Log selected vehicle data
+    
+    console.log('Vehicle type changed:', selectedVehicleType);
+    console.log('Selected vehicle data:', selectedVehicle);
+    console.log('Available vehicle types:', vehicleTypes);
 
     if (selectedVehicle) {
-      setUpdateFormData({
+      const updatedFormData = {
         ...updateFormData,
         vehicleType: selectedVehicleType,
-        vehicleRate: selectedVehicle.rate, // Automatically set the rate
+        vehicleRate: selectedVehicle.rate,
         vehicleId: selectedVehicle
-      });
+      };
+      console.log('Updated form data after vehicle change:', updatedFormData);
+      setUpdateFormData(updatedFormData);
     }
   };
 
