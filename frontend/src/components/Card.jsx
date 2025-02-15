@@ -638,13 +638,13 @@ const Card = ({ operator }) => {
             onClick={() => handlePrint(row)}
             className="bg-gradient-to-r from-green-400 to-green-600 hover:from-green-600 hover:to-green-400 text-white px-3 py-1 rounded-full flex items-center justify-center transition duration-300 transform hover:scale-105"
           >
-            A4 Print
+            L Print
           </button>
           <button
             onClick={() => handleReceiptPrint(row)}
             className="bg-gradient-to-r from-blue-400 to-blue-600 hover:from-blue-600 hover:to-blue-400 text-white px-3 py-1 rounded-full flex items-center justify-center transition duration-300 transform hover:scale-105"
           >
-            Receipt
+            T Print
           </button>
         </div>
       ),

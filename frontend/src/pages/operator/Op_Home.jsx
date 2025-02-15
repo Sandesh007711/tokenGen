@@ -423,7 +423,7 @@ const Op_Home = () => {
         date: formatDateTime(entry.createdAt),
         token: entry.tokenNo,
         query: entry.route,
-        cluster: '6',
+        cluster: '1',
         driver: entry.driverName,
         vehicle: entry.vehicleType, 
         quantity: entry.quantity,
@@ -460,7 +460,7 @@ const Op_Home = () => {
               <tr><td>Date/Time:</td><td>${formatDateTime(entry.createdAt)}</td></tr>
               <tr><td>Token No.:</td><td>${entry.tokenNo || 'N/A'}</td></tr>
               <tr><td>Query Name:</td><td>${entry.route || 'N/A'}</td></tr>
-              <tr><td>Cluster:</td><td>6</td></tr>
+              <tr><td>Cluster:</td><td>1</td></tr>
               <tr><td>Driver Name:</td><td>${entry.driverName}</td></tr>
               <tr><td>Vehicle Type:</td><td>${entry.vehicleType}</td></tr> 
               <tr><td>Quantity:</td><td>${entry.quantity}</td></tr>
@@ -587,7 +587,7 @@ const Op_Home = () => {
         date: formatDateTime(entry.createdAt),
         token: entry.tokenNo,
         query: entry.route,
-        cluster: '6',
+        cluster: '1',
         driver: entry.driverName,
         vehicle: entry.vehicleType, // Changed from VehicleType
         quantity: entry.quantity,
@@ -625,7 +625,7 @@ const Op_Home = () => {
           <div class="content">
             <div>Date/Time: ${formatDateTime(entry.createdAt)}</div>
             <div>Query Name: ${entry.route || 'N/A'}</div>
-            <div>Cluster: 6</div>
+            <div>Cluster: 1</div>
             <div>Driver Name: ${entry.driverName}</div>
             <div>Vehicle Type: ${entry.vehicleType}</div> 
             <div>Quantity: ${entry.quantity}</div>
@@ -886,13 +886,13 @@ const formatDateTime = (dateString) => {
             onClick={() => handlePrint(row)}
             className="bg-gradient-to-r from-green-400 to-green-600 hover:from-green-600 hover:to-green-400 text-white px-3 py-1 rounded-full flex items-center justify-center transition duration-300 transform hover:scale-105"
           >
-            A4 Print
+            L Print
           </button>
           <button
             onClick={() => handleReceiptPrint(row)}
             className="bg-gradient-to-r from-blue-400 to-blue-600 hover:from-blue-600 hover:to-blue-400 text-white px-3 py-1 rounded-full flex items-center justify-center transition duration-300 transform hover:scale-105"
           >
-            Receipt
+            T Print
           </button>
         </div>
       ),
