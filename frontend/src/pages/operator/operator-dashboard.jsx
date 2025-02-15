@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import Sidebar from '../../components/Sidebar_OP';
-import Nav from '../../components/Nav_OP';
+import Nav from '../../components/Nav_Op';
 import O_Routes from '../../routes/O_Routes';
 
 const OperatorDashboard = () => {
