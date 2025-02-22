@@ -3,6 +3,10 @@ import { Link, useNavigate } from "react-router-dom";
 import styled from 'styled-components';
 import logo from "../assets/logo.png";
 import { FaUser, FaRoute, FaExpandAlt, FaCompressAlt } from 'react-icons/fa';
+import { BiSolidContact } from 'react-icons/bi';
+import { IoMdClose } from 'react-icons/io';
+import { BsBuilding } from 'react-icons/bs';
+import { FaPhoneAlt } from 'react-icons/fa';
 
 const StyledWrapper = styled.div`
   .Btn {
@@ -74,6 +78,7 @@ const StyledWrapper = styled.div`
 
 const Nav = () => {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [showContactModal, setShowContactModal] = useState(false);
   const [username, setUsername] = useState('');
   const [route, setRoute] = useState('');
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -157,6 +162,17 @@ const Nav = () => {
               )}
             </button>
 
+            {/* Contact Us Button */}
+            <button
+              onClick={() => setShowContactModal(true)}
+              className="transition-transform duration-300 hover:scale-110 group"
+            >
+              <BiSolidContact className="text-3xl text-white hover:text-blue-400 transition-colors" />
+              <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-black rounded opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                Contact Us
+              </span>
+            </button>
+
             {/* User Icon and Name */}
             <div className="flex items-center gap-2">
               <FaUser className="text-lg sm:text-xl text-white" />
@@ -204,6 +220,54 @@ const Nav = () => {
               >
                 Logout
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Contact Modal */}
+      {showContactModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-8 rounded-lg shadow-xl max-w-md w-full mx-4">
+            <div className="flex justify-between items-center mb-6">
+              <div className="flex items-center gap-2">
+                <BiSolidContact className="text-4xl text-blue-600" />
+                <h2 className="text-2xl font-bold text-gray-800">Contact Us</h2>
+              </div>
+              <button
+                onClick={() => setShowContactModal(false)}
+                className="text-gray-500 hover:text-gray-700 transition-colors"
+              >
+                <IoMdClose className="text-2xl" />
+              </button>
+            </div>
+            
+            <div className="space-y-6">
+              <div className="p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg shadow-sm">
+                <div className="flex items-center gap-3 mb-3">
+                  <BsBuilding className="text-2xl text-blue-600" />
+                  <h3 className="font-semibold text-gray-800 text-xl">Company</h3>
+                </div>
+                <p className="text-gray-700 text-lg font-medium pl-9">Vashudev</p>
+              </div>
+              
+              <div className="p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg shadow-sm">
+                <div className="flex items-center gap-3 mb-4">
+                  <FaPhoneAlt className="text-2xl text-blue-600" />
+                  <h3 className="font-semibold text-gray-800 text-xl">Contact Numbers</h3>
+                </div>
+                <div className="space-y-3 pl-9">
+                  <p className="text-gray-700 hover:text-blue-600 transition-colors cursor-pointer flex items-center gap-2">
+                    <span className="font-medium">+91 6239135898</span>
+                  </p>
+                  <p className="text-gray-700 hover:text-blue-600 transition-colors cursor-pointer flex items-center gap-2">
+                    <span className="font-medium">+91 7644027325</span>
+                  </p>
+                  <p className="text-gray-700 hover:text-blue-600 transition-colors cursor-pointer flex items-center gap-2">
+                    <span className="font-medium">+91 9508694942</span>
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
