@@ -85,13 +85,13 @@ const Op_Home = () => {
     transform: 'translateY(0)'
   };
 
-  // Add quantity options generator
+  // Modify generateQuantityOptions function
   const generateQuantityOptions = () => {
-    const options = ["Select Quantity"];
+    const options = [];
     for (let i = 0; i <= 1000; i += 50) {
       options.push(i.toString());
     }
-    return options;
+    return ["Select Quantity", ...options];
   };
 
   const quantityOptions = generateQuantityOptions();
@@ -184,11 +184,25 @@ const Op_Home = () => {
     }
   };
 
+  // Update handleInputChange function
   const handleInputChange = (e) => {
     const { name, value } = e.target;
 
     // Prevent changes to userId and route
     if (name === 'userId' || name === 'route') {
+      return;
+    }
+
+    // Special handling for quantity field
+    if (name === 'quantity') {
+      if (value === 'Select Quantity') {
+        setFormData(prev => ({ ...prev, quantity: '' }));
+        return;
+      }
+      setFormData(prev => ({
+        ...prev,
+        quantity: value
+      }));
       return;
     }
 
@@ -235,16 +249,13 @@ const Op_Home = () => {
       return;
     }
 
-    if ((name === 'vehicleRate' || name === 'quantity') && value < 0) {
-      return;
-    }
-
     setFormData(prev => ({
       ...prev,
       [name]: value
     }));
   };
 
+  // Update handleSubmitClick validation
   const handleSubmitClick = (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -265,7 +276,8 @@ const Op_Home = () => {
       return;
     }
 
-    if (!formData.quantity || formData.quantity === 'Select Quantity') {
+    // Updated quantity validation
+    if (formData.quantity === '' || formData.quantity === 'Select Quantity') {
       showError('Please select a quantity');
       return;
     }
@@ -276,7 +288,6 @@ const Op_Home = () => {
     }
 
     try {
-      // Find the selected vehicle data from vehicleRates
       const selectedVehicle = vehicleRates.find(
         vehicle => vehicle.vehicleType === formData.vehicleType
       );
@@ -284,6 +295,12 @@ const Op_Home = () => {
       if (!selectedVehicle) {
         throw new Error('Please select a valid vehicle type');
       }
+
+      // Log the form data before submission for debugging
+      console.log('Form data before submission:', {
+        ...formData,
+        quantity: parseInt(formData.quantity)
+      });
 
       // If all validations pass, show confirmation dialog
       setShowSubmitConfirm(true);
@@ -355,7 +372,13 @@ const Op_Home = () => {
       if (!selectedVehicle) {
         throw new Error('Please select a valid vehicle type');
       }
-
+  
+      // Ensure quantity is properly parsed as an integer
+      const quantity = parseInt(formData.quantity);
+      if (isNaN(quantity)) {
+        throw new Error('Invalid quantity value');
+      }
+  
       const submitData = {
         userId: formData.userId,
         vehicleId: selectedVehicle.vehicleId || selectedVehicle._id, // Add fallback to _id
@@ -364,7 +387,7 @@ const Op_Home = () => {
         vehicleNo: formData.vehicleNo.trim(),
         vehicleType: formData.vehicleType,
         vehicleRate: parseInt(formData.vehicleRate),
-        quantity: parseInt(formData.quantity),
+        quantity: formData.quantity === "0" ? 0 : parseInt(formData.quantity), // Handle zero explicitly
         place: formData.place.trim() || undefined,
         challanPin: formData.chalaanPin ? formData.chalaanPin : undefined,
         route: formData.route
@@ -1088,29 +1111,36 @@ const formatDateTime = (dateString) => {
                 <div className="relative">
                   <label className="block text-gray-300 text-sm font-bold mb-2">Quantity</label>
                   <div className="inline-block relative w-full">
-                    <select
-                      name="quantity"
-                      value={formData.quantity}
-                      onChange={handleInputChange}
-                      className="block w-full px-4 py-3 pr-10 bg-gray-900 text-gray-300 rounded-lg border border-gray-700 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 transition-all duration-300 appearance-none"
-                      required
-                    >
-                      {quantityOptions.map((qty, index) => (
-                        <option 
-                          key={index} 
-                          value={qty}
-                          disabled={qty === "Select Quantity"}
-                          className={`${qty === "Select Quantity" ? "text-gray-500" : "text-gray-300"} bg-gray-900`}
-                        >
-                          {qty}
-                        </option>
-                      ))}
-                    </select>
-                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-400">
-                      <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-                        <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 111.414 1.414l-4 4a1 1 01-1.414 0l-4-4a1 1 010-1.414z"/>
-                      </svg>
-                    </div>
+                    {formData.quantity === "0" ? (
+                      <input
+                        type="number"
+                        name="quantity"
+                        value={formData.quantity}
+                        onChange={handleInputChange}
+                        min="0"
+                        className="block w-full px-4 py-3 pr-10 bg-gray-900 text-gray-300 rounded-lg border border-gray-700 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 transition-all duration-300"
+                        required
+                      />
+                    ) : (
+                      <select
+                        name="quantity"
+                        value={formData.quantity}
+                        onChange={handleInputChange}
+                        className="block w-full px-4 py-3 pr-10 bg-gray-900 text-gray-300 rounded-lg border border-gray-700 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 transition-all duration-300 appearance-none"
+                        required
+                      >
+                        {quantityOptions.map((qty, index) => (
+                          <option 
+                            key={index} 
+                            value={qty === "Select Quantity" ? "" : qty}
+                            disabled={qty === "Select Quantity"}
+                            className={`${qty === "Select Quantity" ? "text-gray-500" : "text-gray-300"} bg-gray-900`}
+                          >
+                            {qty}
+                          </option>
+                        ))}
+                      </select>
+                    )}
                   </div>
                 </div>
                 <div className="relative">

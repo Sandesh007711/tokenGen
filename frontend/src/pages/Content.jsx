@@ -38,9 +38,12 @@ const Content = () => {
   const [routes, setRoutes] = useState([]);
   const [users, setUsers] = useState([]);
 
+  // Modify generateQuantityOptions to only include predefined values
   const generateQuantityOptions = () => {
-    const options = ["Select Quantity"];
-    for (let i = 0; i <= 1000; i += 50) {
+//20/02/25
+    
+    const options = ["Select Quantity", "0"];
+    for (let i = 50; i <= 1000; i += 50) {
       options.push(i.toString());
     }
     return options;
@@ -48,9 +51,26 @@ const Content = () => {
 
   const quantityOptions = generateQuantityOptions();
 
-  // Modify handleInputChange to automatically set vehicle rate when vehicle type changes
+  // Update handleInputChange for quantity
   const handleInputChange = (e) => {
     const { name, value } = e.target;
+//20/02/25
+    // Special handling for quantity field
+    if (name === 'quantity') {
+      if (value === 'Select Quantity') {
+        setFormData(prev => ({ ...prev, quantity: '' }));
+        return;
+      }
+      // Ensure empty string and zero are handled properly
+      const numValue = value === '' ? '' : Number(value);
+      if (!isNaN(numValue)) {
+        setFormData(prev => ({
+          ...prev,
+          quantity: numValue.toString()
+        }));
+      }
+      return;
+    }
 
     if (name === 'vehicleType') {
       if (value === '') {
@@ -115,60 +135,74 @@ const Content = () => {
     setTimeout(() => setSuccessPopup({ show: false, message: '' }), 3000);
   };
 
-  // Modify handleSubmitClick to handle API submission
+  // Update handleSubmitClick validation
   const handleSubmitClick = async (e) => {
     e.preventDefault();
-
-    // Validation checks
-    if (!formData.driverName.trim()) {
-      showError('Driver Name is required');
-      return;
-    }
-
-    if (!formData.vehicleId) {
-      showError('Please select a vehicle type');
-      return;
-    }
-
-    // Log vehicle types and selected vehicle ID for debugging
     
-    // Find vehicle using vehicleId instead of _id
-    const selectedVehicle = vehicleTypes.find(v => v.vehicleId === formData.vehicleId);
-
-    if (!selectedVehicle) {
-      showError('Selected vehicle type is not valid');
-      return;
-    }
-
-    setIsSubmitting(true);
     try {
+      // Basic validations
+      if (!formData.driverName.trim()) {
+        showError('Driver Name is required');
+        return;
+      }
+  
+      if (!formData.vehicleId) {
+        showError('Please select a vehicle type');
+        return;
+      }
+  
+      // Prepare the data first
       const submitData = {
         userId: formData.userId,
         driverName: formData.driverName.trim(),
         driverMobileNo: parseInt(formData.driverMobile),
         vehicleNo: formData.vehicleNo.trim(),
-        vehicleId: formData.vehicleId, // Use formData.vehicleId directly
-        quantity: parseInt(formData.quantity),
+        vehicleId: formData.vehicleId,
+        quantity: formData.quantity === "0" ? 0 : Number(formData.quantity), // Handle zero explicitly
         place: formData.place.trim() || undefined,
         challanPin: formData.chalaanPin || undefined,
         route: formData.route
       };
-
-      // Remove undefined fields
+  
+      // Clean undefined values
       Object.keys(submitData).forEach(key => 
         submitData[key] === undefined && delete submitData[key]
       );
-
-      // Validate required fields
-      const requiredFields = ['userId', 'driverName', 'driverMobileNo', 'vehicleNo', 'vehicleId', 'quantity', 'route'];
+  
+      // Now validate all required fields
+      const requiredFields = ['userId', 'driverName', 'driverMobileNo', 'vehicleNo', 'vehicleId', 'route'];
       const missingFields = requiredFields.filter(field => !submitData[field]);
       
+      // Special check for quantity that allows zero
+      if (submitData.quantity === undefined || submitData.quantity === '' || isNaN(submitData.quantity)) {
+        missingFields.push('quantity');
+      }
+  
       if (missingFields.length > 0) {
         throw new Error(`Please fill in all required fields: ${missingFields.join(', ')}`);
       }
 
+      console.log('Submitting data:', submitData); // For debugging
 
-      const result = await createToken(submitData);
+      const response = await fetch('http://localhost:8000/api/v1/tokens', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(submitData)
+      });
+
+      if (response.status === 401) {
+        throw new Error('Unauthorized access');
+      }
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to submit token');
+      }
+
+      const result = await response.json();
 
       if (result.status === 'success') {
         showSuccess('Token generated successfully!');
@@ -420,17 +454,29 @@ const Content = () => {
                 </div>
                 <div className="relative">
                   <label className="block text-gray-300 text-sm font-bold mb-2">Quantity</label>
-                  <select
-                    name="quantity"
-                    value={formData.quantity}
-                    onChange={handleInputChange}
-                    className="px-4 py-3 w-full bg-gray-900 text-gray-300 rounded-lg border border-gray-700 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 transition-all duration-300"
-                    required
-                  >
-                    {quantityOptions.map((qty, index) => (
-                      <option key={index} value={qty}>{qty}</option>
-                    ))}
-                  </select>
+                  {formData.quantity === "0" ? (
+                    <input
+                      type="number"
+                      name="quantity"
+                      value={formData.quantity}
+                      onChange={handleInputChange}
+                      min="0"
+                      className="px-4 py-3 w-full bg-gray-900 text-gray-300 rounded-lg border border-gray-700 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 transition-all duration-300"
+                      required
+                    />
+                  ) : (
+                    <select
+                      name="quantity"
+                      value={formData.quantity}
+                      onChange={handleInputChange}
+                      className="px-4 py-3 w-full bg-gray-900 text-gray-300 rounded-lg border border-gray-700 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 transition-all duration-300"
+                      required
+                    >
+                      {quantityOptions.map((qty, index) => (
+                        <option key={index} value={qty}>{qty}</option>
+                      ))}
+                    </select>
+                  )}
                 </div>
                 <div className="relative">
                   <label className="block text-gray-300 text-sm font-bold mb-2">Route</label>
