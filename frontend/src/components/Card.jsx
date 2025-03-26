@@ -292,6 +292,7 @@ const Card = ({ operator }) => {
               <tr><td>Cluster:</td><td>1</td></tr>
               <tr><td>Driver Name:</td><td>${entry.driver}</td></tr>
               <tr><td>Vehicle Type:</td><td>${entry.vehicleType}</td></tr>
+              <tr><td>Vehicle No.:</td><td>${entry.vehicleNo || 'N/A'}</td></tr>
               <tr><td>Quantity:</td><td>${entry.quantity}</td></tr>
               <tr><td>Driver Mobile:</td><td>${entry.mobileNo}</td></tr>
               <tr><td>Operator:</td><td>${operator.username}</td></tr>

@@ -485,7 +485,8 @@ const Op_Home = () => {
               <tr><td>Query Name:</td><td>${entry.route || 'N/A'}</td></tr>
               <tr><td>Cluster:</td><td>1</td></tr>
               <tr><td>Driver Name:</td><td>${entry.driverName}</td></tr>
-              <tr><td>Vehicle Type:</td><td>${entry.vehicleType}</td></tr> 
+              <tr><td>Vehicle Type:</td><td>${entry.vehicleType}</td></tr>
+              <tr><td>Vehicle No.:</td><td>${entry.vehicleNo || 'N/A'}</td></tr> 
               <tr><td>Quantity:</td><td>${entry.quantity}</td></tr>
               <tr><td>Driver Mobile:</td><td>${entry.driverMobileNo}</td></tr>
               <tr><td>Operator:</td><td>${entry.userId?.username || 'N/A'}</td></tr>
