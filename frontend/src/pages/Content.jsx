@@ -140,12 +140,6 @@ const Content = () => {
     e.preventDefault();
     
     try {
-      // Retrieve the token from local storage or context
-      const token = localStorage.getItem('token'); // Adjust this if you're using a different storage mechanism
-      if (!token) {
-        throw new Error('Authentication token is missing. Please log in again.');
-      }
-
       // Basic validations
       if (!formData.driverName.trim()) {
         showError('Driver Name is required');
