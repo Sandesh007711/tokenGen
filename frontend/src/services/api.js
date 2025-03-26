@@ -63,7 +63,7 @@ export const createToken = async (tokenData) => {
     const response = await api.post('/tokens', tokenData);
     return response.data;
   } catch (error) {
-    throw error.response?.data || error.message;
+    throw error.response?.data || { message: 'Failed to create token' };
   }
 };
 

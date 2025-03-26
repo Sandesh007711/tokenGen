@@ -184,25 +184,7 @@ const Content = () => {
 
       console.log('Submitting data:', submitData); // For debugging
 
-      const response = await fetch('http://localhost:8000/api/v1/tokens', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(submitData)
-      });
-
-      if (response.status === 401) {
-        throw new Error('Unauthorized access');
-      }
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to submit token');
-      }
-
-      const result = await response.json();
+      const result = await createToken(submitData);
 
       if (result.status === 'success') {
         showSuccess('Token generated successfully!');
