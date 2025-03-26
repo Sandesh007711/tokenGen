@@ -435,6 +435,7 @@ const Card = ({ operator }) => {
             <div>Cluster: 1</div>
             <div>Driver Name: ${entry.driver}</div>
             <div>Vehicle Type: ${entry.vehicleType}</div>
+            <div>Vehicle No: ${entry.vehicleNo || 'N/A'}</div>
             <div>Quantity: ${entry.quantity}</div>
             <div>Driver Mobile: ${entry.mobileNo}</div>
             <div>Operator: ${operator.username}</div>
