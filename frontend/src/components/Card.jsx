@@ -360,11 +360,11 @@ const Card = ({ operator }) => {
               width: 25%;
             }
             .qr-code {
-              position: relative;
-              left: 1;
+              position: absolute; /* Changed from relative to absolute */
+              bottom: 10px; /* Adjusted placement */
+              right: 10px; /* Adjusted placement */
               width: 90px;
               height: 90px;
-              margin-top: auto;
             }
             .qr-code svg {
               width: 100%;
@@ -476,9 +476,10 @@ const Card = ({ operator }) => {
               width: 80mm;
               margin: 0;
               padding: 8px;
-              font-size: 12pt;
+              font-size: 12pt; /* Adjusted font size */
               line-height: 1.2;
               text-transform: uppercase;
+              font-weight: bold; /* Added boldness */
             }
             .receipt {
               width: 100%;

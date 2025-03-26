@@ -555,16 +555,23 @@ const Op_Home = () => {
               width: 25%;
             }
             .qr-code {
-              position: relative;
-              left: 1;
+              position: absolute; /* Changed from relative to absolute */
+              bottom: 10px; /* Adjusted placement */
+              right: 10px; /* Adjusted placement */
               width: 90px;
               height: 90px;
-              margin-top: auto;
-
             }
             .qr-code svg {
               width: 100%;
               height: 100%;
+            }
+            .token-number {
+              font-size: 26pt; /* Larger font size for token number */
+              font-weight: 900; /* Extra bold */
+            }
+            .content div {
+              font-size: 12pt; /* Increased font size */
+              font-weight: 900; /* Extra bold */
             }
           </style>
         </head>
@@ -689,6 +696,7 @@ const Op_Home = () => {
               font-size: 12pt;
               line-height: 1.2;
               text-transform: uppercase;
+              font-weight: bold; /* Added boldness */
             }
             .receipt {
               width: 100%;
