@@ -515,8 +515,8 @@ const Op_Home = () => {
               font-family: Arial, sans-serif;
               margin: 0;
               padding: 0;
-              font-size: 8pt;
-              line-height: 1.1;
+              font-size: 10pt; /* Increased font size */
+              line-height: 1.2; /* Adjusted line height */
             }
             .token-section {
               padding: 3mm;
@@ -528,12 +528,12 @@ const Op_Home = () => {
               margin-bottom: 2mm;
             }
             .company-name {
-              font-size: 10pt;
-              font-weight: bold;
+              font-size: 12pt; /* Increased font size */
+              font-weight: 900; /* Extra bold */
             }
             .copy-type {
-              font-size: 8pt;
-              font-weight: bold;
+              font-size: 10pt; /* Increased font size */
+              font-weight: 900; /* Extra bold */
             }
             .content {
               position: relative;
@@ -545,6 +545,9 @@ const Op_Home = () => {
             .info-table td {
               padding: 0.5mm 2mm 0.5mm 0;
               vertical-align: top;
+              font-weight: bold; /* Make text bolder */
+              font-size: 10pt; /* Increased font size */
+              font-weight: 900; /* Extra bold */
             }
             .info-table td:first-child {
               white-space: nowrap;
@@ -712,7 +715,7 @@ const Op_Home = () => {
             }
             .token-number {
               font-size: 24pt;  /* Even larger font for token number */
-              font-weight: bold;
+              font-weight: bold; /* Make token number bolder */
               margin: 10px 0;
               letter-spacing: 2px;
             }
@@ -723,6 +726,7 @@ const Op_Home = () => {
               text-align: left;
               margin-bottom: 10px;
               font-size: 12pt;
+              font-weight: bold; /* Make content text bolder */
             }
             .content div {
               margin: 3px 0;

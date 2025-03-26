@@ -321,8 +321,8 @@ const Card = ({ operator }) => {
               font-family: Arial, sans-serif;
               margin: 0;
               padding: 0;
-              font-size: 8pt;
-              line-height: 1.1;
+              font-size: 10pt; /* Increased font size */
+              line-height: 1.2; /* Adjusted line height */
             }
             .token-section {
               padding: 3mm;
@@ -334,12 +334,12 @@ const Card = ({ operator }) => {
               margin-bottom: 2mm;
             }
             .company-name {
-              font-size: 10pt;
-              font-weight: bold;
+              font-size: 12pt; /* Increased font size */
+              font-weight: 900; /* Extra bold */
             }
             .copy-type {
-              font-size: 8pt;
-              font-weight: bold;
+              font-size: 10pt; /* Increased font size */
+              font-weight: 900; /* Extra bold */
             }
             .content {
               position: relative;
@@ -351,6 +351,8 @@ const Card = ({ operator }) => {
             .info-table td {
               padding: 0.5mm 2mm 0.5mm 0;
               vertical-align: top;
+              font-size: 10pt; /* Increased font size */
+              font-weight: 900; /* Extra bold */
             }
             .info-table td:first-child {
               white-space: nowrap;
@@ -367,6 +369,14 @@ const Card = ({ operator }) => {
             .qr-code svg {
               width: 100%;
               height: 100%;
+            }
+            .token-number {
+              font-size: 26pt; /* Larger font size for token number */
+              font-weight: 900; /* Extra bold */
+            }
+            .content div {
+              font-size: 12pt; /* Increased font size */
+              font-weight: 900; /* Extra bold */
             }
           </style>
         </head>
