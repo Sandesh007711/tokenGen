@@ -266,7 +266,7 @@ const Card = ({ operator }) => {
     const QRCodeComponent = ({ data }) => (
       <QRCodeSVG 
         value={data}
-        size={50}
+        size={40} // Reduced QR code size
         level="M"
         includeMargin={true}
       />
@@ -315,14 +315,14 @@ const Card = ({ operator }) => {
           <style>
             @page {
               size: A4;
-              margin: 10mm;
+              margin: 5mm; /* Reduced margin */
             }
             body {
               font-family: Arial, sans-serif;
               margin: 0;
               padding: 0;
-              font-size: 9pt;
-              line-height: 1.2;
+              font-size: 8pt; /* Reduced font size */
+              line-height: 1.1; /* Reduced line height */
             }
             .page {
               display: flex;
@@ -331,46 +331,46 @@ const Card = ({ operator }) => {
               height: 100%;
             }
             .token-section {
-              padding: 5mm;
+              padding: 3mm; /* Reduced padding */
               border: 1px solid #000;
-              margin-bottom: 5mm;
+              margin-bottom: 3mm; /* Reduced margin */
               flex: 1;
             }
             .header {
               text-align: center;
-              margin-bottom: 5px;
+              margin-bottom: 3px; /* Reduced spacing */
             }
             .company-name {
-              font-size: 12pt;
+              font-size: 10pt; /* Reduced font size */
               font-weight: bold;
             }
             .copy-type {
-              font-size: 10pt;
+              font-size: 9pt; /* Reduced font size */
               font-weight: bold;
             }
             .content {
-              margin-top: 5px;
+              margin-top: 3px; /* Reduced spacing */
             }
             .info-table {
               width: 100%;
               border-collapse: collapse;
             }
             .info-table td {
-              padding: 3px;
+              padding: 2px; /* Reduced padding */
               vertical-align: top;
-              font-size: 9pt;
+              font-size: 8pt; /* Reduced font size */
             }
             .info-table td:first-child {
               font-weight: bold;
               width: 30%;
             }
             .qr-code {
-              margin-top: 5px;
+              margin-top: 3px; /* Reduced spacing */
               text-align: center;
             }
             .qr-code svg {
-              width: 80px;
-              height: 80px;
+              width: 60px; /* Reduced QR code size */
+              height: 60px;
             }
           </style>
         </head>

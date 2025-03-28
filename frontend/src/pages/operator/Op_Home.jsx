@@ -460,7 +460,7 @@ const Op_Home = () => {
     const QRCodeComponent = ({ data }) => (
       <QRCodeSVG 
         value={data}
-        size={50}
+        size={40} // Reduced QR code size
         level="M"
         includeMargin={true}
       />
@@ -486,12 +486,12 @@ const Op_Home = () => {
               <tr><td>Cluster:</td><td>1</td></tr>
               <tr><td>Driver Name:</td><td>${entry.driverName}</td></tr>
               <tr><td>Vehicle Type:</td><td>${entry.vehicleType}</td></tr>
-              <tr><td>Vehicle No.:</td><td>${entry.vehicleNo || 'N/A'}</td></tr> 
+              <tr><td>Vehicle No.:</td><td>${entry.vehicleNo || 'N/A'}</td></tr>
               <tr><td>Quantity:</td><td>${entry.quantity}</td></tr>
               <tr><td>Driver Mobile:</td><td>${entry.driverMobileNo}</td></tr>
               <tr><td>Operator:</td><td>${entry.userId?.username || 'N/A'}</td></tr>
               <tr><td>Destination:</td><td>${entry.place}</td></tr>
-              <tr><td>Challan Pin:</td><td>${entry.challanPin}</td></tr>
+              <tr><td>Challan Pin:</td><td>${entry.chalaanPin}</td></tr>
             </table>
             <div class="qr-code">
               ${qrCodeSvg}
@@ -509,14 +509,14 @@ const Op_Home = () => {
           <style>
             @page {
               size: A4;
-              margin: 10mm;
+              margin: 5mm; /* Reduced margin */
             }
             body {
               font-family: Arial, sans-serif;
               margin: 0;
               padding: 0;
-              font-size: 9pt;
-              line-height: 1.2;
+              font-size: 8pt; /* Reduced font size */
+              line-height: 1.1; /* Reduced line height */
             }
             .page {
               display: flex;
@@ -525,46 +525,46 @@ const Op_Home = () => {
               height: 100%;
             }
             .token-section {
-              padding: 5mm;
+              padding: 3mm; /* Reduced padding */
               border: 1px solid #000;
-              margin-bottom: 5mm;
+              margin-bottom: 3mm; /* Reduced margin */
               flex: 1;
             }
             .header {
               text-align: center;
-              margin-bottom: 5px;
+              margin-bottom: 3px; /* Reduced spacing */
             }
             .company-name {
-              font-size: 12pt;
+              font-size: 10pt; /* Reduced font size */
               font-weight: bold;
             }
             .copy-type {
-              font-size: 10pt;
+              font-size: 9pt; /* Reduced font size */
               font-weight: bold;
             }
             .content {
-              margin-top: 5px;
+              margin-top: 3px; /* Reduced spacing */
             }
             .info-table {
               width: 100%;
               border-collapse: collapse;
             }
             .info-table td {
-              padding: 3px;
+              padding: 2px; /* Reduced padding */
               vertical-align: top;
-              font-size: 9pt;
+              font-size: 8pt; /* Reduced font size */
             }
             .info-table td:first-child {
               font-weight: bold;
               width: 30%;
             }
             .qr-code {
-              margin-top: 5px;
+              margin-top: 3px; /* Reduced spacing */
               text-align: center;
             }
             .qr-code svg {
-              width: 80px;
-              height: 80px;
+              width: 60px; /* Reduced QR code size */
+              height: 60px;
             }
           </style>
         </head>
@@ -624,7 +624,7 @@ const Op_Home = () => {
         mobile: entry.driverMobileNo,
         operator: entry.userId?.username,
         destination: entry.place,
-        challan: entry.challanPin
+        challan: entry.chalaanPin
       });
     };
   
@@ -663,7 +663,7 @@ const Op_Home = () => {
             <div>Driver Mobile: ${entry.driverMobileNo}</div>
             <div>Operator: ${entry.userId?.username || 'N/A'}</div>
             <div>Destination: ${entry.place || 'N/A'}</div>
-            <div>Challan Pin: ${entry.challanPin || 'N/A'}</div>
+            <div>Challan Pin: ${entry.chalaanPin || 'N/A'}</div>
             <div class="divider">================================</div>
           </div>
           <div class="qr-section">
