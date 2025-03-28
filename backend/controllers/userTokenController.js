@@ -10,6 +10,13 @@ const Vehicle = require('../models/vehicleModel');
 const Rate = require('../models/rateModel');
 const APIfeatures = require('./../utils/apiFeatures')
 
+// Utility function to get the current date in a specific time zone
+const getLocalDate = () => {
+    const options = { timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit' };
+    const formatter = new Intl.DateTimeFormat('en-CA', options); // YYYY-MM-DD format
+    return formatter.format(new Date());
+};
+
 // create printToken
 exports.createToken = catchAsync(async (req, res, next) => {
     const { vehicleId, userId } = req.body;
@@ -32,9 +39,11 @@ exports.createToken = catchAsync(async (req, res, next) => {
         // console.log(vehicle, rate);
         // return
 
-        // Get today's date in 'YYYY-MM-DD' format
-        const today = new Date().toISOString().split("T")[0];
-        const lastTokenDate = user.tokenData.dailyTokens.date ? user.tokenData.dailyTokens.date.toISOString().split("T")[0] : null;
+        // Get today's date in 'YYYY-MM-DD' format for the specified time zone
+        const today = getLocalDate();
+        const lastTokenDate = user.tokenData.dailyTokens.date
+            ? new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(user.tokenData.dailyTokens.date)
+            : null;
 
         let dailyTokensDate = user.tokenData.dailyTokens.date ? user.tokenData.dailyTokens.date : '';
         let dailyTokensCount = user.tokenData.dailyTokens.count ? user.tokenData.dailyTokens.count : 0;
