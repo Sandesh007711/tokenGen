@@ -515,63 +515,49 @@ const Op_Home = () => {
               font-family: Arial, sans-serif;
               margin: 0;
               padding: 0;
-              font-size: 10pt; /* Increased font size */
-              line-height: 1.2; /* Adjusted line height */
+              font-size: 10pt;
+              line-height: 1.5;
             }
             .token-section {
-              padding: 3mm;
-              height: 85mm;
-              position: relative;
+              padding: 10mm;
+              border: 1px solid #000;
+              margin-bottom: 10mm;
             }
             .header {
-              text-align: left;
-              margin-bottom: 2mm;
+              text-align: center;
+              margin-bottom: 10px;
             }
             .company-name {
-              font-size: 12pt; /* Increased font size */
-              font-weight: 900; /* Extra bold */
+              font-size: 14pt;
+              font-weight: bold;
             }
             .copy-type {
-              font-size: 10pt; /* Increased font size */
-              font-weight: 900; /* Extra bold */
+              font-size: 12pt;
+              font-weight: bold;
             }
             .content {
-              position: relative;
+              margin-top: 10px;
             }
             .info-table {
               width: 100%;
-              margin-bottom: 4mm;
+              border-collapse: collapse;
             }
             .info-table td {
-              padding: 0.5mm 2mm 0.5mm 0;
+              padding: 5px;
               vertical-align: top;
-              font-weight: bold; /* Make text bolder */
-              font-size: 10pt; /* Increased font size */
-              font-weight: 900; /* Extra bold */
+              font-size: 10pt;
             }
             .info-table td:first-child {
-              white-space: nowrap;
               font-weight: bold;
-              width: 25%;
+              width: 30%;
             }
             .qr-code {
-              position: absolute; /* Changed from relative to absolute */
-              bottom: 10px; /* Adjusted placement */
-              right: 10px; /* Adjusted placement */
-              width: 90px;
-              height: 90px;
+              margin-top: 10px;
+              text-align: center;
             }
             .qr-code svg {
-              width: 100%;
-              height: 100%;
-            }
-            .token-number {
-              font-size: 26pt; /* Larger font size for token number */
-              font-weight: 900; /* Extra bold */
-            }
-            .content div {
-              font-size: 12pt; /* Increased font size */
-              font-weight: 900; /* Extra bold */
+              width: 100px;
+              height: 100px;
             }
           </style>
         </head>
