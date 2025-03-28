@@ -448,15 +448,15 @@ const Op_Home = () => {
         query: entry.route,
         cluster: '1',
         driver: entry.driverName,
-        vehicle: entry.vehicleType, 
+        vehicle: entry.vehicleType,
         quantity: entry.quantity,
         mobile: entry.driverMobileNo,
         operator: entry.userId?.username,
         destination: entry.place,
-        challan: entry.challanPin
+        challan: entry.chalaanPin
       });
     };
-
+  
     const QRCodeComponent = ({ data }) => (
       <QRCodeSVG 
         value={data}
@@ -465,13 +465,13 @@ const Op_Home = () => {
         includeMargin={true}
       />
     );
-
+  
     const createCopy = (title) => {
       const qrData = createQRData(entry);
       const qrCodeSvg = ReactDOMServer.renderToString(
         <QRCodeComponent data={qrData} />
       );
-
+  
       return `
         <div class="token-section">
           <div class="header">
@@ -500,7 +500,7 @@ const Op_Home = () => {
         </div>
       `;
     };
-
+  
     const printContent = `
       <!DOCTYPE html>
       <html>
@@ -515,80 +515,89 @@ const Op_Home = () => {
               font-family: Arial, sans-serif;
               margin: 0;
               padding: 0;
-              font-size: 10pt;
-              line-height: 1.5;
+              font-size: 9pt;
+              line-height: 1.2;
+            }
+            .page {
+              display: flex;
+              flex-direction: column;
+              justify-content: space-between;
+              height: 100%;
             }
             .token-section {
-              padding: 10mm;
+              padding: 5mm;
               border: 1px solid #000;
-              margin-bottom: 10mm;
+              margin-bottom: 5mm;
+              flex: 1;
             }
             .header {
               text-align: center;
-              margin-bottom: 10px;
+              margin-bottom: 5px;
             }
             .company-name {
-              font-size: 14pt;
-              font-weight: bold;
-            }
-            .copy-type {
               font-size: 12pt;
               font-weight: bold;
             }
+            .copy-type {
+              font-size: 10pt;
+              font-weight: bold;
+            }
             .content {
-              margin-top: 10px;
+              margin-top: 5px;
             }
             .info-table {
               width: 100%;
               border-collapse: collapse;
             }
             .info-table td {
-              padding: 5px;
+              padding: 3px;
               vertical-align: top;
-              font-size: 10pt;
+              font-size: 9pt;
             }
             .info-table td:first-child {
               font-weight: bold;
               width: 30%;
             }
             .qr-code {
-              margin-top: 10px;
+              margin-top: 5px;
               text-align: center;
             }
             .qr-code svg {
-              width: 100px;
-              height: 100px;
+              width: 80px;
+              height: 80px;
             }
           </style>
         </head>
         <body>
-          ${createCopy("OFFICE COPY")}
-          ${createCopy("OPERATOR COPY")}
-          ${createCopy("DRIVER COPY")}
+          <div class="page">
+            ${createCopy("OFFICE COPY")}
+            ${createCopy("OPERATOR COPY")}
+            ${createCopy("DRIVER COPY")}
+          </div>
         </body>
       </html>
     `;
-
+  
     const printWindow = window.open('', '_blank');
     if (!printWindow) {
       showError('Popup was blocked. Please allow popups and try again.');
       return;
     }
-
+  
     printWindow.document.write(printContent);
     printWindow.document.close();
-
+  
     printWindow.onafterprint = () => {
       printWindow.close();
       window.focus(); // Return focus to the main window
     };
-
+  
     printWindow.onerror = () => {
       showError('Error occurred while printing');
       printWindow.close();
       window.focus();
     };
-
+  
     setTimeout(() => {
       try {
         printWindow.print();
@@ -600,6 +609,7 @@ const Op_Home = () => {
       }
     }, 500);
   };
+  
 
   const handleReceiptPrint = (entry) => {
     const createQRData = (entry) => {
