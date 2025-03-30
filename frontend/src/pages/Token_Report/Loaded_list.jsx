@@ -132,7 +132,6 @@ const Loaded_list = () => {
 
   // Add these new functions
   const handlePageChange = async (page) => {
-    console.log('Changing to page:', page);
     const searchParams = isFiltered ? {
       fromDate: fromDate,
       toDate: toDate
@@ -145,7 +144,6 @@ const Loaded_list = () => {
   };
 
   const handlePerPageChange = async (newPerPage, page) => {
-    console.log('Changing rows per page:', { newPerPage, page });
     setPerPage(newPerPage);
     
     const searchParams = isFiltered ? {

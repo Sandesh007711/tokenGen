@@ -90,7 +90,7 @@ const Token_list = () => {
         params.dateTo = searchParams.toDate.toISOString().split('T')[0];
       }
 
-      // Add user parameter if selected - now passing only the user ID
+      // Add user parameter if selected - now passing only the user ID - now passing only the user ID
       if (searchParams.userId) {
         params.user = searchParams.userId._id; // Extract just the ID
       }
@@ -308,9 +308,6 @@ const Token_list = () => {
   // Add these new functions for handling updates and deletes
   const handleUpdate = (token) => {
     // Debug logs for initial token data
-    console.log('Original token data:', token);
-    console.log('Original userId:', token.userId);
-    console.log('Original vehicleId:', token.vehicleId);
     
     const updatedToken = {
       ...token,
@@ -319,14 +316,12 @@ const Token_list = () => {
       vehicleRate: token.vehicleRate || token.vehicleId?.rate
     };
     
-    console.log('Processed token data for form:', updatedToken);
     setUpdateFormData(updatedToken);
     setShowUpdateForm(true);
   };
 
   const handleUpdateSubmit = async (updatedData) => {
     setIsUpdating(true);
-    console.log('Starting update with data:', updatedData);
     
     try {
       const selectedVehicle = vehicleTypes.find(type => 
@@ -360,11 +355,8 @@ const Token_list = () => {
         route: updatedData.route || ''
       };
 
-      console.log('Final update payload:', updatePayload);
-      console.log('Token ID being updated:', updatedData._id);
 
       const response = await updateToken(updatedData._id, updatePayload);
-      console.log('Update API response:', response);
 
       await fetchTokens();
       setShowUpdateForm(false);
@@ -594,9 +586,6 @@ const Token_list = () => {
     const selectedVehicleType = e.target.value;
     const selectedVehicle = vehicleTypes.find(type => type.vehicleType === selectedVehicleType);
     
-    console.log('Vehicle type changed:', selectedVehicleType);
-    console.log('Selected vehicle data:', selectedVehicle);
-    console.log('Available vehicle types:', vehicleTypes);
 
     if (selectedVehicle) {
       const updatedFormData = {
@@ -605,7 +594,6 @@ const Token_list = () => {
         vehicleRate: selectedVehicle.rate,
         vehicleId: selectedVehicle
       };
-      console.log('Updated form data after vehicle change:', updatedFormData);
       setUpdateFormData(updatedFormData);
     }
   };

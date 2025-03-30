@@ -28,8 +28,8 @@ mongoose
   })
   .then(() => console.log('DB connection successful!'));
 
-const port = process.env.PORT || 8000; // Changed default port to 8007
-const server = app.listen(port, '127.0.0.1', () => {
+const port = process.env.PORT || 8000; // Changed default port to 800999
+const server = app.listen(port, '0.0.0.0', () => {
   console.log(`App running on port ${port}`);
 });
 

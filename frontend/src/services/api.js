@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_BASE_URL + '/api/v1';
+const API_URL = `${import.meta.env.VITE_API_BASE_URL}/api/v1`;
 
 const api = axios.create({
   baseURL: API_URL,
@@ -63,7 +63,7 @@ export const createToken = async (tokenData) => {
     const response = await api.post('/tokens', tokenData);
     return response.data;
   } catch (error) {
-    throw error.response?.data || error.message;
+    throw error.response?.data || { message: 'Failed to create token' };
   }
 };
 
@@ -340,17 +340,13 @@ export const getCurrentUser = () => {
 
 export const getTokenReport = async (params = {}) => {
   try {
-    const { page = 1, limit = 20, username, fromDate, toDate } = params;
+    const { page = 1, limit = 20, fromDate, toDate } = params;
     
     const queryParams = new URLSearchParams({
       page: page.toString(),
-      limit: limit.toString(),
-      deleted: 'false'
+      limit: limit.toString()
     });
 
-    if (username) {
-      queryParams.append('username', username);
-    }
     if (fromDate) {
       queryParams.append('dateFrom', fromDate.toISOString().split('T')[0]);
     }
@@ -361,13 +357,11 @@ export const getTokenReport = async (params = {}) => {
     const response = await api.get(`/tokens?${queryParams}`);
     
     if (response.data?.status === 'success') {
-      const processedTokens = response.data.data
-        .filter(token => !token.deletedAt)
-        .map(token => ({
-          ...token,
-          displayVehicleType: token.vehicleId?.vehicleType || token.vehicleType || 'N/A',
-          displayVehicleRate: token.vehicleRate || 'N/A'
-        }));
+      const processedTokens = response.data.data.map(token => ({
+        ...token,
+        displayVehicleType: token.vehicleId?.vehicleType || token.vehicleType || 'N/A',
+        displayVehicleRate: token.vehicleRate || 'N/A'
+      }));
 
       return {
         status: 'success',

@@ -34,12 +34,10 @@ const VehicleRate = () => {
   // Update fetchVehicles function
   const fetchVehicles = async () => {
     try {
-      console.log('Fetching vehicles...');
       const response = await getAllVehicles();
       
       if (response && response.data) {
         const vehicles = response.data;
-        console.log('Vehicles received:', vehicles);
         setVehicleList(vehicles.map(vehicle => ({
           id: vehicle._id,
           vehicleType: vehicle.vehicleType
@@ -80,10 +78,7 @@ const VehicleRate = () => {
     try {
       if (editIndex !== null) {
         const vehicleToUpdate = vehicleList[editIndex];
-        console.log('Updating vehicle:', {
-          id: vehicleToUpdate.id,
-          vehicleType: vehicleType
-        });
+        
 
         const response = await updateVehicleType(vehicleToUpdate.id, {
           vehicleType: vehicleType

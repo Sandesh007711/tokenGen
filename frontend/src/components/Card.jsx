@@ -19,7 +19,6 @@ const Card = ({ operator }) => {
   const fetchData = async (page, newPerPage = perPage) => {
     setLoading(true);
     try {
-      console.log('Fetching data for operator:', operator);
 
       const response = await getFilteredTokens({
         user: operator,
@@ -64,7 +63,6 @@ const Card = ({ operator }) => {
   const handlePageChange = async (page) => {
     setIsPaginationLoading(true);
     try {
-      console.log('Changing to page:', page);
       const success = await fetchData(page);
       if (!success) {
         console.error('Failed to load page data');
@@ -78,7 +76,6 @@ const Card = ({ operator }) => {
   const handlePerRowsChange = async (newPerPage, page) => {
     setIsPaginationLoading(true);
     try {
-      console.log('Changing rows per page:', { newPerPage, page });
       setPerPage(newPerPage);
       const success = await fetchData(page, newPerPage);
       if (!success) {
@@ -269,7 +266,7 @@ const Card = ({ operator }) => {
     const QRCodeComponent = ({ data }) => (
       <QRCodeSVG 
         value={data}
-        size={50}
+        size={40} // Reduced QR code size
         level="M"
         includeMargin={true}
       />
@@ -295,6 +292,7 @@ const Card = ({ operator }) => {
               <tr><td>Cluster:</td><td>1</td></tr>
               <tr><td>Driver Name:</td><td>${entry.driver}</td></tr>
               <tr><td>Vehicle Type:</td><td>${entry.vehicleType}</td></tr>
+              <tr><td>Vehicle No.:</td><td>${entry.vehicleNo || 'N/A'}</td></tr>
               <tr><td>Quantity:</td><td>${entry.quantity}</td></tr>
               <tr><td>Driver Mobile:</td><td>${entry.mobileNo}</td></tr>
               <tr><td>Operator:</td><td>${operator.username}</td></tr>
@@ -317,76 +315,103 @@ const Card = ({ operator }) => {
           <style>
             @page {
               size: A4;
-              margin: 10mm;
+              margin: 5mm; /* Reduced margin */
             }
             body {
               font-family: Arial, sans-serif;
               margin: 0;
               padding: 0;
-              font-size: 8pt;
-              line-height: 1.1;
+              font-size: 8pt; /* Reduced font size */
+              line-height: 1.1; /* Reduced line height */
+            }
+            .page {
+              display: flex;
+              flex-direction: column;
+              justify-content: space-between;
+              height: 100%;
             }
             .token-section {
-              padding: 3mm;
-              height: 85mm;
-              position: relative;
+              padding: 3mm; /* Reduced padding */
+              border: 1px solid #000;
+              margin-bottom: 3mm; /* Reduced margin */
+              flex: 1;
             }
             .header {
-              text-align: left;
-              margin-bottom: 2mm;
+              text-align: center;
+              margin-bottom: 3px; /* Reduced spacing */
             }
             .company-name {
-              font-size: 10pt;
+              font-size: 10pt; /* Reduced font size */
               font-weight: bold;
             }
             .copy-type {
-              font-size: 8pt;
+              font-size: 9pt; /* Reduced font size */
               font-weight: bold;
             }
             .content {
-              position: relative;
+              margin-top: 3px; /* Reduced spacing */
             }
             .info-table {
               width: 100%;
-              margin-bottom: 4mm;
+              border-collapse: collapse;
             }
             .info-table td {
-              padding: 0.5mm 2mm 0.5mm 0;
+              padding: 2px; /* Reduced padding */
               vertical-align: top;
+              font-size: 8pt; /* Reduced font size */
             }
             .info-table td:first-child {
-              white-space: nowrap;
               font-weight: bold;
-              width: 25%;
+              width: 30%;
             }
             .qr-code {
-              position: relative;
-              left: 1;
-              width: 90px;
-              height: 90px;
-              margin-top: auto;
+              margin-top: 3px; /* Reduced spacing */
+              text-align: center;
             }
             .qr-code svg {
-              width: 100%;
-              height: 100%;
+              width: 60px; /* Reduced QR code size */
+              height: 60px;
             }
           </style>
         </head>
         <body>
-          ${createCopy("OFFICE COPY")}
-          ${createCopy("OPERATOR COPY")}
-          ${createCopy("DRIVER COPY")}
+          <div class="page">
+            ${createCopy("OFFICE COPY")}
+            ${createCopy("OPERATOR COPY")}
+            ${createCopy("DRIVER COPY")}
+          </div>
         </body>
       </html>
     `;
 
     const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      console.error('Popup was blocked. Please allow popups and try again.');
+      return;
+    }
+
     printWindow.document.write(printContent);
     printWindow.document.close();
 
-    setTimeout(() => {
-      printWindow.print();
+    printWindow.onafterprint = () => {
       printWindow.close();
+      window.focus(); // Return focus to the main window
+    };
+
+    printWindow.onerror = () => {
+      console.error('Error occurred while printing');
+      printWindow.close();
+      window.focus();
+    };
+
+    setTimeout(() => {
+      try {
+        printWindow.print();
+      } catch (error) {
+        console.error('Print error:', error);
+        printWindow.close();
+        window.focus();
+      }
     }, 500);
   };
 
@@ -437,6 +462,7 @@ const Card = ({ operator }) => {
             <div>Cluster: 1</div>
             <div>Driver Name: ${entry.driver}</div>
             <div>Vehicle Type: ${entry.vehicleType}</div>
+            <div>Vehicle No: ${entry.vehicleNo || 'N/A'}</div>
             <div>Quantity: ${entry.quantity}</div>
             <div>Driver Mobile: ${entry.mobileNo}</div>
             <div>Operator: ${operator.username}</div>
@@ -467,9 +493,10 @@ const Card = ({ operator }) => {
               width: 80mm;
               margin: 0;
               padding: 8px;
-              font-size: 12pt;
+              font-size: 12pt; /* Adjusted font size */
               line-height: 1.2;
               text-transform: uppercase;
+              font-weight: bold; /* Added boldness */
             }
             .receipt {
               width: 100%;
@@ -641,13 +668,13 @@ const Card = ({ operator }) => {
             onClick={() => handlePrint(row)}
             className="bg-gradient-to-r from-green-400 to-green-600 hover:from-green-600 hover:to-green-400 text-white px-3 py-1 rounded-full flex items-center justify-center transition duration-300 transform hover:scale-105"
           >
-            A4 Print
+            L Print
           </button>
           <button
             onClick={() => handleReceiptPrint(row)}
             className="bg-gradient-to-r from-blue-400 to-blue-600 hover:from-blue-600 hover:to-blue-400 text-white px-3 py-1 rounded-full flex items-center justify-center transition duration-300 transform hover:scale-105"
           >
-            Receipt
+            T Print
           </button>
         </div>
       ),

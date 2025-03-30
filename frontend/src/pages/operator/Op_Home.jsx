@@ -85,13 +85,13 @@ const Op_Home = () => {
     transform: 'translateY(0)'
   };
 
-  // Add quantity options generator
+  // Modify generateQuantityOptions function
   const generateQuantityOptions = () => {
-    const options = ["Select Quantity"];
+    const options = [];
     for (let i = 0; i <= 1000; i += 50) {
       options.push(i.toString());
     }
-    return options;
+    return ["Select Quantity", ...options];
   };
 
   const quantityOptions = generateQuantityOptions();
@@ -170,24 +170,21 @@ const Op_Home = () => {
   }, [perPage]); // Remove currentPage dependency
 
   const handlePageChange = async (page) => {
-    console.log('Page change requested:', page);
     const success = await fetchUserTokens(page);
     if (!success) {
       showError('Failed to load page data');
     }
-    console.log('Current table data:', entries); // Log current table data after page change
   };
 
   const handlePerPageChange = async (newPerPage, page) => {
-    console.log('Rows per page change:', { newPerPage, page });
     setPerPage(newPerPage);
     const success = await fetchUserTokens(page);
     if (!success) {
       showError('Failed to update rows per page');
     }
-    console.log('Updated table data:', entries); // Log table data after rows per page change
   };
 
+  // Update handleInputChange function
   const handleInputChange = (e) => {
     const { name, value } = e.target;
 
@@ -196,10 +193,22 @@ const Op_Home = () => {
       return;
     }
 
+    // Special handling for quantity field
+    if (name === 'quantity') {
+      if (value === 'Select Quantity') {
+        setFormData(prev => ({ ...prev, quantity: '' }));
+        return;
+      }
+      setFormData(prev => ({
+        ...prev,
+        quantity: value
+      }));
+      return;
+    }
+
     if (name === 'vehicleType') {
       const selectedVehicle = vehicleRates.find(v => v.vehicleType === value);
       if (selectedVehicle) {
-        console.log('Selected vehicle data:', selectedVehicle); // Debug log
         setFormData(prev => ({
           ...prev,
           vehicleType: selectedVehicle.vehicleType,
@@ -240,16 +249,13 @@ const Op_Home = () => {
       return;
     }
 
-    if ((name === 'vehicleRate' || name === 'quantity') && value < 0) {
-      return;
-    }
-
     setFormData(prev => ({
       ...prev,
       [name]: value
     }));
   };
 
+  // Update handleSubmitClick validation
   const handleSubmitClick = (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -270,7 +276,8 @@ const Op_Home = () => {
       return;
     }
 
-    if (!formData.quantity || formData.quantity === 'Select Quantity') {
+    // Updated quantity validation
+    if (formData.quantity === '' || formData.quantity === 'Select Quantity') {
       showError('Please select a quantity');
       return;
     }
@@ -281,7 +288,6 @@ const Op_Home = () => {
     }
 
     try {
-      // Find the selected vehicle data from vehicleRates
       const selectedVehicle = vehicleRates.find(
         vehicle => vehicle.vehicleType === formData.vehicleType
       );
@@ -289,6 +295,12 @@ const Op_Home = () => {
       if (!selectedVehicle) {
         throw new Error('Please select a valid vehicle type');
       }
+
+      // Log the form data before submission for debugging
+      console.log('Form data before submission:', {
+        ...formData,
+        quantity: parseInt(formData.quantity)
+      });
 
       // If all validations pass, show confirmation dialog
       setShowSubmitConfirm(true);
@@ -360,7 +372,13 @@ const Op_Home = () => {
       if (!selectedVehicle) {
         throw new Error('Please select a valid vehicle type');
       }
-
+  
+      // Ensure quantity is properly parsed as an integer
+      const quantity = parseInt(formData.quantity);
+      if (isNaN(quantity)) {
+        throw new Error('Invalid quantity value');
+      }
+  
       const submitData = {
         userId: formData.userId,
         vehicleId: selectedVehicle.vehicleId || selectedVehicle._id, // Add fallback to _id
@@ -369,7 +387,7 @@ const Op_Home = () => {
         vehicleNo: formData.vehicleNo.trim(),
         vehicleType: formData.vehicleType,
         vehicleRate: parseInt(formData.vehicleRate),
-        quantity: parseInt(formData.quantity),
+        quantity: formData.quantity === "0" ? 0 : parseInt(formData.quantity), // Handle zero explicitly
         place: formData.place.trim() || undefined,
         challanPin: formData.chalaanPin ? formData.chalaanPin : undefined,
         route: formData.route
@@ -428,32 +446,32 @@ const Op_Home = () => {
         date: formatDateTime(entry.createdAt),
         token: entry.tokenNo,
         query: entry.route,
-        cluster: '6',
+        cluster: '1',
         driver: entry.driverName,
-        vehicle: entry.vehicleType, 
+        vehicle: entry.vehicleType,
         quantity: entry.quantity,
         mobile: entry.driverMobileNo,
         operator: entry.userId?.username,
         destination: entry.place,
-        challan: entry.challanPin
+        challan: entry.chalaanPin
       });
     };
-
+  
     const QRCodeComponent = ({ data }) => (
       <QRCodeSVG 
         value={data}
-        size={50}
+        size={40} // Reduced QR code size
         level="M"
         includeMargin={true}
       />
     );
-
+  
     const createCopy = (title) => {
       const qrData = createQRData(entry);
       const qrCodeSvg = ReactDOMServer.renderToString(
         <QRCodeComponent data={qrData} />
       );
-
+  
       return `
         <div class="token-section">
           <div class="header">
@@ -465,14 +483,15 @@ const Op_Home = () => {
               <tr><td>Date/Time:</td><td>${formatDateTime(entry.createdAt)}</td></tr>
               <tr><td>Token No.:</td><td>${entry.tokenNo || 'N/A'}</td></tr>
               <tr><td>Query Name:</td><td>${entry.route || 'N/A'}</td></tr>
-              <tr><td>Cluster:</td><td>6</td></tr>
+              <tr><td>Cluster:</td><td>1</td></tr>
               <tr><td>Driver Name:</td><td>${entry.driverName}</td></tr>
-              <tr><td>Vehicle Type:</td><td>${entry.vehicleType}</td></tr> 
+              <tr><td>Vehicle Type:</td><td>${entry.vehicleType}</td></tr>
+              <tr><td>Vehicle No.:</td><td>${entry.vehicleNo || 'N/A'}</td></tr>
               <tr><td>Quantity:</td><td>${entry.quantity}</td></tr>
               <tr><td>Driver Mobile:</td><td>${entry.driverMobileNo}</td></tr>
               <tr><td>Operator:</td><td>${entry.userId?.username || 'N/A'}</td></tr>
               <tr><td>Destination:</td><td>${entry.place}</td></tr>
-              <tr><td>Challan Pin:</td><td>${entry.challanPin}</td></tr>
+              <tr><td>Challan Pin:</td><td>${entry.chalaanPin}</td></tr>
             </table>
             <div class="qr-code">
               ${qrCodeSvg}
@@ -481,7 +500,7 @@ const Op_Home = () => {
         </div>
       `;
     };
-
+  
     const printContent = `
       <!DOCTYPE html>
       <html>
@@ -490,90 +509,95 @@ const Op_Home = () => {
           <style>
             @page {
               size: A4;
-              margin: 10mm;
+              margin: 5mm; /* Reduced margin */
             }
             body {
               font-family: Arial, sans-serif;
               margin: 0;
               padding: 0;
-              font-size: 8pt;
-              line-height: 1.1;
+              font-size: 8pt; /* Reduced font size */
+              line-height: 1.1; /* Reduced line height */
+            }
+            .page {
+              display: flex;
+              flex-direction: column;
+              justify-content: space-between;
+              height: 100%;
             }
             .token-section {
-              padding: 3mm;
-              height: 85mm;
-              position: relative;
+              padding: 3mm; /* Reduced padding */
+              border: 1px solid #000;
+              margin-bottom: 3mm; /* Reduced margin */
+              flex: 1;
             }
             .header {
-              text-align: left;
-              margin-bottom: 2mm;
+              text-align: center;
+              margin-bottom: 3px; /* Reduced spacing */
             }
             .company-name {
-              font-size: 10pt;
+              font-size: 10pt; /* Reduced font size */
               font-weight: bold;
             }
             .copy-type {
-              font-size: 8pt;
+              font-size: 9pt; /* Reduced font size */
               font-weight: bold;
             }
             .content {
-              position: relative;
+              margin-top: 3px; /* Reduced spacing */
             }
             .info-table {
               width: 100%;
-              margin-bottom: 4mm;
+              border-collapse: collapse;
             }
             .info-table td {
-              padding: 0.5mm 2mm 0.5mm 0;
+              padding: 2px; /* Reduced padding */
               vertical-align: top;
+              font-size: 8pt; /* Reduced font size */
             }
             .info-table td:first-child {
-              white-space: nowrap;
               font-weight: bold;
-              width: 25%;
+              width: 30%;
             }
             .qr-code {
-              position: relative;
-              left: 1;
-              width: 90px;
-              height: 90px;
-              margin-top: auto;
-
+              margin-top: 3px; /* Reduced spacing */
+              text-align: center;
             }
             .qr-code svg {
-              width: 100%;
-              height: 100%;
+              width: 60px; /* Reduced QR code size */
+              height: 60px;
             }
           </style>
         </head>
         <body>
-          ${createCopy("OFFICE COPY")}
-          ${createCopy("OPERATOR COPY")}
-          ${createCopy("DRIVER COPY")}
+          <div class="page">
+            ${createCopy("OFFICE COPY")}
+            ${createCopy("OPERATOR COPY")}
+            ${createCopy("DRIVER COPY")}
+          </div>
         </body>
       </html>
     `;
-
+  
     const printWindow = window.open('', '_blank');
     if (!printWindow) {
       showError('Popup was blocked. Please allow popups and try again.');
       return;
     }
-
+  
     printWindow.document.write(printContent);
     printWindow.document.close();
-
+  
     printWindow.onafterprint = () => {
       printWindow.close();
       window.focus(); // Return focus to the main window
     };
-
+  
     printWindow.onerror = () => {
       showError('Error occurred while printing');
       printWindow.close();
       window.focus();
     };
-
+  
     setTimeout(() => {
       try {
         printWindow.print();
@@ -585,6 +609,7 @@ const Op_Home = () => {
       }
     }, 500);
   };
+  
 
   const handleReceiptPrint = (entry) => {
     const createQRData = (entry) => {
@@ -592,14 +617,14 @@ const Op_Home = () => {
         date: formatDateTime(entry.createdAt),
         token: entry.tokenNo,
         query: entry.route,
-        cluster: '6',
+        cluster: '1',
         driver: entry.driverName,
         vehicle: entry.vehicleType, // Changed from VehicleType
         quantity: entry.quantity,
         mobile: entry.driverMobileNo,
         operator: entry.userId?.username,
         destination: entry.place,
-        challan: entry.challanPin
+        challan: entry.chalaanPin
       });
     };
   
@@ -630,14 +655,15 @@ const Op_Home = () => {
           <div class="content">
             <div>Date/Time: ${formatDateTime(entry.createdAt)}</div>
             <div>Query Name: ${entry.route || 'N/A'}</div>
-            <div>Cluster: 6</div>
+            <div>Cluster: 1</div>
             <div>Driver Name: ${entry.driverName}</div>
-            <div>Vehicle Type: ${entry.vehicleType}</div> 
+            <div>Vehicle Type: ${entry.vehicleType}</div>
+            <div>Vehicle No: ${entry.vehicleNo || 'N/A'}</div> 
             <div>Quantity: ${entry.quantity}</div>
             <div>Driver Mobile: ${entry.driverMobileNo}</div>
             <div>Operator: ${entry.userId?.username || 'N/A'}</div>
             <div>Destination: ${entry.place || 'N/A'}</div>
-            <div>Challan Pin: ${entry.challanPin || 'N/A'}</div>
+            <div>Challan Pin: ${entry.chalaanPin || 'N/A'}</div>
             <div class="divider">================================</div>
           </div>
           <div class="qr-section">
@@ -666,6 +692,7 @@ const Op_Home = () => {
               font-size: 12pt;
               line-height: 1.2;
               text-transform: uppercase;
+              font-weight: bold; /* Added boldness */
             }
             .receipt {
               width: 100%;
@@ -692,7 +719,7 @@ const Op_Home = () => {
             }
             .token-number {
               font-size: 24pt;  /* Even larger font for token number */
-              font-weight: bold;
+              font-weight: bold; /* Make token number bolder */
               margin: 10px 0;
               letter-spacing: 2px;
             }
@@ -703,6 +730,7 @@ const Op_Home = () => {
               text-align: left;
               margin-bottom: 10px;
               font-size: 12pt;
+              font-weight: bold; /* Make content text bolder */
             }
             .content div {
               margin: 3px 0;
@@ -891,13 +919,13 @@ const formatDateTime = (dateString) => {
             onClick={() => handlePrint(row)}
             className="bg-gradient-to-r from-green-400 to-green-600 hover:from-green-600 hover:to-green-400 text-white px-3 py-1 rounded-full flex items-center justify-center transition duration-300 transform hover:scale-105"
           >
-            A4 Print
+            L Print
           </button>
           <button
             onClick={() => handleReceiptPrint(row)}
             className="bg-gradient-to-r from-blue-400 to-blue-600 hover:from-blue-600 hover:to-blue-400 text-white px-3 py-1 rounded-full flex items-center justify-center transition duration-300 transform hover:scale-105"
           >
-            Receipt
+            T Print
           </button>
         </div>
       ),
@@ -1093,29 +1121,36 @@ const formatDateTime = (dateString) => {
                 <div className="relative">
                   <label className="block text-gray-300 text-sm font-bold mb-2">Quantity</label>
                   <div className="inline-block relative w-full">
-                    <select
-                      name="quantity"
-                      value={formData.quantity}
-                      onChange={handleInputChange}
-                      className="block w-full px-4 py-3 pr-10 bg-gray-900 text-gray-300 rounded-lg border border-gray-700 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 transition-all duration-300 appearance-none"
-                      required
-                    >
-                      {quantityOptions.map((qty, index) => (
-                        <option 
-                          key={index} 
-                          value={qty}
-                          disabled={qty === "Select Quantity"}
-                          className={`${qty === "Select Quantity" ? "text-gray-500" : "text-gray-300"} bg-gray-900`}
-                        >
-                          {qty}
-                        </option>
-                      ))}
-                    </select>
-                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-400">
-                      <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-                        <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 111.414 1.414l-4 4a1 1 01-1.414 0l-4-4a1 1 010-1.414z"/>
-                      </svg>
-                    </div>
+                    {formData.quantity === "0" ? (
+                      <input
+                        type="number"
+                        name="quantity"
+                        value={formData.quantity}
+                        onChange={handleInputChange}
+                        min="0"
+                        className="block w-full px-4 py-3 pr-10 bg-gray-900 text-gray-300 rounded-lg border border-gray-700 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 transition-all duration-300"
+                        required
+                      />
+                    ) : (
+                      <select
+                        name="quantity"
+                        value={formData.quantity}
+                        onChange={handleInputChange}
+                        className="block w-full px-4 py-3 pr-10 bg-gray-900 text-gray-300 rounded-lg border border-gray-700 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 transition-all duration-300 appearance-none"
+                        required
+                      >
+                        {quantityOptions.map((qty, index) => (
+                          <option 
+                            key={index} 
+                            value={qty === "Select Quantity" ? "" : qty}
+                            disabled={qty === "Select Quantity"}
+                            className={`${qty === "Select Quantity" ? "text-gray-500" : "text-gray-300"} bg-gray-900`}
+                          >
+                            {qty}
+                          </option>
+                        ))}
+                      </select>
+                    )}
                   </div>
                 </div>
                 <div className="relative">
