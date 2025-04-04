@@ -17,7 +17,7 @@ const getLocalDate = () => {
     return formatter.format(new Date());
 };
 
-// create printToken
+// create printToken logic fix
 exports.createToken = catchAsync(async (req, res, next) => {
     const { vehicleId, userId } = req.body;
 
@@ -225,53 +225,45 @@ exports.updateToken = catchAsync(async (req, res, next) => {
     })
 });
 
+// deleteToken logic fix
 exports.deleteToken = catchAsync(async (req, res, next) => {
     const session = await mongoose.startSession();
     session.startTransaction();
 
     try {
-        const tokenId = req.params.id
-        // Find the token
+        const tokenId = req.params.id;
         const token = await UserToken.findOne({ _id: tokenId }).session(session);
-        if (!token) return next(new AppError('Token not found!', 400))
-    
+        if (!token) return next(new AppError('Token not found!', 400));
+
         const userId = token.userId;
         const user = await User.findById(userId).session(session);
 
+        // Ensure daily token count is not reset when a token is deleted
         const today = new Date().toISOString().split('T')[0];
-        const tokenCreationDate = token.createdAt.toISOString().split('T')[0] ;
-    
-        // Decrement daily and total token counts
-        const dailyTokens = user.tokenData.dailyTokens.date === today ? user.tokenData.dailyTokens.count - 1 : 0;
-        const totalTokens = user.tokenData.totalTokens - 1;
-  
-        // Update the user's token data
-        await User.findByIdAndUpdate(userId,
-            (tokenCreationDate === today && user.tokenData.dailyTokens.count > 0)
-            ? {
-                $set: {
-                    'tokenData.dailyTokens.count': Math.max(dailyTokens, 0),
-                    'tokenData.totalTokens': totalTokens
-                },
-            } 
-            : {
-                $set: {
-                    'tokenData.totalTokens': totalTokens
-                },
-            },
-            { session }
-        );
+        const tokenCreationDate = token.createdAt.toISOString().split('T')[0];
 
-        // Delete the token
-        // await UserToken.findByIdAndDelete(tokenId, { session });
-        await UserToken.findByIdAndUpdate(tokenId, 
-            {
+        if (tokenCreationDate === today && user.tokenData.dailyTokens.date === today) {
+            const dailyTokens = Math.max(user.tokenData.dailyTokens.count - 1, 0);
+            await User.findByIdAndUpdate(userId, {
                 $set: {
-                    deletedAt: new Date()
-                }
+                    'tokenData.dailyTokens.count': dailyTokens,
+                },
+            }, { session });
+        }
+
+        const totalTokens = Math.max(user.tokenData.totalTokens - 1, 0);
+        await User.findByIdAndUpdate(userId, {
+            $set: {
+                'tokenData.totalTokens': totalTokens,
             },
-            { session }
-        );
+        }, { session });
+
+        // Mark the token as deleted
+        await UserToken.findByIdAndUpdate(tokenId, {
+            $set: {
+                deletedAt: new Date(),
+            },
+        }, { session });
 
         await session.commitTransaction();
         session.endSession();
@@ -279,12 +271,12 @@ exports.deleteToken = catchAsync(async (req, res, next) => {
         await session.abortTransaction();
         session.endSession();
         throw error;
-    }  
+    }
 
     res.status(200).json({
         status: 'success',
-        message: 'Print Token has been deleted successfully.'
-    })
+        message: 'Print Token has been deleted successfully.',
+    });
 });
 
 exports.getUpdatedTokens = catchAsync(async (req, res) => {

@@ -830,6 +830,26 @@ const formatDateTime = (dateString) => {
 
   const columns = [
     {
+      name: 'Actions',
+      cell: row => (
+        <div className="flex flex-col gap-2 py-2">
+          <button
+            onClick={() => handlePrint(row)}
+            className="bg-gradient-to-r from-green-400 to-green-600 hover:from-green-600 hover:to-green-400 text-white px-3 py-1 rounded-full flex items-center justify-center transition duration-300 transform hover:scale-105"
+          >
+            L Print
+          </button>
+          <button
+            onClick={() => handleReceiptPrint(row)}
+            className="bg-gradient-to-r from-blue-400 to-blue-600 hover:from-blue-600 hover:to-blue-400 text-white px-3 py-1 rounded-full flex items-center justify-center transition duration-300 transform hover:scale-105"
+          >
+            T Print
+          </button>
+        </div>
+      ),
+      width: '120px',
+    },
+    {
       name: 'Sr No.',
       cell: (row, index) => ((currentPage - 1) * perPage) + index + 1,
       width: '70px',
@@ -910,26 +930,6 @@ const formatDateTime = (dateString) => {
         </span>
       ),
       width: '100px',
-    },
-    {
-      name: 'Actions',
-      cell: row => (
-        <div className="flex flex-col gap-2 py-2">
-          <button
-            onClick={() => handlePrint(row)}
-            className="bg-gradient-to-r from-green-400 to-green-600 hover:from-green-600 hover:to-green-400 text-white px-3 py-1 rounded-full flex items-center justify-center transition duration-300 transform hover:scale-105"
-          >
-            L Print
-          </button>
-          <button
-            onClick={() => handleReceiptPrint(row)}
-            className="bg-gradient-to-r from-blue-400 to-blue-600 hover:from-blue-600 hover:to-blue-400 text-white px-3 py-1 rounded-full flex items-center justify-center transition duration-300 transform hover:scale-105"
-          >
-            T Print
-          </button>
-        </div>
-      ),
-      width: '120px',
     },
   ];
 
@@ -1265,7 +1265,7 @@ const formatDateTime = (dateString) => {
           paginationTotalRows={totalRows}
           paginationPerPage={perPage}
           paginationDefaultPage={currentPage}
-          paginationRowsPerPageOptions={[10, 20, 25, 50, 100]}
+          paginationRowsPerPageOptions={[50, 100, 200, 400, 500, 600]} // Updated pagination options
           onChangePage={handlePageChange}
           onChangeRowsPerPage={handlePerPageChange}
           progressPending={loading}
