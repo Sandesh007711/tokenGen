@@ -628,6 +628,24 @@ const Op_Home = () => {
       });
     };
   
+    // Add compact date formatter for thermal receipts
+    const formatCompactDateTime = (dateString) => {
+      try {
+        const date = new Date(dateString);
+        const day = date.getDate().toString().padStart(2, '0');
+        const month = (date.getMonth() + 1).toString().padStart(2, '0');
+        const year = date.getFullYear();
+        const hour = date.getHours() % 12 || 12;
+        const minute = date.getMinutes().toString().padStart(2, '0');
+        const ampm = date.getHours() >= 12 ? 'PM' : 'AM';
+        
+        return `${day}/${month}/${year} ${hour}:${minute}${ampm}`;
+      } catch (error) {
+        console.error('Date formatting error:', error);
+        return 'Invalid Date';
+      }
+    };
+
     const QRCodeComponent = ({ data }) => (
       <QRCodeSVG 
         value={data}
@@ -653,7 +671,7 @@ const Op_Home = () => {
             <div class="divider">================================</div>
           </div>
           <div class="content">
-            <div>Date/Time: ${formatDateTime(entry.createdAt)}</div>
+            <div>Date/Time: ${formatCompactDateTime(entry.createdAt)}</div>
             <div>Query Name: ${entry.route || 'N/A'}</div>
             <div>Cluster: 1</div>
             <div>Driver Name: ${entry.driverName}</div>
