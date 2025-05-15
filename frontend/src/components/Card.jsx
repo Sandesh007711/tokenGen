@@ -118,7 +118,7 @@ const Card = ({ operator }) => {
   const formatPrintContent = async (row) => {
     const printDate = new Date().toLocaleString();
     const qrCodeDataUrl = await generateQR(row);
-    
+
     const content = `
       <div class="content-wrapper">
         <div class="data-section">
@@ -264,7 +264,7 @@ const Card = ({ operator }) => {
     };
 
     const QRCodeComponent = ({ data }) => (
-      <QRCodeSVG 
+      <QRCodeSVG
         value={data}
         size={40} // Reduced QR code size
         level="M"
@@ -433,7 +433,7 @@ const Card = ({ operator }) => {
     };
 
     const QRCodeComponent = ({ data }) => (
-      <QRCodeSVG 
+      <QRCodeSVG
         value={data}
         size={100}
         level="M"
@@ -579,6 +579,26 @@ const Card = ({ operator }) => {
   // Replace the columns definition with this:
   const columns = [
     {
+      name: 'Actions',
+      cell: row => (
+        <div className="flex flex-col gap-2 py-2">
+          <button
+            onClick={() => handlePrint(row)}
+            className="bg-gradient-to-r from-green-400 to-green-600 hover:from-green-600 hover:to-green-400 text-white px-3 py-1 rounded-full flex items-center justify-center transition duration-300 transform hover:scale-105"
+          >
+            L Print
+          </button>
+          <button
+            onClick={() => handleReceiptPrint(row)}
+            className="bg-gradient-to-r from-blue-400 to-blue-600 hover:from-blue-600 hover:to-blue-400 text-white px-3 py-1 rounded-full flex items-center justify-center transition duration-300 transform hover:scale-105"
+          >
+            T Print
+          </button>
+        </div>
+      ),
+      width: '120px',
+    },
+    {
       name: 'Sr No.',
       cell: (row, index) => ((currentPage - 1) * perPage) + index + 1,
       width: '70px',
@@ -652,33 +672,12 @@ const Card = ({ operator }) => {
     {
       name: 'Status',
       cell: row => (
-        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-          row.isLoaded === 'Yes' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-        }`}>
+        <span className={`px-2 py-1 rounded-full text-xs font-medium ${row.isLoaded === 'Yes' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+          }`}>
           {row.isLoaded === 'Yes' ? 'Loaded' : 'Pending'}
         </span>
       ),
       width: '100px',
-    },
-    {
-      name: 'Actions',
-      cell: row => (
-        <div className="flex flex-col gap-2 py-2">
-          <button
-            onClick={() => handlePrint(row)}
-            className="bg-gradient-to-r from-green-400 to-green-600 hover:from-green-600 hover:to-green-400 text-white px-3 py-1 rounded-full flex items-center justify-center transition duration-300 transform hover:scale-105"
-          >
-            L Print
-          </button>
-          <button
-            onClick={() => handleReceiptPrint(row)}
-            className="bg-gradient-to-r from-blue-400 to-blue-600 hover:from-blue-600 hover:to-blue-400 text-white px-3 py-1 rounded-full flex items-center justify-center transition duration-300 transform hover:scale-105"
-          >
-            T Print
-          </button>
-        </div>
-      ),
-      width: '120px',
     },
   ];
 
@@ -719,7 +718,7 @@ const Card = ({ operator }) => {
           paginationTotalRows={totalRows}
           paginationPerPage={perPage}
           paginationDefaultPage={currentPage}
-          paginationRowsPerPageOptions={[10, 20, 25, 50, 100]}
+          paginationRowsPerPageOptions={[12, 20, 50, 100, 300, 600]}
           onChangePage={handlePageChange}
           onChangeRowsPerPage={handlePerRowsChange}
           progressPending={loading}
