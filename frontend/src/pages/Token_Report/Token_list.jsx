@@ -96,7 +96,7 @@ const Token_list = () => {
       }
 
       const result = await getFilteredTokens(params);
-      
+
       if (result.status === 'success') {
         const processedTokens = result.data.map(token => ({
           ...token,
@@ -107,7 +107,7 @@ const Token_list = () => {
         setFilteredData(processedTokens);
         setTotalRows(result.totalCount || 0);
         setCurrentPage(newPage);
-        
+
         if (processedTokens.length > 0) {
           showSuccess(`Found ${result.totalCount} matching records`);
         } else {
@@ -138,11 +138,11 @@ const Token_list = () => {
   // Update handlePageChange to maintain filters
   const handlePageChange = async (page) => {
     const searchParams = {};
-    
+
     if (isFiltered) {
       searchParams.fromDate = fromDate;
       searchParams.toDate = toDate;
-      
+
       if (selectedUser) {
         const userObj = users.find(u => u.username === selectedUser);
         if (userObj) {
@@ -150,7 +150,7 @@ const Token_list = () => {
         }
       }
     }
-    
+
     const success = await fetchTokens(searchParams, page);
     if (!success) {
       showError('Failed to load page data');
@@ -160,13 +160,13 @@ const Token_list = () => {
   // Update handlePerPageChange to maintain filters
   const handlePerPageChange = async (newPerPage, page) => {
     setPerPage(newPerPage);
-    
+
     const searchParams = {};
-    
+
     if (isFiltered) {
       searchParams.fromDate = fromDate;
       searchParams.toDate = toDate;
-      
+
       if (selectedUser) {
         const userObj = users.find(u => u.username === selectedUser);
         if (userObj) {
@@ -174,7 +174,7 @@ const Token_list = () => {
         }
       }
     }
-    
+
     const success = await fetchTokens(searchParams, page);
     if (!success) {
       showError('Failed to update rows per page');
@@ -308,23 +308,23 @@ const Token_list = () => {
   // Add these new functions for handling updates and deletes
   const handleUpdate = (token) => {
     // Debug logs for initial token data
-    
+
     const updatedToken = {
       ...token,
       userId: token.userId?._id || token.userId,
       vehicleType: token.vehicleType || token.vehicleId?.vehicleType,
       vehicleRate: token.vehicleRate || token.vehicleId?.rate
     };
-    
+
     setUpdateFormData(updatedToken);
     setShowUpdateForm(true);
   };
 
   const handleUpdateSubmit = async (updatedData) => {
     setIsUpdating(true);
-    
+
     try {
-      const selectedVehicle = vehicleTypes.find(type => 
+      const selectedVehicle = vehicleTypes.find(type =>
         type.vehicleType === (updatedData.vehicleType || updatedData.vehicleId?.vehicleType)
       );
       console.log('Selected vehicle for update:', selectedVehicle);
@@ -334,9 +334,9 @@ const Token_list = () => {
       }
 
       // Find the user object from the users array based on the token's username
-      const userObj = users.find(u => u.username === updatedData.userId?.username) || 
-                     users.find(u => u._id === updatedData.userId);
-      
+      const userObj = users.find(u => u.username === updatedData.userId?.username) ||
+        users.find(u => u._id === updatedData.userId);
+
       if (!userObj || !userObj._id) {
         throw new Error('Invalid user ID - Unable to find user');
       }
@@ -383,7 +383,7 @@ const Token_list = () => {
       setFilteredData(prevData => prevData.filter(t => t._id !== selectedToken._id));
       setTotalRows(prev => prev - 1);
       showSuccess('Token deleted successfully');
-      
+
       // Refresh the token list after deletion
       await fetchTokens();
     } catch (error) {
@@ -398,6 +398,32 @@ const Token_list = () => {
 
   // Define the columns for DataTable
   const columns = [
+    {
+      name: 'Actions',
+      cell: (row) => (
+        <div className="flex justify-center w-full gap-2">
+          <button
+            onClick={() => handleUpdate(row)}
+            className="p-2 text-blue-600 hover:text-blue-800 transition-colors"
+            title="Update"
+          >
+            <FaEdit />
+          </button>
+          <button
+            onClick={() => {
+              setSelectedToken({ _id: row._id });
+              setShowDeleteConfirm(true);
+            }}
+            className="p-2 text-red-600 hover:text-red-800 transition-colors"
+            title="Delete"
+          >
+            <FaTrash />
+          </button>
+        </div>
+      ),
+      ignoreRowClick: true,
+      width: '100px',
+    },
     {
       name: 'S.No.',
       selector: (row, index) => index + 1 + (currentPage - 1) * perPage,
@@ -475,32 +501,6 @@ const Token_list = () => {
       selector: row => row.challanPin || 'N/A',
       sortable: true,
       width: '120px',
-    },
-    {
-      name: 'Actions',
-      cell: (row) => (
-        <div className="flex justify-center w-full gap-2">
-          <button
-            onClick={() => handleUpdate(row)}
-            className="p-2 text-blue-600 hover:text-blue-800 transition-colors"
-            title="Update"
-          >
-            <FaEdit />
-          </button>
-          <button
-            onClick={() => {
-              setSelectedToken({ _id: row._id });
-              setShowDeleteConfirm(true);
-            }}
-            className="p-2 text-red-600 hover:text-red-800 transition-colors"
-            title="Delete"
-          >
-            <FaTrash />
-          </button>
-        </div>
-      ),
-      ignoreRowClick: true,
-      width: '100px',
     },
   ];
 
@@ -585,7 +585,7 @@ const Token_list = () => {
   const handleVehicleTypeChange = (e) => {
     const selectedVehicleType = e.target.value;
     const selectedVehicle = vehicleTypes.find(type => type.vehicleType === selectedVehicleType);
-    
+
 
     if (selectedVehicle) {
       const updatedFormData = {
@@ -683,7 +683,7 @@ const Token_list = () => {
               placeholderText="From Date"
             />
           </div>
-          
+
           <div className="flex flex-col">
             <label htmlFor="toDate" className="text-gray-300 mb-1">To Date</label>
             <DatePicker
@@ -694,7 +694,7 @@ const Token_list = () => {
               placeholderText="To Date"
             />
           </div>
-          
+
           <div className="flex flex-col">
             <label htmlFor="userSelect" className="text-gray-300 mb-1">Select User</label>
             <select
@@ -721,7 +721,7 @@ const Token_list = () => {
               >
                 Apply Filters
               </button>
-              
+
               {isFiltered && (
                 <button
                   type="button"
@@ -737,9 +737,8 @@ const Token_list = () => {
       </div>
 
       {/* Table Section */}
-      <div className={`bg-white rounded-lg shadow-lg overflow-hidden transition-all duration-300 ${
-        isFullScreen ? 'fixed inset-0 z-50' : ''
-      }`}>
+      <div className={`bg-white rounded-lg shadow-lg overflow-hidden transition-all duration-300 ${isFullScreen ? 'fixed inset-0 z-50' : ''
+        }`}>
         <div className="p-4 bg-gray-50 border-b flex justify-between items-center">
           <button
             onClick={toggleFullScreen}
@@ -758,7 +757,7 @@ const Token_list = () => {
             </button>
           )}
         </div>
-        
+
         <div className={`${isFullScreen ? 'h-[calc(100vh-80px)] overflow-auto' : ''}`}>
           <DataTable
             columns={columns}
@@ -767,7 +766,7 @@ const Token_list = () => {
             paginationServer
             paginationPerPage={perPage}
             paginationDefaultPage={currentPage}
-            paginationRowsPerPageOptions={[10, 20, 25, 50, 100]}
+            paginationRowsPerPageOptions={[10, 20, 50, 100, 300, 600]}
             paginationTotalRows={totalRows}
             onChangePage={handlePageChange}
             onChangeRowsPerPage={handlePerPageChange}
@@ -822,7 +821,7 @@ const Token_list = () => {
                   <input
                     type="text"
                     value={updateFormData.driverName}
-                    onChange={(e) => setUpdateFormData({...updateFormData, driverName: e.target.value})}
+                    onChange={(e) => setUpdateFormData({ ...updateFormData, driverName: e.target.value })}
                     className="px-4 py-3 w-full bg-gray-900 text-gray-300 rounded-lg border border-gray-700 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 transition-all duration-300"
                   />
                 </div>
@@ -831,7 +830,7 @@ const Token_list = () => {
                   <input
                     type="text"
                     value={updateFormData.driverMobileNo}
-                    onChange={(e) => setUpdateFormData({...updateFormData, driverMobileNo: e.target.value})}
+                    onChange={(e) => setUpdateFormData({ ...updateFormData, driverMobileNo: e.target.value })}
                     className="px-4 py-3 w-full bg-gray-900 text-gray-300 rounded-lg border border-gray-700 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 transition-all duration-300"
                   />
                 </div>
@@ -864,7 +863,7 @@ const Token_list = () => {
                   <input
                     type="text"
                     value={updateFormData.vehicleNo}
-                    onChange={(e) => setUpdateFormData({...updateFormData, vehicleNo: e.target.value})}
+                    onChange={(e) => setUpdateFormData({ ...updateFormData, vehicleNo: e.target.value })}
                     className="px-4 py-3 w-full bg-gray-900 text-gray-300 rounded-lg border border-gray-700 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 transition-all duration-300"
                   />
                 </div>
@@ -873,7 +872,7 @@ const Token_list = () => {
                   <input
                     type="text"
                     value={updateFormData.place}
-                    onChange={(e) => setUpdateFormData({...updateFormData, place: e.target.value})}
+                    onChange={(e) => setUpdateFormData({ ...updateFormData, place: e.target.value })}
                     className="px-4 py-3 w-full bg-gray-900 text-gray-300 rounded-lg border border-gray-700 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 transition-all duration-300"
                   />
                 </div>
@@ -882,7 +881,7 @@ const Token_list = () => {
                   <input
                     type="text"
                     value={updateFormData.route}
-                    onChange={(e) => setUpdateFormData({...updateFormData, route: e.target.value})}
+                    onChange={(e) => setUpdateFormData({ ...updateFormData, route: e.target.value })}
                     className="px-4 py-3 w-full bg-gray-900 text-gray-300 rounded-lg border border-gray-700 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 transition-all duration-300"
                   />
                 </div>
@@ -891,7 +890,7 @@ const Token_list = () => {
                   <input
                     type="text"
                     value={updateFormData.challanPin}
-                    onChange={(e) => setUpdateFormData({...updateFormData, challanPin: e.target.value})}
+                    onChange={(e) => setUpdateFormData({ ...updateFormData, challanPin: e.target.value })}
                     className="px-4 py-3 w-full bg-gray-900 text-gray-300 rounded-lg border border-gray-700 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 transition-all duration-300"
                   />
                 </div>
@@ -900,7 +899,7 @@ const Token_list = () => {
                   <input
                     type="number"
                     value={updateFormData.quantity}
-                    onChange={(e) => setUpdateFormData({...updateFormData, quantity: e.target.value})}
+                    onChange={(e) => setUpdateFormData({ ...updateFormData, quantity: e.target.value })}
                     className="px-4 py-3 w-full bg-gray-900 text-gray-300 rounded-lg border border-gray-700 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 transition-all duration-300"
                   />
                 </div>
